@@ -11,6 +11,7 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.machine.artik;
 
+import org.eclipse.che.api.machine.server.util.RecipeDownloader;
 import org.eclipse.che.plugin.machine.ssh.SshMachineFactory;
 import org.eclipse.che.plugin.machine.ssh.SshMachineInstanceProvider;
 
@@ -24,8 +25,8 @@ import java.io.IOException;
  */
 public class ArtikMachineInstanceProvider extends SshMachineInstanceProvider {
     @Inject
-    public ArtikMachineInstanceProvider(SshMachineFactory sshMachineFactory) throws IOException {
-        super(sshMachineFactory);
+    public ArtikMachineInstanceProvider(SshMachineFactory sshMachineFactory, final RecipeDownloader recipeDownloader) throws IOException {
+        super(sshMachineFactory, recipeDownloader);
     }
 
     @Override
