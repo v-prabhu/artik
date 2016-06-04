@@ -1,5 +1,59 @@
 # Change Log
 
+## [4.3.0-RC1](https://github.com/codenvy/artik-ide/tree/4.3.0-RC1) (2016-06-04)
+[Full Changelog](https://github.com/codenvy/artik-ide/compare/4.2.2...4.3.0-RC1)
+
+**Pull requests merged:**
+
+- CHE-1260 Enable svg files license checking [\#60](https://github.com/codenvy/artik-ide/pull/60) ([mkuznyetsov](https://github.com/mkuznyetsov))
+- Update Vagrantfile [\#59](https://github.com/codenvy/artik-ide/pull/59) ([TylerJewell](https://github.com/TylerJewell))
+- CODENVY-560 InstanceProvider refactoring [\#58](https://github.com/codenvy/artik-ide/pull/58) ([benoitf](https://github.com/benoitf))
+- CHE-336: Refactoring of LocalGitUserResolver class [\#57](https://github.com/codenvy/artik-ide/pull/57) ([vinokurig](https://github.com/vinokurig))
+- CHE-398: Add bindings for the workspace recovering,  without using the registry [\#56](https://github.com/codenvy/artik-ide/pull/56) ([akorneta](https://github.com/akorneta))
+- CHE-962: Add ability to store and use SSH keys for Subversion hosts [\#55](https://github.com/codenvy/artik-ide/pull/55) ([tolusha](https://github.com/tolusha))
+- Adopt to last changes in Che repo [\#54](https://github.com/codenvy/artik-ide/pull/54) ([vparfonov](https://github.com/vparfonov))
+- CHE-956 remove dependency on che-jdt-ext-machine [\#53](https://github.com/codenvy/artik-ide/pull/53) ([evidolob](https://github.com/evidolob))
+- add new sampple [\#52](https://github.com/codenvy/artik-ide/pull/52) ([eivantsov](https://github.com/eivantsov))
+- Add auto-snapshot and auto-restore the workspace state properties [\#51](https://github.com/codenvy/artik-ide/pull/51) ([akorneta](https://github.com/akorneta))
+- CODENVY-433 Adapt source code to acl of recipes [\#50](https://github.com/codenvy/artik-ide/pull/50) ([sleshchenko](https://github.com/sleshchenko))
+- CHE-781:Move all platform-api-client-gwt to the che-core-ide-api module [\#49](https://github.com/codenvy/artik-ide/pull/49) ([vparfonov](https://github.com/vparfonov))
+- CHE-781:Move all platform-api-client-gwt to the che-core-ide-api module [\#48](https://github.com/codenvy/artik-ide/pull/48) ([vparfonov](https://github.com/vparfonov))
+- CHE-976: Make Debugger API generic [\#47](https://github.com/codenvy/artik-ide/pull/47) ([tolusha](https://github.com/tolusha))
+- Fix unexpxected suspend [\#46](https://github.com/codenvy/artik-ide/pull/46) ([TylerJewell](https://github.com/TylerJewell))
+- CHE-747:Move ProjectTemplateService to separate module [\#45](https://github.com/codenvy/artik-ide/pull/45) ([vparfonov](https://github.com/vparfonov))
+- CHE-1112 remove usage of  che-core-api-account [\#44](https://github.com/codenvy/artik-ide/pull/44) ([skabashnyuk](https://github.com/skabashnyuk))
+- Update in accordance with API changes [\#43](https://github.com/codenvy/artik-ide/pull/43) ([azatsarynnyy](https://github.com/azatsarynnyy))
+- Add VM mount and backup workspaces, projects and prefs [\#42](https://github.com/codenvy/artik-ide/pull/42) ([eivantsov](https://github.com/eivantsov))
+- Sync with Che master [\#41](https://github.com/codenvy/artik-ide/pull/41) ([garagatyi](https://github.com/garagatyi))
+- Add new maven plugin [\#40](https://github.com/codenvy/artik-ide/pull/40) ([vparfonov](https://github.com/vparfonov))
+- Add default maven configuration [\#39](https://github.com/codenvy/artik-ide/pull/39) ([garagatyi](https://github.com/garagatyi))
+- Che-1076 replaced duplicated files and classes [\#37](https://github.com/codenvy/artik-ide/pull/37) ([skabashnyuk](https://github.com/skabashnyuk))
+- Add device name validation [\#36](https://github.com/codenvy/artik-ide/pull/36) ([ashumilova](https://github.com/ashumilova))
+
+## [4.2.2](https://github.com/codenvy/artik-ide/tree/4.2.2) (2016-04-28)
+[Full Changelog](https://github.com/codenvy/artik-ide/compare/4.2.1...4.2.2)
+
+**Pull requests merged:**
+
+- Porting CHE-1077 and CHE-1072 from 4.2.x, improve device name checks [\#35](https://github.com/codenvy/artik-ide/pull/35) ([ashumilova](https://github.com/ashumilova))
+- scp fix from 4.2.x [\#34](https://github.com/codenvy/artik-ide/pull/34) ([eivantsov](https://github.com/eivantsov))
+- Decouple shared modules or user, machine, workspace, factory [\#33](https://github.com/codenvy/artik-ide/pull/33) ([mshaposhnik](https://github.com/mshaposhnik))
+
+## [4.2.1](https://github.com/codenvy/artik-ide/tree/4.2.1) (2016-04-27)
+[Full Changelog](https://github.com/codenvy/artik-ide/compare/4.2.0...4.2.1)
+
+**Pull requests merged:**
+
+- CHE-1072: fix disabled state of host widget [\#32](https://github.com/codenvy/artik-ide/pull/32) ([ashumilova](https://github.com/ashumilova))
+- CHE-1077: remove save button, do autosave on connect [\#31](https://github.com/codenvy/artik-ide/pull/31) ([ashumilova](https://github.com/ashumilova))
+- Update version [\#30](https://github.com/codenvy/artik-ide/pull/30) ([ashumilova](https://github.com/ashumilova))
+- CHE-1073 Deleting a running device does not delete it from Consoles and Machines widget [\#29](https://github.com/codenvy/artik-ide/pull/29) ([vitaliy-guliy](https://github.com/vitaliy-guliy))
+- CHE-1059: workaround artik connection hanging [\#28](https://github.com/codenvy/artik-ide/pull/28) ([garagatyi](https://github.com/garagatyi))
+- fixed scp service [\#27](https://github.com/codenvy/artik-ide/pull/27) ([eivantsov](https://github.com/eivantsov))
+- Update artik assembly [\#26](https://github.com/codenvy/artik-ide/pull/26) ([ashumilova](https://github.com/ashumilova))
+- CODENVY-323: improve readability of stacks config [\#25](https://github.com/codenvy/artik-ide/pull/25) ([ashumilova](https://github.com/ashumilova))
+- change parent pom to che-depmgt; cleanup main pom [\#24](https://github.com/codenvy/artik-ide/pull/24) ([garagatyi](https://github.com/garagatyi))
+
 ## [4.2.0](https://github.com/codenvy/artik-ide/tree/4.2.0) (2016-04-25)
 **Pull requests merged:**
 
