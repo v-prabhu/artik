@@ -16,6 +16,7 @@ import com.google.gwt.inject.client.assistedinject.GinFactoryModuleBuilder;
 import com.google.inject.Singleton;
 
 import org.eclipse.che.ide.api.extension.ExtensionGinModule;
+import org.eclipse.che.ide.api.machine.WsAgentURLModifier;
 import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClient;
 import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClientImpl;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceActionFactory;
@@ -33,5 +34,6 @@ public class ArtikGinModule extends AbstractGinModule {
     protected void configure() {
         install(new GinFactoryModuleBuilder().build(PushToDeviceActionFactory.class));
         bind(DeviceDiscoveryServiceClient.class).to(DeviceDiscoveryServiceClientImpl.class).in(Singleton.class);
+        bind(WsAgentURLModifier.class).to(org.eclipse.che.ide.api.machine.CheWsAgentLinksModifier.class);
     }
 }
