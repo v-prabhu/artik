@@ -1,0 +1,1 @@
+dnf info --disablerepo=updates --disablerepo=fedora libartik-sdk | grep Version | awk '{print $3}'

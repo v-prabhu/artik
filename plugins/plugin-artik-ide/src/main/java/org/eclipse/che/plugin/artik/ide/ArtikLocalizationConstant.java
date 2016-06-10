@@ -74,4 +74,58 @@ public interface ArtikLocalizationConstant extends Messages {
 
     @Key("device.delete.error")
     String deviceDeleteError(String device);
+
+    @Key("updateSDK.action.title")
+    String updateSDKActionTitle();
+
+    @Key("updateSDK.action.description")
+    String updateSDKActionDescription();
+
+    @Key("updateSDK.view.title")
+    String updateSDKViewTitle();
+
+    @Key("updateSDK.view.button.updateAll.title")
+    String updateSDKViewButtonInstallTitle();
+
+    @Key("updateSDK.view.button.cancel.title")
+    String updateSDKViewButtonCancelTitle();
+
+    @Key("updateSDK.view.column.target.title")
+    String updateSDKViewColumnTargetTitle();
+
+    @Key("updateSDK.view.column.currentVersion.title")
+    String updateSDKViewColumnInstalledVersionTitle();
+
+    @Key("updateSDK.view.label.availableVersions.title")
+    String updateSDKViewLabelAvailableVersionsTitle();
+
+    @Key("updateSDK.view.label.selectVersion.title")
+    String updateSDKViewLabelSelectVersionTitle();
+
+    @Key("updateSDK.view.loader.message")
+    String updateSDKViewLoaderMessage();
+
+    @Key("updateSDK.notification.getVersions.title")
+    String updateSDKNotificationGetVersionsTitle();
+
+    @Key("updateSDK.notification.getVersions.fail.message")
+    String updateSDKNotificationGetVersionsFailMessage();
+
+    @Key("updateSDK.notification.getInstalledVersion.fail.message")
+    String updateSDKNotificationGetInstalledVersionFailMessage();
+
+    @Key("updateSDK.notification.updating.message")
+    String updateSDKNotificationUpdatingMessage();
+
+    @Key("updateSDK.notification.update.fail.message")
+    String updateSDKNotificationUpdateFailMessage();
+
+    @Key("restart.view.text")
+    String restartViewText();
+
+    @Key("restart.view.button.restartNow")
+    String restartViewButtonRestartNow();
+
+    @Key("restart.view.button.restartLater")
+    String restartViewButtonRestartLater();
 }

@@ -24,18 +24,30 @@ import org.eclipse.che.ide.api.icon.Icon;
 import org.eclipse.che.ide.api.icon.IconRegistry;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateEvent;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
-import org.eclipse.che.plugin.artik.ide.scp.PushToDeviceManager;
 import org.eclipse.che.plugin.artik.ide.manage.ManageArtikDevicesAction;
+import org.eclipse.che.plugin.artik.ide.scp.PushToDeviceManager;
+import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKAction;
+
+import static org.eclipse.che.ide.api.action.IdeActions.GROUP_MAIN_MENU;
 
 /**
+ * Artik extension entry point.
+ *
  * @author Dmitry Shnurenko
+ * @author Artem Zatsarynnyi
  */
 @Singleton
 @Extension(title = "Artik", version = "1.0.0")
 public class ArtikExtension {
 
+    public final String ARTIK_GROUP_MAIN_MENU_ID   = "artik";
+    public final String ARTIK_GROUP_MAIN_MENU_NAME = "Artik";
+
     @Inject
-    public ArtikExtension(EventBus eventBus, final PushToDeviceManager pushToDeviceManager, IconRegistry iconRegistry, ArtikResources artikResources) {
+    public ArtikExtension(EventBus eventBus,
+                          final PushToDeviceManager pushToDeviceManager,
+                          IconRegistry iconRegistry,
+                          ArtikResources artikResources) {
         artikResources.getCss().ensureInjected();
 
         eventBus.addHandler(WsAgentStateEvent.TYPE, new WsAgentStateHandler() {
@@ -46,7 +58,6 @@ public class ArtikExtension {
 
             @Override
             public void onWsAgentStopped(WsAgentStateEvent wsAgentStateEvent) {
-
             }
         });
 
@@ -55,12 +66,17 @@ public class ArtikExtension {
 
     @Inject
     private void prepareActions(ManageArtikDevicesAction manageDevicesAction,
-                                ActionManager actionManager, ArtikResources artikResources) {
-        artikResources.getCss().ensureInjected();
+                                ActionManager actionManager,
+                                UpdateSDKAction updateSDKAction) {
+        final DefaultActionGroup artikGroup = new DefaultActionGroup(ARTIK_GROUP_MAIN_MENU_NAME, true, actionManager);
+        actionManager.registerAction(ARTIK_GROUP_MAIN_MENU_ID, artikGroup);
+        final DefaultActionGroup mainMenu = (DefaultActionGroup)actionManager.getAction(GROUP_MAIN_MENU);
+        mainMenu.add(artikGroup);
+        artikGroup.add(updateSDKAction);
 
         actionManager.registerAction("manageArtikDevices", manageDevicesAction);
 
-        DefaultActionGroup centerToolbarGroup = (DefaultActionGroup)actionManager.getAction(IdeActions.GROUP_CENTER_TOOLBAR);
+        final DefaultActionGroup centerToolbarGroup = (DefaultActionGroup)actionManager.getAction(IdeActions.GROUP_CENTER_TOOLBAR);
         centerToolbarGroup.add(manageDevicesAction, Constraints.FIRST);
     }
 }

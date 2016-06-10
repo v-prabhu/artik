@@ -1,0 +1,5 @@
+dnf remove -y libartik-sdk
+dnf install -y --disablerepo=updates --disablerepo=fedora libartik-sdk-${sdk.version}.armv7hl
+
+# Special marker line. Don't modify it.
+echo "The latest Artik SDK installed"

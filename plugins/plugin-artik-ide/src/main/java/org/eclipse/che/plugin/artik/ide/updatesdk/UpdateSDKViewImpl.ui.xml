@@ -1,0 +1,56 @@
+<!--
+
+    Copyright (c) 2016 Samsung Electronics Co., Ltd.
+    All rights reserved. This program and the accompanying materials
+    are made available under the terms of the Eclipse Public License v1.0
+    which accompanies this distribution, and is available at
+    http://www.eclipse.org/legal/epl-v10.html
+
+    Contributors:
+      Codenvy, S.A. - Initial implementation
+      Samsung Electronics Co., Ltd. - Initial implementation
+
+-->
+<ui:UiBinder xmlns:ui='urn:ui:com.google.gwt.uibinder'
+             xmlns:g='urn:import:com.google.gwt.user.client.ui'
+             xmlns:c='urn:import:com.google.gwt.user.cellview.client'
+             xmlns:che='urn:import:org.eclipse.che.ide.ui.listbox'>
+    <ui:with field="localizationConstants" type="org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant"/>
+
+    <ui:style>
+        .main-panel {
+            margin: 6px;
+        }
+
+        .bottom-panel {
+            margin: 5px;
+        }
+
+        .label {
+            color: #dbdbdb;
+        }
+
+        .box-label {
+            position: absolute;
+        }
+
+        .box {
+            float: right;
+        }
+    </ui:style>
+
+    <g:DockLayoutPanel unit="PX" width="350px" height="200px" addStyleNames="{style.main-panel}">
+        <g:center>
+            <g:ScrollPanel>
+                <c:CellTable width="100%" ui:field="targetsTable" focus="false"/>
+            </g:ScrollPanel>
+        </g:center>
+        <g:south size="100">
+            <g:FlowPanel styleName="{style.bottom-panel}">
+                <g:Label addStyleNames="{style.label}" text="{localizationConstants.updateSDKViewLabelAvailableVersionsTitle}"/>
+                <g:Label addStyleNames="{style.box-label}" text="{localizationConstants.updateSDKViewLabelSelectVersionTitle}"/>
+                <che:CustomListBox ui:field="versionsBox" debugId="window-artik-updateSDK-availableVersion" addStyleNames="{style.box}"/>
+            </g:FlowPanel>
+        </g:south>
+    </g:DockLayoutPanel>
+</ui:UiBinder> 

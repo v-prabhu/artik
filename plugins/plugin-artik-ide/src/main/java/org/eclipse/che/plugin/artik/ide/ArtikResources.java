@@ -13,6 +13,7 @@ package org.eclipse.che.plugin.artik.ide;
 
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
+import com.google.gwt.resources.client.TextResource;
 
 import org.vectomatic.dom.svg.ui.SVGResource;
 
@@ -24,6 +25,21 @@ public interface ArtikResources extends ClientBundle {
     /** Returns the CSS resource for the Artik extension. */
     @Source({"artik-plugin.css", "org/eclipse/che/ide/api/ui/style.css"})
     Css getCss();
+
+    @Source("updatesdk/checkAvailableSdkVersionsCommand")
+    TextResource getCheckAvailableSDKVersionsCommand();
+
+    @Source("updatesdk/checkSdkVersionOnDeviceCommand")
+    TextResource getCheckSDKVersionOnDeviceCommand();
+
+    @Source("updatesdk/checkSdkVersionOnWsAgentCommand")
+    TextResource getCheckSDKVersionOnAgentCommand();
+
+    @Source("updatesdk/installSdkOnDeviceCommand")
+    TextResource getInstallSDKOnDeviceCommand();
+
+    @Source("updatesdk/recipe")
+    TextResource recipe();
 
     /** The CssResource interface for the Artik extension. */
     interface Css extends CssResource {

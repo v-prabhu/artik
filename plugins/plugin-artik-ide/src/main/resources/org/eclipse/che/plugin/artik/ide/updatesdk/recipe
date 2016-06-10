@@ -1,0 +1,3 @@
+FROM codenvy/artik
+RUN dnf remove -y libartik-sdk-sysroot
+RUN dnf install -y --disablerepo=updates --disablerepo=lantw44-arm-linux-gnueabi-toolchain --disablerepo=fedora libartik-sdk-sysroot-${sdk.version}.noarch
