@@ -1,5 +1,16 @@
 # Change Log
 
+## [4.3.0](https://github.com/codenvy/artik-ide/tree/4.3.0) (2016-06-13)
+[Full Changelog](https://github.com/codenvy/artik-ide/compare/4.3.0-RC1...4.3.0)
+
+**Pull requests merged:**
+
+- Fix license headers [\#66](https://github.com/codenvy/artik-ide/pull/66) ([azatsarynnyy](https://github.com/azatsarynnyy))
+- CODENVY-583: Add bindings for wsagent.endpoint [\#64](https://github.com/codenvy/artik-ide/pull/64) ([akorneta](https://github.com/akorneta))
+- CHE-1167: Make it possible to update Artik SDK and APIs on targets and in a workspace [\#63](https://github.com/codenvy/artik-ide/pull/63) ([azatsarynnyy](https://github.com/azatsarynnyy))
+- CODENVY-583: Fix javadoc navigation [\#62](https://github.com/codenvy/artik-ide/pull/62) ([akorneta](https://github.com/akorneta))
+- CODENVY-595: add missing props [\#61](https://github.com/codenvy/artik-ide/pull/61) ([riuvshin](https://github.com/riuvshin))
+
 ## [4.3.0-RC1](https://github.com/codenvy/artik-ide/tree/4.3.0-RC1) (2016-06-04)
 [Full Changelog](https://github.com/codenvy/artik-ide/compare/4.2.2...4.3.0-RC1)
 
