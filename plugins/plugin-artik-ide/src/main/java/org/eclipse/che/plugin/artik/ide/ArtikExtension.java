@@ -24,6 +24,8 @@ import org.eclipse.che.ide.api.icon.Icon;
 import org.eclipse.che.ide.api.icon.IconRegistry;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateEvent;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
+import org.eclipse.che.plugin.artik.ide.docs.DocsPartPresenter;
+import org.eclipse.che.plugin.artik.ide.docs.ShowDocsAction;
 import org.eclipse.che.plugin.artik.ide.manage.ManageArtikDevicesAction;
 import org.eclipse.che.plugin.artik.ide.scp.PushToDeviceManager;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKAction;
@@ -47,12 +49,14 @@ public class ArtikExtension {
     public ArtikExtension(EventBus eventBus,
                           final PushToDeviceManager pushToDeviceManager,
                           IconRegistry iconRegistry,
-                          ArtikResources artikResources) {
+                          ArtikResources artikResources,
+                          final DocsPartPresenter docsPartPresenter) {
         artikResources.getCss().ensureInjected();
 
         eventBus.addHandler(WsAgentStateEvent.TYPE, new WsAgentStateHandler() {
             @Override
             public void onWsAgentStarted(WsAgentStateEvent wsAgentStateEvent) {
+                docsPartPresenter.open();
                 pushToDeviceManager.fetchSshMachines();
             }
 
@@ -67,14 +71,18 @@ public class ArtikExtension {
     @Inject
     private void prepareActions(ManageArtikDevicesAction manageDevicesAction,
                                 ActionManager actionManager,
-                                UpdateSDKAction updateSDKAction) {
+                                UpdateSDKAction updateSDKAction,
+                                ShowDocsAction showDocsAction) {
         final DefaultActionGroup artikGroup = new DefaultActionGroup(ARTIK_GROUP_MAIN_MENU_NAME, true, actionManager);
         actionManager.registerAction(ARTIK_GROUP_MAIN_MENU_ID, artikGroup);
         final DefaultActionGroup mainMenu = (DefaultActionGroup)actionManager.getAction(GROUP_MAIN_MENU);
         mainMenu.add(artikGroup);
         artikGroup.add(updateSDKAction);
+        artikGroup.add(showDocsAction);
 
         actionManager.registerAction("manageArtikDevices", manageDevicesAction);
+        actionManager.registerAction("updateSDKAction", updateSDKAction);
+        actionManager.registerAction("showDocsAction", showDocsAction);
 
         final DefaultActionGroup centerToolbarGroup = (DefaultActionGroup)actionManager.getAction(IdeActions.GROUP_CENTER_TOOLBAR);
         centerToolbarGroup.add(manageDevicesAction, Constraints.FIRST);

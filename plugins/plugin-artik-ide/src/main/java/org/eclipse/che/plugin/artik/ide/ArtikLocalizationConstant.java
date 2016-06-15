@@ -75,6 +75,18 @@ public interface ArtikLocalizationConstant extends Messages {
     @Key("device.delete.error")
     String deviceDeleteError(String device);
 
+    @Key("showApiDoc.action.title")
+    String showApiDocActionTitle();
+
+    @Key("showApiDoc.action.description")
+    String showApiDocActionDescription();
+
+    @Key("showApiDoc.page.title")
+    String showApiDocPageTitle();
+
+    @Key("showApiDoc.page.tooltip")
+    String showApiDocPageTooltip();
+
     @Key("updateSDK.action.title")
     String updateSDKActionTitle();
 
