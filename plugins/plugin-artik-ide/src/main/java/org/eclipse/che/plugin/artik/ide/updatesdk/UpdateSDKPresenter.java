@@ -99,6 +99,8 @@ public class UpdateSDKPresenter implements UpdateSDKView.ActionDelegate {
         view.setAvailableVersions(Collections.<String>emptyList());
         view.setEnabledInstallButton(false);
 
+        loader.show();
+
         sdkUpdaterProvider.get().getAvailableSDKVersions().then(new Operation<List<String>>() {
             @Override
             public void apply(List<String> versions) throws OperationException {
@@ -108,6 +110,8 @@ public class UpdateSDKPresenter implements UpdateSDKView.ActionDelegate {
         }).catchError(new Operation<PromiseError>() {
             @Override
             public void apply(PromiseError arg) throws OperationException {
+                loader.hide();
+
                 notificationManager.notify(localizationConstants.updateSDKNotificationGetVersionsTitle(),
                                            localizationConstants.updateSDKNotificationGetVersionsFailMessage() + arg.getMessage(),
                                            FAIL,
@@ -118,7 +122,6 @@ public class UpdateSDKPresenter implements UpdateSDKView.ActionDelegate {
 
     private void fillTargetsForUpdate() {
         loader.show();
-
         machineServiceClient.getMachines(appContext.getWorkspaceId()).then(new Function<List<MachineDto>, List<TargetForUpdate>>() {
             @Override
             public List<TargetForUpdate> apply(List<MachineDto> machines) throws FunctionException {

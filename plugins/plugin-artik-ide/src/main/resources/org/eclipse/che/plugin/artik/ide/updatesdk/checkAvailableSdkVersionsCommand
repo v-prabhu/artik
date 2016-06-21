@@ -1,4 +1,4 @@
-dnf list --showduplicates libartik-sdk | grep libartik-sdk | awk '{print $2}' | sort -r -n
+dnf list --showduplicates libartik-sdk-sysroot | grep libartik-sdk-sysroot | awk '{print $2}' | sort -r -n
 
 # Special marker line. Don't modify it.
 echo ">>> end <<<"
