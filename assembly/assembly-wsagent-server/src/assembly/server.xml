@@ -130,7 +130,7 @@
 
       <Host name="localhost"  appBase="webapps"
             unpackWARs="true" autoDeploy="false">
-        <Context docBase="/artik-docs/html" path="/artikdoc" />
+        <Context docBase="/root/.apidocs/html" path="/artikdoc"/>
 
         <!-- SingleSignOn valve, share authentication between web applications
              Documentation at: /docs/config/valve.html -->
