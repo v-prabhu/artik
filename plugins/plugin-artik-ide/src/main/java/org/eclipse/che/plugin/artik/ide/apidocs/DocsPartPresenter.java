@@ -9,7 +9,7 @@
  *   Codenvy, S.A. - Initial implementation
  *   Samsung Electronics Co., Ltd. - Initial implementation
  *******************************************************************************/
-package org.eclipse.che.plugin.artik.ide.docs;
+package org.eclipse.che.plugin.artik.ide.apidocs;
 
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 import com.google.gwt.user.client.ui.IsWidget;
@@ -69,10 +69,7 @@ public class DocsPartPresenter extends BasePresenter {
     }
 
     String getDocURL() {
-        final String wsAgentBaseUrl = appContext.getDevMachine().getWsAgentBaseUrl();
-        final int fromIndex = wsAgentBaseUrl.indexOf("://") + 3;
-        final int endIndex = wsAgentBaseUrl.indexOf("/", fromIndex);
-        return wsAgentBaseUrl.substring(0, endIndex) + "/artikdoc";
+        return appContext.getDevMachine().getAddress() + "/artikdocs";
     }
 
     /** Open this documentation page. */

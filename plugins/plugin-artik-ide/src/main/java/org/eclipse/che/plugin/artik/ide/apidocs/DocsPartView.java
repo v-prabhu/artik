@@ -9,7 +9,7 @@
  *   Codenvy, S.A. - Initial implementation
  *   Samsung Electronics Co., Ltd. - Initial implementation
  *******************************************************************************/
-package org.eclipse.che.plugin.artik.ide.docs;
+package org.eclipse.che.plugin.artik.ide.apidocs;
 
 import org.eclipse.che.ide.api.mvp.View;
 import org.eclipse.che.ide.api.parts.base.BaseActionDelegate;

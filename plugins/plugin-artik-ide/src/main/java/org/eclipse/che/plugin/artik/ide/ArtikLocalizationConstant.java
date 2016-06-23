@@ -132,6 +132,12 @@ public interface ArtikLocalizationConstant extends Messages {
     @Key("updateSDK.notification.update.fail.message")
     String updateSDKNotificationUpdateFailMessage();
 
+    @Key("showKeywordDoc.action.title")
+    String showKeywordDocActionTitle();
+
+    @Key("showKeywordDoc.action.description")
+    String showKeywordDocActionDescription();
+
     @Key("restart.view.text")
     String restartViewText();
 

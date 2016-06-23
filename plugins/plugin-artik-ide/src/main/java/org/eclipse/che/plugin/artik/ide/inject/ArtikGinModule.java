@@ -20,8 +20,10 @@ import org.eclipse.che.ide.api.machine.CheWsAgentLinksModifier;
 import org.eclipse.che.ide.api.machine.WsAgentURLModifier;
 import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClient;
 import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClientImpl;
-import org.eclipse.che.plugin.artik.ide.docs.DocsPartView;
-import org.eclipse.che.plugin.artik.ide.docs.DocsPartViewImpl;
+import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartView;
+import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartViewImpl;
+import org.eclipse.che.plugin.artik.ide.keyworddoc.KeywordDocsServiceClient;
+import org.eclipse.che.plugin.artik.ide.keyworddoc.KeywordDocsServiceClientImpl;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceActionFactory;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKView;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKViewImpl;
@@ -44,5 +46,7 @@ public class ArtikGinModule extends AbstractGinModule {
 
         bind(UpdateSDKView.class).to(UpdateSDKViewImpl.class).in(Singleton.class);
         bind(DocsPartView.class).to(DocsPartViewImpl.class).in(Singleton.class);
+
+        bind(KeywordDocsServiceClient.class).to(KeywordDocsServiceClientImpl.class).in(Singleton.class);
     }
 }

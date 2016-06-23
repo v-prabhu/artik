@@ -9,7 +9,7 @@
  *   Codenvy, S.A. - Initial implementation
  *   Samsung Electronics Co., Ltd. - Initial implementation
  *******************************************************************************/
-package org.eclipse.che.plugin.artik.ide.docs;
+package org.eclipse.che.plugin.artik.ide.apidocs;
 
 import com.google.gwt.user.client.Window;
 import com.google.inject.Inject;

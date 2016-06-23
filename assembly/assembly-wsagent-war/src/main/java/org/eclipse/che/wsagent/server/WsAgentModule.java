@@ -38,6 +38,7 @@ import org.eclipse.che.git.impl.nativegit.NativeGitConnectionFactory;
 import org.eclipse.che.inject.DynaModule;
 import org.eclipse.che.plugin.github.server.inject.GitHubModule;
 import org.eclipse.che.plugin.java.server.rest.WsAgentURLProvider;
+import org.eclipse.che.plugin.machine.artik.keyworddoc.KeywordDocsService;
 import org.eclipse.che.plugin.maven.generator.archetype.ArchetypeGenerator;
 import org.eclipse.che.plugin.maven.server.inject.MavenModule;
 import org.eclipse.che.security.oauth.RemoteOAuthTokenProvider;
@@ -58,6 +59,7 @@ public class WsAgentModule extends AbstractModule {
         bind(ApiInfoService.class);
         bind(org.eclipse.che.plugin.machine.artik.scp.PushToDeviceService.class);
         bind(org.eclipse.che.plugin.machine.artik.discovery.DeviceDiscoveryService.class);
+        bind(KeywordDocsService.class);
 
         bind(PreferenceDao.class).to(org.eclipse.che.RemotePreferenceDao.class);
 

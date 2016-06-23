@@ -9,7 +9,7 @@
  *   Codenvy, S.A. - Initial implementation
  *   Samsung Electronics Co., Ltd. - Initial implementation
  *******************************************************************************/
-package org.eclipse.che.plugin.artik.ide.docs;
+package org.eclipse.che.plugin.artik.ide.apidocs;
 
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 import com.google.web.bindery.event.shared.EventBus;
@@ -104,14 +104,14 @@ public class DocsPartPresenterTest {
     @Test
     public void shouldReturnDosURL() throws Exception {
         DevMachine devMachine = mock(DevMachine.class);
-        when(devMachine.getWsAgentBaseUrl()).thenReturn("http://localhost:32806/wsagent/ext");
+        when(devMachine.getAddress()).thenReturn("http://localhost:32806");
         when(appContext.getDevMachine()).thenReturn(devMachine);
 
         String docURL = presenter.getDocURL();
 
         verify(appContext).getDevMachine();
-        verify(devMachine).getWsAgentBaseUrl();
+        verify(devMachine).getAddress();
 
-        assertEquals("http://localhost:32806/artikdoc", docURL);
+        assertEquals("http://localhost:32806/artikdocs", docURL);
     }
 }
