@@ -1,4 +1,5 @@
-dnf list --showduplicates libartik-sdk-sysroot | grep libartik-sdk-sysroot | awk '{print $2}' | sort -r -n
+dnf clean all > /dev/null 2>&1
+dnf list --showduplicates --disablerepo=updates --disablerepo=fedora libartik-sdk-sysroot | grep libartik-sdk-sysroot | awk '{print $2}' | sort -r -n
 
 # Special marker line. Don't modify it.
 echo ">>> end <<<"
