@@ -1,5 +1,37 @@
 # Change Log
 
+## [4.4.0](https://github.com/codenvy/artik-ide/tree/4.4.0) (2016-06-28)
+[Full Changelog](https://github.com/codenvy/artik-ide/compare/4.3.4...4.4.0)
+
+**Pull requests merged:**
+
+- Skip unnecessary repos while checking available Artik SDK versions [\#74](https://github.com/codenvy/artik-ide/pull/74) ([azatsarynnyy](https://github.com/azatsarynnyy))
+- CHE-1312: Add ability to configure credentials for several docker private registries [\#73](https://github.com/codenvy/artik-ide/pull/73) ([AndrienkoAleksandr](https://github.com/AndrienkoAleksandr))
+- CHE-1308: Display Artik API doc reference in the editor [\#71](https://github.com/codenvy/artik-ide/pull/71) ([azatsarynnyy](https://github.com/azatsarynnyy))
+- CODENVY-27; allow to open workspaces by using /ide/namespace/ws\_name schema [\#65](https://github.com/codenvy/artik-ide/pull/65) ([mshaposhnik](https://github.com/mshaposhnik))
+
+## [4.3.4](https://github.com/codenvy/artik-ide/tree/4.3.4) (2016-06-22)
+[Full Changelog](https://github.com/codenvy/artik-ide/compare/4.3.3...4.3.4)
+
+**Pull requests merged:**
+
+- Update commands for working with Artik SDK [\#70](https://github.com/codenvy/artik-ide/pull/70) ([azatsarynnyy](https://github.com/azatsarynnyy))
+- \(\#1531\) Vagrantfile: Apply Che PR \#1532 to ARTIK [\#69](https://github.com/codenvy/artik-ide/pull/69) ([creckord](https://github.com/creckord))
+
+## [4.3.3](https://github.com/codenvy/artik-ide/tree/4.3.3) (2016-06-17)
+[Full Changelog](https://github.com/codenvy/artik-ide/compare/4.3.2...4.3.3)
+
+**Pull requests merged:**
+
+- CHE-1194: Show Artik API Docs [\#68](https://github.com/codenvy/artik-ide/pull/68) ([azatsarynnyy](https://github.com/azatsarynnyy))
+- Change docker auth properties  [\#67](https://github.com/codenvy/artik-ide/pull/67) ([mmorhun](https://github.com/mmorhun))
+
+## [4.3.2](https://github.com/codenvy/artik-ide/tree/4.3.2) (2016-06-14)
+[Full Changelog](https://github.com/codenvy/artik-ide/compare/4.3.1...4.3.2)
+
+## [4.3.1](https://github.com/codenvy/artik-ide/tree/4.3.1) (2016-06-14)
+[Full Changelog](https://github.com/codenvy/artik-ide/compare/4.3.0...4.3.1)
+
 ## [4.3.0](https://github.com/codenvy/artik-ide/tree/4.3.0) (2016-06-13)
 [Full Changelog](https://github.com/codenvy/artik-ide/compare/4.3.0-RC1...4.3.0)
 
