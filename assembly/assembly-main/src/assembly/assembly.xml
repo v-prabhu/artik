@@ -24,7 +24,7 @@
             <useProjectArtifact>false</useProjectArtifact>
             <unpack>false</unpack>
             <outputDirectory>tomcat/webapps</outputDirectory>
-            <outputFileNameMapping>ide.war</outputFileNameMapping>
+            <outputFileNameMapping>ROOT.war</outputFileNameMapping>
             <includes>
                 <include>org.eclipse.che:artik-ide-assembly-ide-war</include>
             </includes>
