@@ -42,7 +42,7 @@
       {
         "name": "build",
         "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path} && $CC -lartik-sdk -lpthread -g -o artik_http_test artik_http_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary and push it to target.'",
+        "commandLine": "echo 'Compiling...' && cd ${current.project.path} && $CC -lartik-sdk-base -I$CPATH/connectivity -I$CPATH/base -lpthread -g artik_http_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
         "attributes": {
           "previewUrl": ""
         }
@@ -50,7 +50,7 @@
       {
         "name": "startgdb",
         "type": "custom",
-        "commandLine": "gdbserver :1234 /root/artik_http_test",
+        "commandLine": "gdbserver :1234 /root/a.out",
         "attributes": {
           "previewUrl": ""
         }
@@ -97,7 +97,7 @@
       {
         "name": "build",
         "type": "custom",
-        "commandLine": "cd ${current.project.path} && $CC -g -o blink Blink.c",
+        "commandLine": "cd ${current.project.path} && $CC -g Blink.c",
         "attributes": {
           "previewUrl": ""
         }
@@ -105,7 +105,7 @@
       {
         "name": "startgdb",
         "type": "custom",
-        "commandLine": "gdbserver :1234 /root/blink",
+        "commandLine": "gdbserver :1234 /root/a.out",
         "attributes": {
           "previewUrl": ""
         }
@@ -152,7 +152,7 @@
       {
         "name": "build",
         "type": "custom",
-        "commandLine": "cd ${current.project.path} && $CC -g -o button button.c",
+        "commandLine": "cd ${current.project.path} && $CC -g button.c",
         "attributes": {
           "previewUrl": ""
         }
@@ -160,7 +160,7 @@
       {
         "name": "startgdb",
         "type": "custom",
-        "commandLine": "gdbserver :1234 /root/button",
+        "commandLine": "gdbserver :1234 /root/a.out",
         "attributes": {
           "previewUrl": ""
         }
