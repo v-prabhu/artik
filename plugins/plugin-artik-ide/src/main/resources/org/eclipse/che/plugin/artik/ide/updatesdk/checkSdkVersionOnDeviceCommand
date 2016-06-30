@@ -1,1 +1,6 @@
-dnf info --disablerepo=updates --disablerepo=fedora libartik-sdk-base | grep Version | awk '{print $3}'
+VERSION=$(dnf list installed | grep libartik-sdk-base.armv7hl | awk '{print $2}')
+if [[ $VERSION ]]; then
+    echo $VERSION
+else
+    echo "Not installed"
+fi
