@@ -16,9 +16,9 @@ import com.google.inject.assistedinject.Assisted;
 
 import org.eclipse.che.ide.api.action.Action;
 import org.eclipse.che.ide.api.action.ActionEvent;
-import org.eclipse.che.ide.api.project.node.HasStorablePath;
 import org.eclipse.che.ide.api.selection.Selection;
 import org.eclipse.che.ide.api.selection.SelectionAgent;
+import org.eclipse.che.ide.resources.tree.ResourceNode;
 import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstants;
 import org.eclipse.che.plugin.artik.ide.scp.PushToDeviceManager;
 
@@ -59,8 +59,8 @@ public class PushToDeviceAction extends Action {
 
         Object selectedElement = selection.getHeadElement();
 
-        if (selectedElement instanceof HasStorablePath) {
-            return ((HasStorablePath)selectedElement).getStorablePath();
+        if (selectedElement instanceof ResourceNode) {
+            return ((ResourceNode)selectedElement).getData().getLocation().toString();
         }
 
         return "";
