@@ -33,6 +33,8 @@ public class Device {
 
     private String type;
 
+    private String syncFolder;
+
     private RecipeDescriptor recipe;
 
     /**
@@ -53,6 +55,14 @@ public class Device {
     public Device(String name, String type) {
         this.name = name;
         this.type = type;
+    }
+
+    public String getSyncFolder() {
+        return syncFolder;
+    }
+
+    public void setSyncFolder(String syncFolder) {
+        this.syncFolder = syncFolder;
     }
 
     public RecipeDescriptor getRecipe() {

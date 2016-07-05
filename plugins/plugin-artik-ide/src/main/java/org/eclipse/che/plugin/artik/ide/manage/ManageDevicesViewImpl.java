@@ -114,6 +114,9 @@ public class ManageDevicesViewImpl extends Window implements ManageDevicesView {
     PasswordTextBox password;
 
     @UiField
+    TextBox syncFolder;
+
+    @UiField
     FlowPanel footer;
 
     private Button closeButton;
@@ -218,6 +221,13 @@ public class ManageDevicesViewImpl extends Window implements ManageDevicesView {
             @Override
             public void onKeyUp(KeyUpEvent keyUpEvent) {
                 delegate.onPasswordChanged(password.getValue());
+            }
+        });
+
+        syncFolder.addKeyUpHandler(new KeyUpHandler() {
+            @Override
+            public void onKeyUp(KeyUpEvent keyUpEvent) {
+                delegate.onSyncFolderChanged(syncFolder.getValue());
             }
         });
     }
@@ -464,6 +474,16 @@ public class ManageDevicesViewImpl extends Window implements ManageDevicesView {
     }
 
     @Override
+    public void setSyncFolder(String folder) {
+        this.syncFolder.setValue(folder);
+    }
+
+    @Override
+    public String getSyncFolder() {
+        return syncFolder.getValue();
+    }
+
+    @Override
     public void enableCancelButton(boolean enable) {
         cancelButton.setEnabled(enable);
     }
@@ -480,6 +500,7 @@ public class ManageDevicesViewImpl extends Window implements ManageDevicesView {
         port.setEnabled(enable);
         userName.setEnabled(enable);
         password.setEnabled(enable);
+        syncFolder.setEnabled(enable);
     }
 
     @Override

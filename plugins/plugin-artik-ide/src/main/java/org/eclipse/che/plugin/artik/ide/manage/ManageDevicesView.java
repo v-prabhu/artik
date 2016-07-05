@@ -154,6 +154,22 @@ public interface ManageDevicesView extends View<ManageDevicesView.ActionDelegate
     String getPassword();
 
     /**
+     * Sets synchronization folder.
+     *
+     * @param folder
+     *          folder
+     */
+    void setSyncFolder(String folder);
+
+    /**
+     * Returns value of synchronization folder.
+     *
+     * @return
+     *          value of synchronization folder
+     */
+    String getSyncFolder();
+
+    /**
      * Enables or disables Cancel button.
      *
      * @param enable
@@ -241,6 +257,8 @@ public interface ManageDevicesView extends View<ManageDevicesView.ActionDelegate
         void onUserNameChanged(String value);
 
         void onPasswordChanged(String value);
+
+        void onSyncFolderChanged(String value);
 
         void onCancelClicked();
 

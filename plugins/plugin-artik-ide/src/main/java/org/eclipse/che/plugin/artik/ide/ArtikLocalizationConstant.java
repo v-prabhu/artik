@@ -42,6 +42,9 @@ public interface ArtikLocalizationConstant extends Messages {
     @Key("manage.artik.devices.view.login")
     String manageArtikDevicesViewLogin();
 
+    @Key("manage.artik.devices.view.syncfolder")
+    String manageArtikDevicesViewSyncfolder();
+
     @Key("manage.artik.devices.view.password")
     String manageArtikDevicesViewPassword();
 

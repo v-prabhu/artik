@@ -271,6 +271,11 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                 device.setPassword(password);
             }
 
+            if (json.get("syncFolder") != null) {
+                String syncFolder = json.get("syncFolder").isString().stringValue();
+                device.setSyncFolder(syncFolder);
+            }
+
         } catch (Exception e) {
             Log.error(ManageDevicesPresenter.class, "Unable to parse recipe JSON. " + e.getMessage());
         }
@@ -290,6 +295,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         device.setPort("22");
         device.setUserName("root");
         device.setPassword("");
+        device.setSyncFolder("/root");
         device.setDirty(true);
         device.setConnected(false);
         devices.add(device);
@@ -325,6 +331,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         view.setPort(device.getPort());
         view.setUserName(device.getUserName());
         view.setPassword(device.getPassword());
+        view.setSyncFolder(device.getSyncFolder());
 
         view.selectDeviceName();
 
@@ -383,6 +390,17 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         }
 
         selectedDevice.setPassword(value);
+        selectedDevice.setDirty(true);
+        updateButtons();
+    }
+
+    @Override
+    public void onSyncFolderChanged(String value) {
+        if (selectedDevice.getSyncFolder().equals(value)) {
+            return;
+        }
+
+        selectedDevice.setSyncFolder(value);
         selectedDevice.setDirty(true);
         updateButtons();
     }
@@ -463,6 +481,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         content.addField("port", selectedDevice.getPort());
         content.addField("username", selectedDevice.getUserName());
         content.addField("password", selectedDevice.getPassword());
+        content.addField("syncFolder", selectedDevice.getSyncFolder());
 
         NewRecipe newRecipe = dtoFactory.createDto(NewRecipe.class)
                 .withName(selectedDevice.getName())
@@ -495,6 +514,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         content.addField("port", selectedDevice.getPort());
         content.addField("username", selectedDevice.getUserName());
         content.addField("password", selectedDevice.getPassword());
+        content.addField("syncFolder", selectedDevice.getSyncFolder());
 
         RecipeUpdate recipeUpdate = dtoFactory.createDto(RecipeUpdate.class)
                 .withId(selectedDevice.getRecipe().getId())

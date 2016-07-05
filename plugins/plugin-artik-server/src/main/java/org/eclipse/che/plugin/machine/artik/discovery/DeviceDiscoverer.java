@@ -114,10 +114,10 @@ public class DeviceDiscoverer {
             try {
                 process.waitFor();
                 if (process.exitValue() != 0) {
-                    LOG.debug(String.format("Command execution failed: %s", commandLine.toString()));
-                    throw new ServerException(String.format("Command execution failed: %s", commandLine.toString()));
+                    LOG.debug(String.format("ShellCommand execution failed: %s", commandLine.toString()));
+                    throw new ServerException(String.format("ShellCommand execution failed: %s", commandLine.toString()));
                 } else {
-                    LOG.debug(String.format("Command execution successful: %s", commandLine.toString()));
+                    LOG.debug(String.format("ShellCommand execution successful: %s", commandLine.toString()));
                 }
             } catch (InterruptedException e) {
                 Thread.interrupted();

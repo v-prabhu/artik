@@ -13,6 +13,9 @@ package org.eclipse.che.wsagent.server;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 
 import org.eclipse.che.ApiEndpointAccessibilityChecker;
@@ -32,6 +35,7 @@ import org.eclipse.che.api.project.server.ProjectApiModule;
 import org.eclipse.che.api.ssh.server.HttpSshServiceClient;
 import org.eclipse.che.api.ssh.server.SshServiceClient;
 import org.eclipse.che.api.user.server.dao.PreferenceDao;
+import org.eclipse.che.api.vfs.impl.file.event.HiEventDetector;
 import org.eclipse.che.commons.lang.Pair;
 import org.eclipse.che.everrest.CheAsynchronousJobPool;
 import org.eclipse.che.git.impl.nativegit.NativeGitConnectionFactory;
@@ -39,6 +43,10 @@ import org.eclipse.che.inject.DynaModule;
 import org.eclipse.che.plugin.github.server.inject.GitHubModule;
 import org.eclipse.che.plugin.java.server.rest.WsAgentURLProvider;
 import org.eclipse.che.plugin.machine.artik.keyworddoc.KeywordDocsService;
+import org.eclipse.che.plugin.machine.artik.replication.ReplicationService;
+import org.eclipse.che.plugin.machine.artik.replication.event.ArtikVfsModificationEventDetector;
+import org.eclipse.che.plugin.machine.artik.replication.event.ArtikVfsModificationEventListener;
+import org.eclipse.che.plugin.machine.artik.replication.shell.JsonValueHelperFactory;
 import org.eclipse.che.plugin.maven.generator.archetype.ArchetypeGenerator;
 import org.eclipse.che.plugin.maven.server.inject.MavenModule;
 import org.eclipse.che.security.oauth.RemoteOAuthTokenProvider;
@@ -57,9 +65,18 @@ public class WsAgentModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(ApiInfoService.class);
-        bind(org.eclipse.che.plugin.machine.artik.scp.PushToDeviceService.class);
+        bind(org.eclipse.che.plugin.machine.artik.replication.PushToDeviceService.class);
         bind(org.eclipse.che.plugin.machine.artik.discovery.DeviceDiscoveryService.class);
         bind(KeywordDocsService.class);
+
+        Multibinder<HiEventDetector<?>> highLevelVfsEventDetectorMultibinder =
+                Multibinder.newSetBinder(binder(), new TypeLiteral<HiEventDetector<?>>() {
+                });
+        highLevelVfsEventDetectorMultibinder.addBinding().to(ArtikVfsModificationEventDetector.class);
+        bind(ArtikVfsModificationEventListener.class);
+        bind(ReplicationService.class);
+
+        install(new FactoryModuleBuilder().build(JsonValueHelperFactory.class));
 
         bind(PreferenceDao.class).to(org.eclipse.che.RemotePreferenceDao.class);
 
@@ -102,7 +119,7 @@ public class WsAgentModule extends AbstractModule {
     @Provides
     @SuppressWarnings("unchecked")
     Pair<String, String>[] eventSubscriptionsProvider(@Named("event.bus.url") String eventBusURL) {
-        return new Pair[] {Pair.of(eventBusURL, "")};
+        return new Pair[]{Pair.of(eventBusURL, "")};
     }
 
     //it's need for EventOriginClientPropagationPolicy and in the future will be replaced with the property
@@ -110,6 +127,6 @@ public class WsAgentModule extends AbstractModule {
     @Provides
     @SuppressWarnings("unchecked")
     Pair<String, String>[] propagateEventsProvider(@Named("event.bus.url") String eventBusURL) {
-        return new Pair[] {Pair.of(eventBusURL, "")};
+        return new Pair[]{Pair.of(eventBusURL, "")};
     }
 }
