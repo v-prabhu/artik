@@ -16,8 +16,8 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>artik-ide-assembly-parent</artifactId>
-        <groupId>org.eclipse.che</groupId>
-        <version>4.5.0-RC1-SNAPSHOT</version>
+        <groupId>org.eclipse.artik</groupId>
+        <version>0.1.0-RC1-SNAPSHOT</version>
     </parent>
     <artifactId>artik-ide-assembly-wsagent-server</artifactId>
     <packaging>pom</packaging>
@@ -32,7 +32,7 @@
             <artifactId>maven-dependency-tree</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.che</groupId>
+            <groupId>org.eclipse.artik</groupId>
             <artifactId>artik-ide-assembly-wsagent-war</artifactId>
             <type>war</type>
         </dependency>

@@ -16,8 +16,8 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>artik-ide-assembly-parent</artifactId>
-        <groupId>org.eclipse.che</groupId>
-        <version>4.5.0-RC1-SNAPSHOT</version>
+        <groupId>org.eclipse.artik</groupId>
+        <version>0.1.0-RC1-SNAPSHOT</version>
     </parent>
     <artifactId>artik-ide-assembly-ide-war</artifactId>
     <packaging>war</packaging>
@@ -58,6 +58,18 @@
             <artifactId>javax.inject</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.eclipse.artik.plugin</groupId>
+            <artifactId>artik-ide-plugin-help-ext</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.artik.plugin</groupId>
+            <artifactId>artik-ide-plugin-ide</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.artik.plugin</groupId>
+            <artifactId>artik-ide-plugin-product-info</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.eclipse.che.core</groupId>
             <artifactId>che-core-commons-gwt</artifactId>
         </dependency>
@@ -80,18 +92,6 @@
         <dependency>
             <groupId>org.eclipse.che.lib</groupId>
             <artifactId>che-swagger-module</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.che.plugin</groupId>
-            <artifactId>artik-ide-plugin-help-ext</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.che.plugin</groupId>
-            <artifactId>artik-ide-plugin-ide</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.che.plugin</groupId>
-            <artifactId>artik-ide-plugin-product-info</artifactId>
         </dependency>
         <dependency>
             <groupId>org.eclipse.che.plugin</groupId>
