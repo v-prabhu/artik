@@ -16,12 +16,12 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>artik-ide-parent</artifactId>
-        <groupId>org.eclipse.che</groupId>
-        <version>4.5.0-RC1-SNAPSHOT</version>
+        <groupId>org.eclipse.artik</groupId>
+        <version>0.1.0-RC1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>artik-ide-assembly-parent</artifactId>
-    <version>4.5.0-RC1-SNAPSHOT</version>
+    <version>0.1.0-RC1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Artik IDE :: Assemblies parent</name>
     <modules>

@@ -16,8 +16,8 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>artik-ide-plugin-parent</artifactId>
-        <groupId>org.eclipse.che.plugin</groupId>
-        <version>4.5.0-RC1-SNAPSHOT</version>
+        <groupId>org.eclipse.artik.plugin</groupId>
+        <version>0.1.0-RC1-SNAPSHOT</version>
     </parent>
     <artifactId>artik-ide-plugin-server</artifactId>
     <packaging>jar</packaging>
@@ -55,6 +55,10 @@
             <artifactId>javax.ws.rs-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.eclipse.artik.plugin</groupId>
+            <artifactId>artik-ide-plugin-shared</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.eclipse.che.core</groupId>
             <artifactId>che-core-api-core</artifactId>
         </dependency>
@@ -80,10 +84,6 @@
         </dependency>
         <dependency>
             <groupId>org.eclipse.che.plugin</groupId>
-            <artifactId>artik-ide-plugin-shared</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.che.plugin</groupId>
             <artifactId>che-plugin-ssh-machine</artifactId>
         </dependency>
         <dependency>
@@ -94,7 +94,6 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
-
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>

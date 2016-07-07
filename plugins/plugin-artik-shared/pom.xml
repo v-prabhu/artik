@@ -16,8 +16,8 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>artik-ide-plugin-parent</artifactId>
-        <groupId>org.eclipse.che.plugin</groupId>
-        <version>4.5.0-RC1-SNAPSHOT</version>
+        <groupId>org.eclipse.artik.plugin</groupId>
+        <version>0.1.0-RC1-SNAPSHOT</version>
     </parent>
     <artifactId>artik-ide-plugin-shared</artifactId>
     <packaging>jar</packaging>

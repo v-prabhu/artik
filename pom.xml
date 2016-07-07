@@ -19,9 +19,9 @@
         <groupId>org.eclipse.che.depmgt</groupId>
         <version>4.5.0-RC1-SNAPSHOT</version>
     </parent>
-    <groupId>org.eclipse.che</groupId>
+    <groupId>org.eclipse.artik</groupId>
     <artifactId>artik-ide-parent</artifactId>
-    <version>4.5.0-RC1-SNAPSHOT</version>
+    <version>0.1.0-RC1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Artik IDE :: Parent</name>
     <modules>
@@ -46,56 +46,56 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>org.eclipse.che</groupId>
+                <groupId>org.eclipse.artik</groupId>
                 <artifactId>artik-ide-assembly-ide-war</artifactId>
                 <version>${project.version}</version>
                 <type>war</type>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.che</groupId>
+                <groupId>org.eclipse.artik</groupId>
                 <artifactId>artik-ide-assembly-main</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.che</groupId>
+                <groupId>org.eclipse.artik</groupId>
                 <artifactId>artik-ide-assembly-wsagent-server</artifactId>
                 <version>${project.version}</version>
                 <type>zip</type>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.che</groupId>
+                <groupId>org.eclipse.artik</groupId>
                 <artifactId>artik-ide-assembly-wsagent-war</artifactId>
                 <version>${project.version}</version>
                 <type>war</type>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.che</groupId>
+                <groupId>org.eclipse.artik</groupId>
                 <artifactId>artik-ide-assembly-wsmaster-war</artifactId>
                 <version>${project.version}</version>
                 <type>war</type>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.che.plugin</groupId>
+                <groupId>org.eclipse.artik.plugin</groupId>
                 <artifactId>artik-ide-plugin-help-ext</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.che.plugin</groupId>
+                <groupId>org.eclipse.artik.plugin</groupId>
                 <artifactId>artik-ide-plugin-ide</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.che.plugin</groupId>
+                <groupId>org.eclipse.artik.plugin</groupId>
                 <artifactId>artik-ide-plugin-product-info</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.che.plugin</groupId>
+                <groupId>org.eclipse.artik.plugin</groupId>
                 <artifactId>artik-ide-plugin-server</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.eclipse.che.plugin</groupId>
+                <groupId>org.eclipse.artik.plugin</groupId>
                 <artifactId>artik-ide-plugin-shared</artifactId>
                 <version>${project.version}</version>
             </dependency>
