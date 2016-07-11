@@ -108,9 +108,6 @@ public interface ArtikLocalizationConstant extends Messages {
     @Key("updateSDK.view.column.currentVersion.title")
     String updateSDKViewColumnInstalledVersionTitle();
 
-    @Key("updateSDK.view.label.availableVersions.title")
-    String updateSDKViewLabelAvailableVersionsTitle();
-
     @Key("updateSDK.view.label.selectVersion.title")
     String updateSDKViewLabelSelectVersionTitle();
 

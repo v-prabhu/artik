@@ -39,7 +39,7 @@
         }
     </ui:style>
 
-    <g:DockLayoutPanel unit="PX" width="350px" height="200px" addStyleNames="{style.main-panel}">
+    <g:DockLayoutPanel unit="PX" width="350px" height="250px" addStyleNames="{style.main-panel}">
         <g:center>
             <g:ScrollPanel>
                 <c:CellTable width="100%" ui:field="targetsTable" focus="false"/>
@@ -47,7 +47,6 @@
         </g:center>
         <g:south size="100">
             <g:FlowPanel styleName="{style.bottom-panel}">
-                <g:Label addStyleNames="{style.label}" text="{localizationConstants.updateSDKViewLabelAvailableVersionsTitle}"/>
                 <g:Label addStyleNames="{style.box-label}" text="{localizationConstants.updateSDKViewLabelSelectVersionTitle}"/>
                 <che:CustomListBox ui:field="versionsBox" debugId="window-artik-updateSDK-availableVersion" addStyleNames="{style.box}"/>
             </g:FlowPanel>
