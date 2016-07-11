@@ -1,3 +1,4 @@
+npm install -g artik-sdk 2>&1
 dnf remove -y libartik-sdk-* 2>&1
 dnf install -y libartik-sdk-base-${sdk.version}.armv7hl libartik-sdk-base-devel-${sdk.version}.armv7hl libartik-sdk-bluetooth-${sdk.version}.armv7hl libartik-sdk-bluetooth-devel-${sdk.version}.armv7hl libartik-sdk-connectivity-${sdk.version}.armv7hl libartik-sdk-connectivity-devel-${sdk.version}.armv7hl libartik-sdk-media-${sdk.version}.armv7hl libartik-sdk-media-devel-${sdk.version}.armv7hl libartik-sdk-sensor-${sdk.version}.armv7hl libartik-sdk-sensor-devel-${sdk.version}.armv7hl libartik-sdk-systemio-${sdk.version}.armv7hl libartik-sdk-systemio-devel-${sdk.version}.armv7hl libartik-sdk-tests-${sdk.version}.armv7hl libartik-sdk-wifi-${sdk.version}.armv7hl libartik-sdk-wifi-devel-${sdk.version}.armv7hl libartik-sdk-zigbee-${sdk.version}.armv7hl libartik-sdk-zigbee-devel-${sdk.version}.armv7hl
 

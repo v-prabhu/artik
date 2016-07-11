@@ -26,7 +26,7 @@
             <outputDirectory>tomcat/webapps</outputDirectory>
             <outputFileNameMapping>ROOT.war</outputFileNameMapping>
             <includes>
-                <include>org.eclipse.che:artik-ide-assembly-ide-war</include>
+                <include>org.eclipse.artik:artik-ide-assembly-ide-war</include>
             </includes>
         </dependencySet>
         <dependencySet>
@@ -35,7 +35,7 @@
             <outputDirectory>tomcat/webapps</outputDirectory>
             <outputFileNameMapping>wsmaster.war</outputFileNameMapping>
             <includes>
-                <include>org.eclipse.che:artik-ide-assembly-wsmaster-war</include>
+                <include>org.eclipse.artik:artik-ide-assembly-wsmaster-war</include>
             </includes>
         </dependencySet>
         <dependencySet>
@@ -67,7 +67,7 @@
             <outputDirectory>lib</outputDirectory>
             <outputFileNameMapping>ws-agent.zip</outputFileNameMapping>
             <includes>
-                <include>org.eclipse.che:artik-ide-assembly-wsagent-server</include>
+                <include>org.eclipse.artik:artik-ide-assembly-wsagent-server</include>
             </includes>
         </dependencySet>
         <dependencySet>
