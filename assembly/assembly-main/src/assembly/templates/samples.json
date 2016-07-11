@@ -42,7 +42,7 @@
       {
         "name": "build",
         "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path} && $CC -lartik-sdk -lpthread -g -o artik_http_test artik_http_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary and push it to target.'",
+        "commandLine": "echo 'Compiling...' && cd ${current.project.path} && $CC -lartik-sdk-base -I$CPATH/connectivity -I$CPATH/base -lpthread -g artik_http_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
         "attributes": {
           "previewUrl": ""
         }
@@ -50,7 +50,117 @@
       {
         "name": "startgdb",
         "type": "custom",
-        "commandLine": "gdbserver :1234 /root/artik_http_test",
+        "commandLine": "gdbserver :1234 /root/a.out",
+        "attributes": {
+          "previewUrl": ""
+        }
+      },
+      {
+        "name": "stoptgdb",
+        "type": "custom",
+        "commandLine": "process=$(ps ax | grep \"[g]dbserver\" | awk {'print $1;}')
+        if [[ $process ]]; then
+      echo 'Stopping GDB server...'
+      kill $process
+      echo 'GDB server stopped'
+      else
+      echo 'GDB server is not running'
+      fi",
+      "attributes": {
+        "previewUrl": ""
+      }
+      }
+    ],
+    "links": [],
+    "category": "Samples",
+    "tags": [
+      "Artik"
+    ]
+  },
+  {
+    "name": "artik-pwm-test",
+    "displayName": "artik-pwm-test",
+    "path": "/artik-pwm-test",
+    "description": "An example app that runs pwm test using Artik SDK",
+    "projectType": "c",
+    "mixins": [],
+    "attributes": {
+    },
+    "modules": [],
+    "problems": [],
+    "source": {
+      "type": "git",
+      "location": "https://github.com/che-samples/artik-pwm-test.git",
+      "parameters": {}
+    },
+    "commands": [
+      {
+        "name": "build",
+        "type": "custom",
+        "commandLine": "echo 'Compiling...' && cd ${current.project.path} && $CC -lartik-sdk-base -I$CPATH/systemio -I$CPATH/base -lpthread -g artik_pwm_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
+        "attributes": {
+          "previewUrl": ""
+        }
+      },
+      {
+        "name": "startgdb",
+        "type": "custom",
+        "commandLine": "gdbserver :1234 /root/a.out",
+        "attributes": {
+          "previewUrl": ""
+        }
+      },
+      {
+        "name": "stoptgdb",
+        "type": "custom",
+        "commandLine": "process=$(ps ax | grep \"[g]dbserver\" | awk {'print $1;}')
+        if [[ $process ]]; then
+      echo 'Stopping GDB server...'
+      kill $process
+      echo 'GDB server stopped'
+      else
+      echo 'GDB server is not running'
+      fi",
+      "attributes": {
+        "previewUrl": ""
+      }
+      }
+    ],
+    "links": [],
+    "category": "Samples",
+    "tags": [
+      "Artik"
+    ]
+  },
+  {
+    "name": "artik-wifi-test",
+    "displayName": "artik-wifi-test",
+    "path": "/artik-wifi-test",
+    "description": "An example app that runs WIFI test using Artik SDK. Network SSID and password required.",
+    "projectType": "c",
+    "mixins": [],
+    "attributes": {
+    },
+    "modules": [],
+    "problems": [],
+    "source": {
+      "type": "git",
+      "location": "https://github.com/che-samples/artik-wifi-test.git",
+      "parameters": {}
+    },
+    "commands": [
+      {
+        "name": "build",
+        "type": "custom",
+        "commandLine": "echo 'Compiling...' && cd ${current.project.path} && $CC -lartik-sdk-base -I$CPATH/wifi -I$CPATH/base -lpthread -g artik_wifi_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
+        "attributes": {
+          "previewUrl": ""
+        }
+      },
+      {
+        "name": "startgdb",
+        "type": "custom",
+        "commandLine": "gdbserver :1234 /root/a.out",
         "attributes": {
           "previewUrl": ""
         }
@@ -97,7 +207,7 @@
       {
         "name": "build",
         "type": "custom",
-        "commandLine": "cd ${current.project.path} && $CC -g -o blink Blink.c",
+        "commandLine": "cd ${current.project.path} && $CC -g Blink.c",
         "attributes": {
           "previewUrl": ""
         }
@@ -105,7 +215,7 @@
       {
         "name": "startgdb",
         "type": "custom",
-        "commandLine": "gdbserver :1234 /root/blink",
+        "commandLine": "gdbserver :1234 /root/a.out",
         "attributes": {
           "previewUrl": ""
         }
@@ -152,7 +262,7 @@
       {
         "name": "build",
         "type": "custom",
-        "commandLine": "cd ${current.project.path} && $CC -g -o button button.c",
+        "commandLine": "cd ${current.project.path} && $CC -g button.c",
         "attributes": {
           "previewUrl": ""
         }
@@ -160,7 +270,7 @@
       {
         "name": "startgdb",
         "type": "custom",
-        "commandLine": "gdbserver :1234 /root/button",
+        "commandLine": "gdbserver :1234 /root/a.out",
         "attributes": {
           "previewUrl": ""
         }
