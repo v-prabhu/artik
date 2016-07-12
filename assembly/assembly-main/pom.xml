@@ -16,25 +16,25 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>artik-ide-assembly-parent</artifactId>
-        <groupId>org.eclipse.che</groupId>
-        <version>4.4.2</version>
+        <groupId>org.eclipse.artik</groupId>
+        <version>0.1.0-RC1-SNAPSHOT</version>
     </parent>
     <artifactId>artik-ide-assembly-main</artifactId>
     <packaging>pom</packaging>
     <name>Artik IDE :: Assemblies Tomcat</name>
     <dependencies>
         <dependency>
-            <groupId>org.eclipse.che</groupId>
+            <groupId>org.eclipse.artik</groupId>
             <artifactId>artik-ide-assembly-ide-war</artifactId>
             <type>war</type>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.che</groupId>
+            <groupId>org.eclipse.artik</groupId>
             <artifactId>artik-ide-assembly-wsagent-server</artifactId>
             <type>zip</type>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.che</groupId>
+            <groupId>org.eclipse.artik</groupId>
             <artifactId>artik-ide-assembly-wsmaster-war</artifactId>
             <type>war</type>
         </dependency>
@@ -84,7 +84,7 @@
                     <appendAssemblyId>false</appendAssemblyId>
                     <updateOnly>false</updateOnly>
                     <descriptor>${project.basedir}/src/assembly/assembly.xml</descriptor>
-                    <finalName>eclipse-che-${project.version}</finalName>
+                    <finalName>artik-ide-${project.version}</finalName>
                     <tarLongFileMode>posix</tarLongFileMode>
                 </configuration>
             </plugin>
