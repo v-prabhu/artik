@@ -17,12 +17,12 @@
     <parent>
         <artifactId>artik-ide-parent</artifactId>
         <groupId>org.eclipse.artik</groupId>
-        <version>0.1.0-RC1</version>
+        <version>0.1.0-RC2-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <groupId>org.eclipse.artik.plugin</groupId>
     <artifactId>artik-ide-plugin-parent</artifactId>
-    <version>0.1.0-RC1</version>
+    <version>0.1.0-RC2-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Artik IDE :: Plugin :: Parent</name>
     <modules>
