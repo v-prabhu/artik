@@ -25,7 +25,7 @@ ENV PATH $JAVA_HOME/bin:$PATH
 
 EXPOSE 8080
 
-ADD /assembly/assembly-main/target/eclipse-che-*/eclipse-che-* /home/user/che
+ADD /assembly/assembly-main/target/artik-ide-*/artik-ide-* /home/user/che
 ENV CHE_HOME /home/user/che
 
 ENTRYPOINT [ "/home/user/che/bin/che.sh", "-c" ]
