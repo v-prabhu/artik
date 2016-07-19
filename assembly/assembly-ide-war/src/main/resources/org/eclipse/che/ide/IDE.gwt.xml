@@ -67,6 +67,7 @@
     <inherits name='org.eclipse.che.plugin.artik.ide.info.ProductInfo'/>
 
     <!-- Platform API GWT client dependencies                       -->
+    <inherits name='org.eclipse.che.api.core.model.Model'/>
     <inherits name='org.eclipse.che.api.auth.Auth'/>
     <inherits name='org.eclipse.che.api.core.Core'/>
     <inherits name='org.eclipse.che.api.machine.Machine'/>
