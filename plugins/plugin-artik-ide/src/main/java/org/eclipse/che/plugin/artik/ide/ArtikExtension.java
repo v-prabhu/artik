@@ -28,8 +28,9 @@ import org.eclipse.che.ide.api.machine.events.WsAgentStateEvent;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
 import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartPresenter;
 import org.eclipse.che.plugin.artik.ide.apidocs.ShowDocsAction;
-import org.eclipse.che.plugin.artik.ide.manage.ManageArtikDevicesAction;
 import org.eclipse.che.plugin.artik.ide.keyworddoc.ShowKeywordDocsAction;
+import org.eclipse.che.plugin.artik.ide.manage.ManageArtikDevicesAction;
+import org.eclipse.che.plugin.artik.ide.resourcemonitor.ResourceMonitor;
 import org.eclipse.che.plugin.artik.ide.scp.PushToDeviceManager;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKAction;
 
@@ -78,7 +79,8 @@ public class ArtikExtension {
                                 UpdateSDKAction updateSDKAction,
                                 ShowDocsAction showDocsAction,
                                 ShowKeywordDocsAction showKeywordDocsAction,
-                                KeyBindingAgent keyBindingAgent) {
+                                KeyBindingAgent keyBindingAgent,
+                                ResourceMonitor resourceMonitor) {
         final DefaultActionGroup artikGroup = new DefaultActionGroup(ARTIK_GROUP_MAIN_MENU_NAME, true, actionManager);
         actionManager.registerAction(ARTIK_GROUP_MAIN_MENU_ID, artikGroup);
         final DefaultActionGroup mainMenu = (DefaultActionGroup)actionManager.getAction(GROUP_MAIN_MENU);

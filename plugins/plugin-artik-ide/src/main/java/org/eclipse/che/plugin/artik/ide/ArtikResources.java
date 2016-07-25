@@ -41,6 +41,21 @@ public interface ArtikResources extends ClientBundle {
     @Source("updatesdk/recipe")
     TextResource recipe();
 
+    @Source("resourcemonitor/cpu")
+    TextResource getCpuCommand();
+
+    @Source("resourcemonitor/memTotal")
+    TextResource getTotalMemoryCommand();
+
+    @Source("resourcemonitor/memUsed")
+    TextResource getUsedMemoryCommand();
+
+    @Source("resourcemonitor/storageTotal")
+    TextResource getTotalStorageSpaceCommand();
+
+    @Source("resourcemonitor/storageUsed")
+    TextResource getUsedStorageSpaceCommand();
+
     /** The CssResource interface for the Artik extension. */
     interface Css extends CssResource {
 

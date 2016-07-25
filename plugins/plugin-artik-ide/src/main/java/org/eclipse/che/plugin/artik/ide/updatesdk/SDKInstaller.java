@@ -84,6 +84,10 @@ public class SDKInstaller {
         this.workspaceServiceClient = workspaceServiceClient;
     }
 
+    private static boolean isErrorMessage(String message) {
+        return message.startsWith("[STDERR]") || message.startsWith("\"[STDERR]");
+    }
+
     /** Returns list of Artik SDK versions available to install. */
     public Promise<List<String>> getAvailableSDKVersions() {
         final String chanel = "process:output:" + UUID.uuid();
@@ -268,9 +272,5 @@ public class SDKInstaller {
                 return "Workspace has been successfully updated";
             }
         });
-    }
-
-    private boolean isErrorMessage(String message) {
-        return message.startsWith("[STDERR]") || message.startsWith("\"[STDERR]");
     }
 }
