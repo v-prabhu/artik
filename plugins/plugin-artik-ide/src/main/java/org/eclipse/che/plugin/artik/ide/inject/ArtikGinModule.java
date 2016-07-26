@@ -24,6 +24,8 @@ import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartView;
 import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartViewImpl;
 import org.eclipse.che.plugin.artik.ide.keyworddoc.KeywordDocsServiceClient;
 import org.eclipse.che.plugin.artik.ide.keyworddoc.KeywordDocsServiceClientImpl;
+import org.eclipse.che.plugin.artik.ide.resourcemonitor.ResourceIndicatorView;
+import org.eclipse.che.plugin.artik.ide.resourcemonitor.ResourceIndicatorViewImpl;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceActionFactory;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKView;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKViewImpl;
@@ -48,5 +50,8 @@ public class ArtikGinModule extends AbstractGinModule {
         bind(DocsPartView.class).to(DocsPartViewImpl.class).in(Singleton.class);
 
         bind(KeywordDocsServiceClient.class).to(KeywordDocsServiceClientImpl.class).in(Singleton.class);
+
+        bind(ResourceIndicatorView.class).to(ResourceIndicatorViewImpl.class);
     }
+
 }
