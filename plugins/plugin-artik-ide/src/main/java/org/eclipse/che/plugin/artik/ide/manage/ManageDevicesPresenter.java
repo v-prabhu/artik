@@ -271,6 +271,11 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                 device.setPassword(password);
             }
 
+            if (json.get("replicationFolder") != null) {
+                String syncFolder = json.get("replicationFolder").isString().stringValue();
+                device.setReplicationFolder(syncFolder);
+            }
+
         } catch (Exception e) {
             Log.error(ManageDevicesPresenter.class, "Unable to parse recipe JSON. " + e.getMessage());
         }
@@ -290,6 +295,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         device.setPort("22");
         device.setUserName("root");
         device.setPassword("");
+        device.setReplicationFolder("/root");
         device.setDirty(true);
         device.setConnected(false);
         devices.add(device);
@@ -325,6 +331,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         view.setPort(device.getPort());
         view.setUserName(device.getUserName());
         view.setPassword(device.getPassword());
+        view.setReplicationFolder(device.getReplicationFolder());
 
         view.selectDeviceName();
 
@@ -383,6 +390,17 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         }
 
         selectedDevice.setPassword(value);
+        selectedDevice.setDirty(true);
+        updateButtons();
+    }
+
+    @Override
+    public void onReplicationFolderChanged(String value) {
+        if (selectedDevice.getReplicationFolder().equals(value)) {
+            return;
+        }
+
+        selectedDevice.setReplicationFolder(value);
         selectedDevice.setDirty(true);
         updateButtons();
     }
@@ -463,6 +481,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         content.addField("port", selectedDevice.getPort());
         content.addField("username", selectedDevice.getUserName());
         content.addField("password", selectedDevice.getPassword());
+        content.addField("replicationFolder", selectedDevice.getReplicationFolder());
 
         NewRecipe newRecipe = dtoFactory.createDto(NewRecipe.class)
                 .withName(selectedDevice.getName())
@@ -495,6 +514,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         content.addField("port", selectedDevice.getPort());
         content.addField("username", selectedDevice.getUserName());
         content.addField("password", selectedDevice.getPassword());
+        content.addField("replicationFolder", selectedDevice.getReplicationFolder());
 
         RecipeUpdate recipeUpdate = dtoFactory.createDto(RecipeUpdate.class)
                 .withId(selectedDevice.getRecipe().getId())

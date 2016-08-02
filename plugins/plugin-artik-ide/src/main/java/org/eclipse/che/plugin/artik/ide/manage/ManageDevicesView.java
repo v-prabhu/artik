@@ -154,6 +154,22 @@ public interface ManageDevicesView extends View<ManageDevicesView.ActionDelegate
     String getPassword();
 
     /**
+     * Sets replication folder.
+     *
+     * @param folder
+     *          folder
+     */
+    void setReplicationFolder(String folder);
+
+    /**
+     * Returns value of replication folder.
+     *
+     * @return
+     *          value of replication folder
+     */
+    String getReplicationFolder();
+
+    /**
      * Enables or disables Cancel button.
      *
      * @param enable
@@ -241,6 +257,8 @@ public interface ManageDevicesView extends View<ManageDevicesView.ActionDelegate
         void onUserNameChanged(String value);
 
         void onPasswordChanged(String value);
+
+        void onReplicationFolderChanged(String value);
 
         void onCancelClicked();
 

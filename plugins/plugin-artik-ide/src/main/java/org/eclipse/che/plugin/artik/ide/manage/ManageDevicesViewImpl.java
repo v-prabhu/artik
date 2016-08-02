@@ -114,6 +114,9 @@ public class ManageDevicesViewImpl extends Window implements ManageDevicesView {
     PasswordTextBox password;
 
     @UiField
+    TextBox replicationFolder;
+
+    @UiField
     FlowPanel footer;
 
     private Button closeButton;
@@ -218,6 +221,13 @@ public class ManageDevicesViewImpl extends Window implements ManageDevicesView {
             @Override
             public void onKeyUp(KeyUpEvent keyUpEvent) {
                 delegate.onPasswordChanged(password.getValue());
+            }
+        });
+
+        replicationFolder.addKeyUpHandler(new KeyUpHandler() {
+            @Override
+            public void onKeyUp(KeyUpEvent keyUpEvent) {
+                delegate.onReplicationFolderChanged(replicationFolder.getValue());
             }
         });
     }
@@ -463,6 +473,14 @@ public class ManageDevicesViewImpl extends Window implements ManageDevicesView {
         return password.getValue();
     }
 
+    public void setReplicationFolder(String folder) {
+        this.replicationFolder.setValue(folder);
+    }
+
+    public String getReplicationFolder() {
+        return replicationFolder.getValue();
+    }
+
     @Override
     public void enableCancelButton(boolean enable) {
         cancelButton.setEnabled(enable);
@@ -480,6 +498,7 @@ public class ManageDevicesViewImpl extends Window implements ManageDevicesView {
         port.setEnabled(enable);
         userName.setEnabled(enable);
         password.setEnabled(enable);
+        replicationFolder.setEnabled(enable);
     }
 
     @Override

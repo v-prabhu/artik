@@ -33,6 +33,8 @@ public class Device {
 
     private String type;
 
+    private String replicationFolder;
+
     private RecipeDescriptor recipe;
 
     /**
@@ -53,6 +55,14 @@ public class Device {
     public Device(String name, String type) {
         this.name = name;
         this.type = type;
+    }
+
+    public String getReplicationFolder() {
+        return replicationFolder;
+    }
+
+    public void setReplicationFolder(String replicationFolder) {
+        this.replicationFolder = replicationFolder;
     }
 
     public RecipeDescriptor getRecipe() {
