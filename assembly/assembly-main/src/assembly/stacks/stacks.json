@@ -4,6 +4,13 @@
     "creator": "ide",
     "name": "Artik",
     "description": "Artik Development Stack",
+    "commands": [
+      {
+        "commandLine": "journalctl --since today",
+        "name": "tail logs",
+        "type": "custom"
+      }
+    ],
     "scope": "general",
     "tags": [
       "Fedora 23",
