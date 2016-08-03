@@ -35,7 +35,7 @@ import org.eclipse.che.api.ssh.server.SshServiceClient;
 import org.eclipse.che.api.user.server.spi.PreferenceDao;
 import org.eclipse.che.commons.lang.Pair;
 import org.eclipse.che.everrest.CheAsynchronousJobPool;
-import org.eclipse.che.git.impl.nativegit.NativeGitConnectionFactory;
+import org.eclipse.che.git.impl.jgit.JGitConnectionFactory;
 import org.eclipse.che.inject.DynaModule;
 import org.eclipse.che.plugin.github.server.inject.GitHubModule;
 import org.eclipse.che.plugin.java.server.rest.WsAgentURLProvider;
@@ -87,7 +87,7 @@ public class WsAgentModule extends AbstractModule {
         bind(ArchetypeGenerator.class);
 
         bind(GitUserResolver.class).to(LocalGitUserResolver.class);
-        bind(GitConnectionFactory.class).to(NativeGitConnectionFactory.class);
+        bind(GitConnectionFactory.class).to(JGitConnectionFactory.class);
 
         bind(AsynchronousJobPool.class).to(CheAsynchronousJobPool.class);
         bind(ServiceBindingHelper.bindingKey(AsynchronousJobService.class, "/async/{ws-id}")).to(AsynchronousJobService.class);
