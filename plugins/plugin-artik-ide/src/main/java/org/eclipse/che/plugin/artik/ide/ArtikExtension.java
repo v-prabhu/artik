@@ -30,6 +30,10 @@ import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartPresenter;
 import org.eclipse.che.plugin.artik.ide.apidocs.ShowDocsAction;
 import org.eclipse.che.plugin.artik.ide.keyworddoc.ShowKeywordDocsAction;
 import org.eclipse.che.plugin.artik.ide.manage.ManageArtikDevicesAction;
+import org.eclipse.che.plugin.artik.ide.profile.ArtikProfileContextMenuGroup;
+import org.eclipse.che.plugin.artik.ide.profile.TurnDevelopmentModeContextMenuAction;
+import org.eclipse.che.plugin.artik.ide.profile.DevelopmentModeManager;
+import org.eclipse.che.plugin.artik.ide.profile.TurnProductionModeContextMenuAction;
 import org.eclipse.che.plugin.artik.ide.resourcemonitor.ResourceMonitor;
 import org.eclipse.che.plugin.artik.ide.scp.PushToDeviceManager;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKAction;
@@ -46,13 +50,15 @@ import static org.eclipse.che.ide.api.action.IdeActions.GROUP_MAIN_MENU;
 @Extension(title = "Artik", version = "1.0.0")
 public class ArtikExtension {
 
-    public final String ARTIK_GROUP_MAIN_MENU_ID    = "artik";
-    public final String ARTIK_GROUP_MAIN_MENU_NAME  = "Artik";
+    public static final String ARTIK_GROUP_MAIN_MENU       = "Artik";
+    public static final String ARTIK_GROUP_MAIN_MENU_ID    = "artik";
+
     public final String SHOW_KEYWORD_DOCS_ACTION_ID = "showKeywordDocsAction";
 
     @Inject
     public ArtikExtension(EventBus eventBus,
                           final PushToDeviceManager pushToDeviceManager,
+                          final DevelopmentModeManager developmentModeManager,
                           IconRegistry iconRegistry,
                           ArtikResources artikResources,
                           final DocsPartPresenter docsPartPresenter) {
@@ -63,6 +69,7 @@ public class ArtikExtension {
             public void onWsAgentStarted(WsAgentStateEvent wsAgentStateEvent) {
                 docsPartPresenter.open();
                 pushToDeviceManager.fetchSshMachines();
+                developmentModeManager.fetchSshMachines();
             }
 
             @Override
@@ -80,9 +87,14 @@ public class ArtikExtension {
                                 ShowDocsAction showDocsAction,
                                 ShowKeywordDocsAction showKeywordDocsAction,
                                 KeyBindingAgent keyBindingAgent,
-                                ResourceMonitor resourceMonitor) {
-        final DefaultActionGroup artikGroup = new DefaultActionGroup(ARTIK_GROUP_MAIN_MENU_NAME, true, actionManager);
+                                ResourceMonitor resourceMonitor,
+                                ArtikProfileContextMenuGroup artikProfileContextMenuGroup,
+                                TurnDevelopmentModeContextMenuAction turnDevelopmentModeContextMenuAction,
+                                TurnProductionModeContextMenuAction turnProductionModeContextMenuAction
+    ) {
+        final DefaultActionGroup artikGroup = new DefaultActionGroup(ARTIK_GROUP_MAIN_MENU, true, actionManager);
         actionManager.registerAction(ARTIK_GROUP_MAIN_MENU_ID, artikGroup);
+
         final DefaultActionGroup mainMenu = (DefaultActionGroup)actionManager.getAction(GROUP_MAIN_MENU);
         mainMenu.add(artikGroup);
         artikGroup.add(updateSDKAction);
@@ -92,11 +104,29 @@ public class ArtikExtension {
         actionManager.registerAction("manageArtikDevices", manageDevicesAction);
         actionManager.registerAction("updateSDKAction", updateSDKAction);
         actionManager.registerAction("showDocsAction", showDocsAction);
+
         actionManager.registerAction(SHOW_KEYWORD_DOCS_ACTION_ID, showKeywordDocsAction);
+
+
+        DefaultActionGroup profileGroup = new DefaultActionGroup("Profile", true, actionManager);
+        actionManager.registerAction("artikProfileGroup", profileGroup);
+        artikGroup.add(profileGroup);
+
+        // Consoles tree context menu group
+        DefaultActionGroup consolesTreeContextMenu =
+                (DefaultActionGroup)actionManager.getAction(IdeActions.GROUP_CONSOLES_TREE_CONTEXT_MENU);
+
+        actionManager.registerAction("artikProfileContextMenuGroup", artikProfileContextMenuGroup);
+
+        consolesTreeContextMenu.add(artikProfileContextMenuGroup);
+
+        artikProfileContextMenuGroup.add(turnDevelopmentModeContextMenuAction);
+        artikProfileContextMenuGroup.add(turnProductionModeContextMenuAction);
 
         final DefaultActionGroup centerToolbarGroup = (DefaultActionGroup)actionManager.getAction(IdeActions.GROUP_CENTER_TOOLBAR);
         centerToolbarGroup.add(manageDevicesAction, Constraints.FIRST);
 
         keyBindingAgent.getGlobal().addKey(new KeyBuilder().action().charCode('q').build(), SHOW_KEYWORD_DOCS_ACTION_ID);
     }
+
 }

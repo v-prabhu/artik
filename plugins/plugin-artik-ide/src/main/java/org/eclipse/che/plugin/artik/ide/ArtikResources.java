@@ -56,6 +56,12 @@ public interface ArtikResources extends ClientBundle {
     @Source("resourcemonitor/storageUsed")
     TextResource getUsedStorageSpaceCommand();
 
+    @Source("profile/turnOnDevelopmentProfile")
+    TextResource turnOnDevelopmentProfileCommand();
+
+    @Source("profile/turnOnProductionProfile")
+    TextResource turnOnProductionProfileCommand();
+
     /** The CssResource interface for the Artik extension. */
     interface Css extends CssResource {
 

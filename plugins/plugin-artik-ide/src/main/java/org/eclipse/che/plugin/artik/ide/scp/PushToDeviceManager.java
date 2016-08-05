@@ -34,7 +34,7 @@ import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
 import org.eclipse.che.ide.extension.machine.client.machine.MachineStateEvent;
 import org.eclipse.che.ide.util.loging.Log;
-import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstants;
+import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 import org.eclipse.che.plugin.artik.ide.scp.action.ChooseTargetAction;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceAction;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceActionFactory;
@@ -60,7 +60,7 @@ public class PushToDeviceManager implements MachineStateEvent.Handler {
     private final Map<String, String>          sshMachines;
     private final PushToDeviceServiceClient    scpService;
     private final NotificationManager          notificationManager;
-    private final ArtikLocalizationConstants   locale;
+    private final ArtikLocalizationConstant    locale;
     private final ActionManager                actionManager;
     private final PushToDeviceActionFactory    pushToDeviceActionFactory;
     private final DefaultActionGroup           pushToDeviceGroup;
@@ -71,7 +71,7 @@ public class PushToDeviceManager implements MachineStateEvent.Handler {
     @Inject
     public PushToDeviceManager(PushToDeviceServiceClient scpService,
                                NotificationManager notificationManager,
-                               ArtikLocalizationConstants locale,
+                               ArtikLocalizationConstant locale,
                                MachineServiceClient machineService,
                                AppContext appContext,
                                EventBus eventBus,

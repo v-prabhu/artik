@@ -143,4 +143,45 @@ public interface ArtikLocalizationConstant extends Messages {
 
     @Key("restart.view.button.restartLater")
     String restartViewButtonRestartLater();
+
+    @Key("push.to.device.description")
+    String pushToDeviceDescription();
+
+    @Key("push.to.device")
+    String pushToDevice();
+
+    @Key("push.to.device.success")
+    String pushToDeviceSuccess(String fileName, String targetPath);
+
+    @Key("push.to.device.fail")
+    String pushToDeviceFail(String fileName, String targetPath);
+
+    @Key("choose.device.label")
+    String chooseDeviceLabel();
+
+    @Key("target.path")
+    String targetPath();
+
+    @Key("choose.target")
+    String chooseTarget();
+
+    @Key("cancel.button")
+    String cancelButton();
+
+
+    @Key("artikProfile.action.title")
+    String artikProfileActionTitle();
+
+    @Key("turnDevelopmentMode.action.title")
+    String turnDevelopmentModeActionTitle();
+
+    @Key("turnDevelopmentMode.action.description")
+    String turnDevelopmentModeActionDescription();
+
+    @Key("turnProductionMode.action.title")
+    String turnProductionModeActionTitle();
+
+    @Key("turnProductionMode.action.description")
+    String turnProductionModeActionDescription();
+
 }

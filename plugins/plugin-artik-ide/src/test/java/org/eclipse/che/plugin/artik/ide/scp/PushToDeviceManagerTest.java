@@ -27,7 +27,7 @@ import org.eclipse.che.ide.api.machine.MachineServiceClient;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
 import org.eclipse.che.ide.extension.machine.client.machine.MachineStateEvent;
-import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstants;
+import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 import org.eclipse.che.plugin.artik.ide.scp.action.ChooseTargetAction;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceAction;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceActionFactory;
@@ -68,7 +68,7 @@ public class PushToDeviceManagerTest {
     @Mock
     private NotificationManager          notificationManager;
     @Mock
-    private ArtikLocalizationConstants   locale;
+    private ArtikLocalizationConstant    locale;
     @Mock
     private ActionManager                actionManager;
     @Mock

@@ -21,7 +21,6 @@ import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
 import org.eclipse.che.ide.api.machine.MachineServiceClient;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.util.UUID;
-import org.eclipse.che.ide.util.loging.Log;
 import org.eclipse.che.ide.websocket.MessageBus;
 import org.eclipse.che.ide.websocket.MessageBusProvider;
 import org.eclipse.che.ide.websocket.WebSocketException;
@@ -92,7 +91,7 @@ public class ResourceMonitorService {
             messageBus.subscribe(chanel, new SubscriptionHandler<String>(new OutputMessageUnmarshaller()) {
                 @Override
                 protected void onMessageReceived(String message) {
-                    unsubscribe(chanel, this);
+                    messageBus.unsubscribeSilently(chanel, this);
                     if (isErrorMessage(message)) {
                         commandCallback.onFailure(new Exception(message));
                     } else {
@@ -102,7 +101,7 @@ public class ResourceMonitorService {
 
                 @Override
                 protected void onErrorReceived(Throwable throwable) {
-                    unsubscribe(chanel, this);
+                    messageBus.unsubscribeSilently(chanel, this);
                     commandCallback.onFailure(throwable);
                 }
             });
@@ -127,11 +126,4 @@ public class ResourceMonitorService {
         return promise;
     }
 
-    private void unsubscribe(String channelId, SubscriptionHandler<String> handler) {
-        try {
-            messageBus.unsubscribe(channelId, handler);
-        } catch (WebSocketException e) {
-            Log.error(ResourceMonitorService.class, e);
-        }
-    }
 }
