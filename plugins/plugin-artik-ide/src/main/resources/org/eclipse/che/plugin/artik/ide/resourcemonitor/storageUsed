@@ -1,1 +1,0 @@
-df /dev/mmcblk0p3 | grep /dev/mmcblk0p3 | awk '{print $3}'

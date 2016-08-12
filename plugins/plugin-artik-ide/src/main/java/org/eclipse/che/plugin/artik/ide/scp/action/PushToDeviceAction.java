@@ -19,7 +19,7 @@ import org.eclipse.che.ide.api.action.ActionEvent;
 import org.eclipse.che.ide.api.selection.Selection;
 import org.eclipse.che.ide.api.selection.SelectionAgent;
 import org.eclipse.che.ide.resources.tree.ResourceNode;
-import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstants;
+import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 import org.eclipse.che.plugin.artik.ide.scp.PushToDeviceManager;
 
 /**
@@ -36,7 +36,7 @@ public class PushToDeviceAction extends Action {
 
     @Inject
     public PushToDeviceAction(SelectionAgent selectionAgent,
-                              ArtikLocalizationConstants locale,
+                              ArtikLocalizationConstant locale,
                               PushToDeviceManager scpManager,
                               @Assisted String machineName) {
         super(machineName, locale.pushToDeviceDescription(), null, null);

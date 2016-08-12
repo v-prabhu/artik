@@ -24,14 +24,14 @@ import org.eclipse.che.ide.websocket.rest.Unmarshallable;
  * @author Artem Zatsarynnyi
  */
 public class OutputMessageUnmarshaller implements Unmarshallable<String> {
+
     private String payload;
 
     @Override
     public void unmarshal(Message message) {
-        final JSONString jsonString = JSONParser.parseStrict(message.getBody()).isString();
-        payload = jsonString.stringValue();
+        payload = message.getBody();
 
-        if (payload.startsWith("[STDOUT]")) {
+        if (payload.startsWith("[STDOUT] ")) {
             payload = payload.substring(9);
         }
     }
@@ -40,4 +40,5 @@ public class OutputMessageUnmarshaller implements Unmarshallable<String> {
     public String getPayload() {
         return payload;
     }
+
 }

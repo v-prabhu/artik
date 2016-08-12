@@ -13,7 +13,7 @@
 -->
 <ui:UiBinder xmlns:ui='urn:ui:com.google.gwt.uibinder'
              xmlns:g='urn:import:com.google.gwt.user.client.ui'>
-    <ui:with field="locale" type="org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstants"/>
+    <ui:with field="locale" type="org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant"/>
     <ui:style>
         .main {
             width: 350px;
