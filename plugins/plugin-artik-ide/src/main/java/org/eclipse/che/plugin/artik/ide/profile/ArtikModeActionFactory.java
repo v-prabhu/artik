@@ -19,7 +19,7 @@ package org.eclipse.che.plugin.artik.ide.profile;
 public interface ArtikModeActionFactory {
 
     /**
-     * Craetes TurnDevelopmentModeAction instance with a given Artik machine name.
+     * Creates TurnDevelopmentModeAction instance with a given Artik machine name.
      *
      * @param machineName
      *          name of the Artik machine
@@ -29,7 +29,7 @@ public interface ArtikModeActionFactory {
     TurnDevelopmentModeAction turnDevelopmentModeAction(String machineName);
 
     /**
-     * Craetes TurnProductionModeAction instance with a given Artik machine name.
+     * Creates TurnProductionModeAction instance with a given Artik machine name.
      *
      * @param machineName
      *          name of the Artik machine
