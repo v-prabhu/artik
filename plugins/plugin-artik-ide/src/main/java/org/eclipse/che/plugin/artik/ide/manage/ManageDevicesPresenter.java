@@ -41,6 +41,7 @@ import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
 import org.eclipse.che.ide.api.workspace.WorkspaceServiceClient;
+import org.eclipse.che.ide.api.workspace.event.MachineStatusChangedEvent;
 import org.eclipse.che.ide.collections.Jso;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.extension.machine.client.machine.MachineStateEvent;
@@ -67,7 +68,9 @@ import static org.eclipse.che.api.core.model.machine.MachineStatus.RUNNING;
  * @author Vitaliy Guliy
  * @author Ann Shumilova
  */
-public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate, WsAgentStateHandler {
+public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate, WsAgentStateHandler,
+        MachineStatusChangedEvent.Handler {
+
     public final static String ARTIK_CATEGORY = "artik";
     public final static String SSH_CATEGORY   = "ssh-config";
     public final static String DEFAULT_NAME   = "artik_device";
@@ -91,7 +94,11 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
     private Device selectedDevice;
     private final Map<String, MachineDto> machines = new HashMap<>();
 
+    /* Notification informing connecting to the target is in progress */
     private StatusNotification connectNotification;
+
+    /* Name currently connecting target  */
+    private String connectTargetName;
 
     private Map<String, SubscriptionHandler<MachineStatusEvent>> subscriptions = new HashMap<>();
 
@@ -123,9 +130,40 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         this.eventBus = eventBus;
         this.messageBusProvider = messageBusProvider;
 
-        eventBus.addHandler(WsAgentStateEvent.TYPE, this);
-
         view.setDelegate(this);
+
+        eventBus.addHandler(WsAgentStateEvent.TYPE, this);
+        eventBus.addHandler(MachineStatusChangedEvent.TYPE, this);
+    }
+
+    @Override
+    public void onWsAgentStarted(WsAgentStateEvent event) {
+        checkArtikMachineExists();
+    }
+
+    private void checkArtikMachineExists() {
+        recipeServiceClient.getAllRecipes().then(new Operation<List<RecipeDescriptor>>() {
+            @Override
+            public void apply(List<RecipeDescriptor> recipeList) throws OperationException {
+                boolean noArtikMachine = true;
+
+                for (RecipeDescriptor recipe : recipeList) {
+                    // Filter recipe by type SSH_CATEGORY and tag - ARTIK_CATEGORY
+                    if ((SSH_CATEGORY.equalsIgnoreCase(recipe.getType()) && recipe.getTags().contains(ARTIK_CATEGORY))) {
+                        noArtikMachine = false;
+                        break;
+                    }
+                }
+
+                if (noArtikMachine) {
+                    edit();
+                }
+            }
+        });
+    }
+
+    @Override
+    public void onWsAgentStopped(WsAgentStateEvent event) {
     }
 
     /**
@@ -602,10 +640,9 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
      * Starts a machine based on the selected recipe.
      */
     private void connect() {
-        subscribeToMachineChannel(selectedDevice.getName());
-
         view.setConnectButtonText(null);
 
+        connectTargetName = selectedDevice.getName();
         connectNotification = notificationManager.notify(locale.deviceConnectProgress(selectedDevice.getName()), StatusNotification.Status.PROGRESS,
                                                          StatusNotification.DisplayMode.FLOAT_MODE);
 
@@ -626,14 +663,12 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         machinePromise.then(new Operation<MachineDto>() {
             @Override
             public void apply(final MachineDto machineDto) throws OperationException {
-                eventBus.fireEvent(new MachineStateEvent(machineDto, MachineStateEvent.MachineAction.CREATING));
             }
         });
 
         machinePromise.catchError(new Operation<PromiseError>() {
             @Override
             public void apply(PromiseError promiseError) throws OperationException {
-                unsubscribeFromMachineChannel(selectedDevice.getName());
                 onConnectingFailed(null);
             }
         });
@@ -647,6 +682,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         if (selectedDevice == null || !selectedDevice.isConnected()) {
             return;
         }
+
         MachineDto machine = machines.get(selectedDevice.getName());
         disconnect(machine);
     }
@@ -675,7 +711,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
             @Override
             public void apply(PromiseError arg) throws OperationException {
                 notificationManager.notify(locale.deviceDisconnectError(selectedDevice.getName()), StatusNotification.Status.FAIL,
-                                           StatusNotification.DisplayMode.FLOAT_MODE);
+                        StatusNotification.DisplayMode.FLOAT_MODE);
                 updateDevices(selectedDevice.getName());
             }
         });
@@ -710,7 +746,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
             @Override
             public void apply(Void arg) throws OperationException {
                 notificationManager.notify(locale.deviceDisconnectSuccess(device.getName()), StatusNotification.Status.SUCCESS,
-                                           StatusNotification.DisplayMode.FLOAT_MODE);
+                        StatusNotification.DisplayMode.FLOAT_MODE);
                 new Timer() {
                     @Override
                     public void run() {
@@ -722,7 +758,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
             @Override
             public void apply(PromiseError arg) throws OperationException {
                 notificationManager.notify(locale.deviceDisconnectError(device.getName()), StatusNotification.Status.FAIL,
-                                           StatusNotification.DisplayMode.FLOAT_MODE);
+                        StatusNotification.DisplayMode.FLOAT_MODE);
                 updateDevices(device.getName());
             }
         });
@@ -759,76 +795,6 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
 
     }
 
-    @Override
-    public void onWsAgentStarted(WsAgentStateEvent event) {
-       checkArtikMachineExists();
-    }
-
-    private void checkArtikMachineExists() {
-        recipeServiceClient.getAllRecipes().then(new Operation<List<RecipeDescriptor>>() {
-            @Override
-            public void apply(List<RecipeDescriptor> recipeList) throws OperationException {
-                boolean noArtikMachine = true;
-
-                for (RecipeDescriptor recipe : recipeList) {
-                    // Filter recipe by type SSH_CATEGORY and tag - ARTIK_CATEGORY
-                    if ((SSH_CATEGORY.equalsIgnoreCase(recipe.getType()) && recipe.getTags().contains(ARTIK_CATEGORY))) {
-                        noArtikMachine = false;
-                        break;
-                    }
-                }
-
-                if (noArtikMachine) {
-                    edit();
-                }
-            }
-        });
-    }
-
-    @Override
-    public void onWsAgentStopped(WsAgentStateEvent event) {
-        //do nothing
-    }
-
-    /**
-     * Subscribes to the websocket channel and starts listening machine status events.
-     *
-     * @param machineName
-     *          mane of the machine to subscribe
-     */
-    private void subscribeToMachineChannel(final String machineName) {
-        String channel = "machine:status:" + appContext.getWorkspace().getId() + ':' + machineName;
-
-        if (subscriptions.containsKey(channel)) {
-            return;
-        }
-
-        SubscriptionHandler<MachineStatusEvent> statusHandler = new SubscriptionHandler<MachineStatusEvent>(
-                dtoUnmarshallerFactory.newWSUnmarshaller(MachineStatusEvent.class)) {
-            @Override
-            protected void onMessageReceived(MachineStatusEvent event) {
-                if (MachineStatusEvent.EventType.RUNNING == event.getEventType()) {
-                    onConnected(event.getMachineId());
-                } else if (MachineStatusEvent.EventType.ERROR == event.getEventType()) {
-                    unsubscribeFromMachineChannel(event.getMachineName());
-                    onConnectingFailed(event.getError());
-                }
-            }
-
-            @Override
-            protected void onErrorReceived(Throwable exception) {
-                Log.error(ManageDevicesPresenter.class, exception.getMessage());
-            }
-        };
-
-        try {
-            messageBusProvider.getMessageBus().subscribe(channel, statusHandler);
-            subscriptions.put(channel, statusHandler);
-        } catch (Exception e) {
-            Log.error(ManageDevicesPresenter.class, e.getMessage());
-        }
-    }
-
     /**
      * Ensures machine is started.
      */
@@ -843,12 +809,9 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                     @Override
                     public void apply(MachineDto machineDto) throws OperationException {
                         if (machineDto.getStatus() == RUNNING) {
-                            eventBus.fireEvent(new MachineStateEvent(machineDto, MachineStateEvent.MachineAction.RUNNING));
                             connectNotification.setTitle(locale.deviceConnectSuccess(machineDto.getConfig().getName()));
                             connectNotification.setStatus(StatusNotification.Status.SUCCESS);
                             updateDevices(machineDto.getConfig().getName());
-                        } else if (machineDto.getStatus() == CREATING) {
-                            onConnected(machineId);
                         } else {
                             onConnectingFailed(null);
                         }
@@ -880,22 +843,20 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         view.selectDevice(selectedDevice);
     }
 
-    /**
-     * Removes the subscription from the websocket channel and stops listening machine status events.
-     *
-     * @param machineName
-     *          name of the machine to unsubscribe
-     */
-    private void unsubscribeFromMachineChannel(String machineName) {
-        String channel = "machine:status:" + appContext.getWorkspace().getId() + ':' + machineName;
+    @Override
+    public void onMachineStatusChanged(MachineStatusChangedEvent event) {
+        if (MachineStatusEvent.EventType.RUNNING == event.getEventType()
+                && connectNotification != null && connectTargetName != null
+                && connectTargetName.equals(event.getMachineName())) {
+            onConnected(event.getMachineId());
+            return;
+        }
 
-        SubscriptionHandler<MachineStatusEvent> statusHandler = subscriptions.remove(channel);
-        if (statusHandler != null) {
-            try {
-                messageBusProvider.getMessageBus().unsubscribe(channel, statusHandler);
-            } catch (Exception e) {
-                Log.error(getClass(), e.getMessage());
-            }
+        if (MachineStatusEvent.EventType.ERROR == event.getEventType()
+                && connectNotification != null && connectTargetName != null
+                && connectTargetName.equals(event.getMachineName())) {
+            onConnectingFailed(event.getErrorMessage());
+            return;
         }
     }
 

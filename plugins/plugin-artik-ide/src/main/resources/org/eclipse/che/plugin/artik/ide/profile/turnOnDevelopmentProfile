@@ -1,0 +1,4 @@
+dnf install gdb-gdbserver.armv7hl -y
+
+# Special marker line. Don't modify it.
+echo ">>> end <<<"

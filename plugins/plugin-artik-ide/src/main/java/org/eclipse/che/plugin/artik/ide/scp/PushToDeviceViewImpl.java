@@ -24,7 +24,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
 import org.eclipse.che.ide.ui.window.Window;
-import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstants;
+import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 
 import java.util.Set;
 
@@ -45,10 +45,10 @@ public class PushToDeviceViewImpl extends Window implements PushToDeviceView {
     @UiField
     TextBox textBox;
     @UiField(provided = true)
-    final ArtikLocalizationConstants locale;
+    final ArtikLocalizationConstant locale;
 
     @Inject
-    public PushToDeviceViewImpl(ArtikLocalizationConstants locale) {
+    public PushToDeviceViewImpl(ArtikLocalizationConstant locale) {
         this.locale = locale;
         setWidget(UI_BINDER.createAndBindUi(this));
 

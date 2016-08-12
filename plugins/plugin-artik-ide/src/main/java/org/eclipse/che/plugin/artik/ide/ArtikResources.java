@@ -41,24 +41,19 @@ public interface ArtikResources extends ClientBundle {
     @Source("updatesdk/recipe")
     TextResource recipe();
 
-    @Source("resourcemonitor/cpu")
-    TextResource getCpuCommand();
+    @Source("resourcemonitor/monitorAll")
+    TextResource getMonitorAllCommand();
 
-    @Source("resourcemonitor/memTotal")
-    TextResource getTotalMemoryCommand();
+    @Source("profile/turnOnDevelopmentProfile")
+    TextResource turnOnDevelopmentProfileCommand();
 
-    @Source("resourcemonitor/memUsed")
-    TextResource getUsedMemoryCommand();
-
-    @Source("resourcemonitor/storageTotal")
-    TextResource getTotalStorageSpaceCommand();
-
-    @Source("resourcemonitor/storageUsed")
-    TextResource getUsedStorageSpaceCommand();
+    @Source("profile/turnOnProductionProfile")
+    TextResource turnOnProductionProfileCommand();
 
     /** The CssResource interface for the Artik extension. */
     interface Css extends CssResource {
 
         String deviceTitle();
     }
+
 }

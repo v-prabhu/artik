@@ -11,26 +11,35 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.artik.ide.resourcemonitor;
 
-import com.google.gwt.core.client.JsArrayMixed;
-import com.google.gwt.user.client.Timer;
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import com.google.inject.Singleton;
 import com.google.web.bindery.event.shared.EventBus;
+import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.core.model.machine.Machine;
+import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
+import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
 import org.eclipse.che.api.promises.client.Operation;
 import org.eclipse.che.api.promises.client.OperationException;
-import org.eclipse.che.api.promises.client.Promise;
-import org.eclipse.che.api.promises.client.js.Promises;
+import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.machine.MachineServiceClient;
 import org.eclipse.che.ide.api.workspace.event.WorkspaceStartedEvent;
 import org.eclipse.che.ide.api.workspace.event.WorkspaceStoppedEvent;
+import org.eclipse.che.ide.commons.exception.UnmarshallerException;
+import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.extension.machine.client.machine.MachineStateEvent;
 import org.eclipse.che.ide.extension.machine.client.processes.monitoring.MachineMonitors;
+import org.eclipse.che.ide.util.UUID;
+import org.eclipse.che.ide.websocket.Message;
+import org.eclipse.che.ide.websocket.MessageBus;
+import org.eclipse.che.ide.websocket.MessageBusProvider;
+import org.eclipse.che.ide.websocket.WebSocketException;
+import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
+import org.eclipse.che.ide.websocket.rest.Unmarshallable;
+import org.eclipse.che.plugin.artik.ide.ArtikResources;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -46,117 +55,32 @@ public class ResourceMonitor implements MachineStateEvent.Handler,
     private final MachineServiceClient              machineServiceClient;
     private final AppContext                        appContext;
     private final MachineMonitors                   machineMonitors;
-    private final Provider<ResourceMonitorService>  resourceMonitorProvider;
+    private final ArtikResources                    resources;
+    private final MessageBus                        messageBus;
+    private final DtoFactory                        dtoFactory;
 
-    private final List<Machine>                     artikMachines;
+    private final HashMap<String, MonitorAgent>     monitorAgents;
 
     @Inject
     public ResourceMonitor(MachineServiceClient machineServiceClient,
                            EventBus eventBus,
                            AppContext appContext,
                            MachineMonitors machineMonitors,
-                           Provider<ResourceMonitorService> resourceMonitorProvider) {
+                           ArtikResources resources,
+                           MessageBusProvider messageBusProvider,
+                           DtoFactory dtoFactory) {
         this.machineServiceClient = machineServiceClient;
         this.appContext = appContext;
         this.machineMonitors = machineMonitors;
-        this.resourceMonitorProvider = resourceMonitorProvider;
+        this.resources = resources;
+        this.messageBus = messageBusProvider.getMessageBus();
+        this.dtoFactory = dtoFactory;
 
-        artikMachines = new ArrayList<>();
+        monitorAgents = new HashMap<>();
 
         eventBus.addHandler(MachineStateEvent.TYPE, this);
         eventBus.addHandler(WorkspaceStartedEvent.TYPE, this);
         eventBus.addHandler(WorkspaceStoppedEvent.TYPE, this);
-    }
-
-    /**
-     * Loads the machine list.
-     */
-    private void loadMachines() {
-        machineServiceClient.getMachines(appContext.getWorkspaceId()).then(new Operation<List<MachineDto>>() {
-            @Override
-            public void apply(List<MachineDto> machines) throws OperationException {
-                for (MachineDto machine : machines) {
-                    if ("artik".equals(machine.getConfig().getType())) {
-                        artikMachines.add(machine);
-                    }
-                }
-
-                UPDATE_TIMER.scheduleRepeating(3000);
-            }
-        });
-    }
-
-    /**
-     * Timer to periodical ask the artik machines for cpu, memory and disk usages
-     *  and to update the corresponding widget in the consoles tree.
-     */
-    private Timer UPDATE_TIMER = new Timer() {
-        @Override
-        public void run() {
-            for (final Machine machine : artikMachines) {
-                updateCPU(machine.getId())
-                        .then(updateMemory(machine.getId()))
-                        .then(updateStorage(machine.getId()));
-            }
-        }
-    };
-
-    /**
-     * Fetches CPU utilization for machine with a given ID and updates the corresponding widget.
-     *
-     * @param machineID
-     *          machine ID
-     */
-    protected Promise updateCPU(final String machineID) {
-        return resourceMonitorProvider.get().getCpuUtilization(machineID).then(new Operation<String>() {
-            @Override
-            public void apply(String value) {
-                int cpu = (int) Math.rint(Double.valueOf(value) * 100);
-
-                machineMonitors.setCpuUsage(machineID, cpu);
-            }
-        });
-    }
-
-    /**
-     * Fetches memory usage for machine with a given ID and updates the corresponding widget.
-     *
-     * @param machineID
-     *          machine ID
-     */
-    private Promise updateMemory(final String machineID) {
-        return Promises.all(new Promise[]{
-                resourceMonitorProvider.get().getTotalMemory(machineID),
-                resourceMonitorProvider.get().getUsedMemory(machineID)})
-                .then(new Operation<JsArrayMixed>() {
-                    @Override
-                    public void apply(JsArrayMixed jsArrayMixed) {
-                        final String totalMemory = jsArrayMixed.getString(0);
-                        final String usedMemory = jsArrayMixed.getString(1);
-
-                        machineMonitors.setMemoryUsage(machineID, Integer.parseInt(usedMemory), Integer.parseInt(totalMemory));
-                    }
-                });
-    }
-
-    /**
-     * Fetches disk usage for machine with a given ID and updates the corresponding widget.
-     *
-     * @param machineID
-     *          machine ID
-     */
-    protected Promise updateStorage(final String machineID) {
-        return Promises.all(new Promise[]{resourceMonitorProvider.get().getTotalStorageSpace(machineID),
-                resourceMonitorProvider.get().getUsedStorageSpace(machineID)})
-                .then(new Operation<JsArrayMixed>() {
-                    @Override
-                    public void apply(JsArrayMixed jsArrayMixed) {
-                        final String totalSpace = jsArrayMixed.getString(0);
-                        final String usedSpace = jsArrayMixed.getString(1);
-
-                        machineMonitors.setDiskUsage(machineID, Integer.parseInt(usedSpace), Integer.parseInt(totalSpace));
-                    }
-                });
     }
 
     @Override
@@ -166,30 +90,164 @@ public class ResourceMonitor implements MachineStateEvent.Handler,
     @Override
     public void onMachineRunning(MachineStateEvent event) {
         if ("artik".equals(event.getMachine().getConfig().getType())) {
-            artikMachines.add(event.getMachine());
+            monitorAgents.put(event.getMachine().getId(), new MonitorAgent(event.getMachine()));
         }
     }
 
     @Override
     public void onMachineDestroyed(MachineStateEvent event) {
-        for (Machine machine : artikMachines) {
-            if (machine.getId().equals(event.getMachineId())) {
-                artikMachines.remove(machine);
-                return;
-            }
+        MonitorAgent monitorAgent = monitorAgents.remove(event.getMachineId());
+        if (monitorAgent != null) {
+            monitorAgent.stop();
         }
-
     }
 
     @Override
     public void onWorkspaceStarted(WorkspaceStartedEvent event) {
-        loadMachines();
+        machineServiceClient.getMachines(appContext.getWorkspaceId()).then(new Operation<List<MachineDto>>() {
+            @Override
+            public void apply(List<MachineDto> machines) throws OperationException {
+                for (MachineDto machine : machines) {
+                    if ("artik".equals(machine.getConfig().getType())) {
+                        monitorAgents.put(machine.getId(), new MonitorAgent(machine));
+                    }
+                }
+            }
+        });
     }
 
     @Override
     public void onWorkspaceStopped(WorkspaceStoppedEvent event) {
-        UPDATE_TIMER.cancel();
-        artikMachines.clear();
+        for (MonitorAgent monitorAgent : monitorAgents.values()) {
+            monitorAgent.stop();
+        }
+
+        monitorAgents.clear();
+    }
+
+    /**
+     * Monitor agent running a special command to get the statistic,
+     * listening the command output and updating the monitor widgets.
+     */
+    private class MonitorAgent extends SubscriptionHandler<String> {
+
+        private final Machine           machine;
+
+        private MachineProcessDto       machineProcessDto;
+        private String                  channel;
+
+        public MonitorAgent(Machine machine) {
+            super(new CommandOutputUnmarshaller());
+            this.machine = machine;
+
+            checkMonitorProcess();
+        }
+
+        private void checkMonitorProcess() {
+            machineServiceClient.getProcesses(machine.getId()).then(new Operation<List<MachineProcessDto>>() {
+                @Override
+                public void apply(List<MachineProcessDto> arg) throws OperationException {
+                    for (MachineProcessDto processDto : arg) {
+                        if (processDto.getCommandLine() != null && !processDto.getCommandLine().isEmpty()
+                                && processDto.getCommandLine().startsWith("#hidden monitor process")) {
+                            connectToProcess(processDto);
+                            return;
+                        }
+                    }
+
+                    runMonitorProcess();
+                }
+            }).catchError(new Operation<PromiseError>() {
+                @Override
+                public void apply(PromiseError arg) throws OperationException {
+                    runMonitorProcess();
+                }
+            });
+        }
+
+        private void runMonitorProcess() {
+            channel = "process:output:" + UUID.uuid();
+
+            try {
+                messageBus.subscribe(channel, this);
+
+                Command command = dtoFactory.createDto(CommandDto.class)
+                        .withName("name")
+                        .withType("custom")
+                        .withCommandLine(resources.getMonitorAllCommand().getText());
+
+                machineServiceClient.executeCommand(machine.getId(), command, channel).then(new Operation<MachineProcessDto>() {
+                    @Override
+                    public void apply(MachineProcessDto processDto) throws OperationException {
+                        machineProcessDto = processDto;
+                    }
+                });
+            } catch (WebSocketException e) {
+                // Ignore and do nothing
+            }
+        }
+
+        private void connectToProcess(MachineProcessDto processDto) {
+            machineProcessDto = processDto;
+            channel = processDto.getOutputChannel();
+
+            try {
+                messageBus.subscribe(channel, this);
+            } catch (WebSocketException e) {
+                // Ignore and do nothing
+            }
+        }
+
+        public void stop() {
+            if (channel != null) {
+                messageBus.unsubscribeSilently(channel, this);
+            }
+
+            if (machineProcessDto != null) {
+                machineServiceClient.stopProcess(machine.getId(), machineProcessDto.getPid());
+            }
+        }
+
+        @Override
+        protected void onMessageReceived(String message) {
+            if (message.startsWith("[STDOUT] ")) {
+                message = message.substring(9);
+            }
+
+            // CPU_USED MEM_USED MEM_TOTAL DISK_USED DISK_TOTAL
+            String []parts = message.split(" ");
+
+            // CPU usage
+            int cpu = (int) Math.rint(Double.valueOf(parts[0]) * 100);
+            machineMonitors.setCpuUsage(machine.getId(), cpu);
+
+            // Memory usage
+            machineMonitors.setMemoryUsage(machine.getId(), Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
+
+            // Disk usage
+            machineMonitors.setDiskUsage(machine.getId(), Integer.parseInt(parts[3]), Integer.parseInt(parts[4]));
+        }
+
+        @Override
+        protected void onErrorReceived(Throwable throwable) {
+            messageBus.unsubscribeSilently(channel, this);
+        }
+
+    }
+
+    private class CommandOutputUnmarshaller implements Unmarshallable<String> {
+
+        private String payload;
+
+        @Override
+        public void unmarshal(Message response) throws UnmarshallerException {
+            payload = response.getBody();
+        }
+
+        @Override
+        public String getPayload() {
+            return payload;
+        }
     }
 
 }

@@ -1,0 +1,13 @@
+#hidden monitor process. Do NOT modify this line!
+while [ 1 = 1 ]
+do
+  CPU_USED=`cat /proc/loadavg | awk '{print $1}'`
+  MEM_USED=`free -m | grep Mem: | awk '{print $3}'`
+  MEM_TOTAL=`free -m | grep Mem: | awk '{print $2}'`
+  DISK_USED=`df /dev/mmcblk0p3 | grep /dev/mmcblk0p3 | awk '{print $3}'`
+  DISK_TOTAL=`df /dev/mmcblk0p3 | grep /dev/mmcblk0p3 | awk '{print $2}'`
+
+  echo "$CPU_USED $MEM_USED $MEM_TOTAL $DISK_USED $DISK_TOTAL"
+
+  sleep 3
+done

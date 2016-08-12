@@ -14,16 +14,17 @@ package org.eclipse.che.plugin.artik.ide.scp.action;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
+import static java.util.Collections.singletonList;
 import org.eclipse.che.ide.api.action.AbstractPerspectiveAction;
 import org.eclipse.che.ide.api.action.ActionEvent;
 import org.eclipse.che.ide.api.selection.Selection;
 import org.eclipse.che.ide.api.selection.SelectionAgent;
 import org.eclipse.che.ide.resources.tree.ResourceNode;
-import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstants;
+import static org.eclipse.che.ide.workspace.perspectives.project.ProjectPerspective.PROJECT_PERSPECTIVE_ID;
+import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 import org.eclipse.che.plugin.artik.ide.scp.PushToDevicePresenter;
 
 import javax.validation.constraints.NotNull;
-import java.util.Arrays;
 
 /**
  * The action which shows dialog window on which we can choose target ssh machine and destination path to copy file or folder to that
@@ -38,8 +39,8 @@ public class ChooseTargetAction extends AbstractPerspectiveAction {
     private final SelectionAgent        selectionAgent;
 
     @Inject
-    public ChooseTargetAction(ArtikLocalizationConstants locale, PushToDevicePresenter presenter, SelectionAgent selectionAgent) {
-        super(Arrays.asList("Project Perspective"), locale.chooseTarget(), locale.pushToDeviceDescription(), null, null);
+    public ChooseTargetAction(ArtikLocalizationConstant locale, PushToDevicePresenter presenter, SelectionAgent selectionAgent) {
+        super(singletonList(PROJECT_PERSPECTIVE_ID), locale.chooseTarget(), locale.pushToDeviceDescription(), null, null);
 
         this.presenter = presenter;
         this.selectionAgent = selectionAgent;
