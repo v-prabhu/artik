@@ -17,7 +17,7 @@
     <parent>
         <artifactId>artik-ide-parent</artifactId>
         <groupId>org.eclipse.artik</groupId>
-        <version>0.1.0-RC3-SNAPSHOT</version>
+        <version>1.0.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <groupId>org.eclipse.artik.plugin</groupId>
