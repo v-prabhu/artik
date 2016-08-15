@@ -36,7 +36,9 @@
     "source": {
       "type": "git",
       "location": "https://github.com/artik-iot/artik-sdk-examples",
-      "parameters": {}
+      "parameters": {
+        "branch": "ARTIK_SDK_V0.13"
+      }
     },
     "commands": [
       {
@@ -115,6 +117,14 @@
         "name": "serial-build",
         "type": "custom",
         "commandLine": "echo 'Compiling...' && cd ${current.project.path}/serial && $CC -lartik-sdk-base -I$CPATH/systemio -I$CPATH/base -lpthread -g artik_serial_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
+        "attributes": {
+          "previewUrl": ""
+        }
+      },
+      {
+        "name": "spi-build",
+        "type": "custom",
+        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/spi && $CC -lartik-sdk-base -I$CPATH/systemio -I$CPATH/base -lpthread -g artik_spi_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
         "attributes": {
           "previewUrl": ""
         }
