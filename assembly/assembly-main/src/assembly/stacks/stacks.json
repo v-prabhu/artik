@@ -4,13 +4,6 @@
     "creator": "ide",
     "name": "Artik",
     "description": "Artik Development Stack",
-    "commands": [
-      {
-        "commandLine": "journalctl --since today",
-        "name": "tail logs",
-        "type": "custom"
-      }
-    ],
     "scope": "general",
     "tags": [
       "Fedora 23",
@@ -47,7 +40,14 @@
       ],
       "name": "default",
       "defaultEnv": "default",
-      "description": null
+      "description": null,
+      "commands": [
+        {
+          "commandLine": "journalctl --since today",
+          "name": "tail logs",
+          "type": "custom"
+        }
+      ]
     },
     "permissions": {
       "groups": [
