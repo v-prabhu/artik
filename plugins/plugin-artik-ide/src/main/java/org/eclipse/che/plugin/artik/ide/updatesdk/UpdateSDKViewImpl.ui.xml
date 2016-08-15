@@ -45,7 +45,7 @@
                 <c:CellTable width="100%" ui:field="targetsTable" focus="false"/>
             </g:ScrollPanel>
         </g:center>
-        <g:south size="120">
+        <g:south size="130">
             <g:FlowPanel styleName="{style.bottom-panel}">
                 <g:Label addStyleNames="{style.box-label}" text="{localizationConstants.updateSDKViewLabelSelectVersionTitle}"/>
                 <che:CustomListBox ui:field="versionsBox" debugId="window-artik-updateSDK-availableVersion" addStyleNames="{style.box}"/>
