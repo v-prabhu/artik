@@ -1,3 +1,12 @@
+# Copyright (c) 2012-2016 Codenvy, S.A.
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Eclipse Public License v1.0
+# which accompanies this distribution, and is available at
+# http://www.eclipse.org/legal/epl-v10.html
+#
+# Contributors:
+#   Codenvy, S.A. - initial API and implementation
+
 # Set to "<proto>://<user>:<pass>@<host>:<port>"
 $http_proxy    = ENV['HTTP_PROXY'] || ""
 $https_proxy   = ENV['HTTPS_PROXY'] || ""
@@ -7,7 +16,7 @@ $ip            = ENV['CHE_IP'] || "192.168.28.200"
 $hostPort      = (ENV['CHE_PORT'] || 9000).to_i
 $containerPort = (ENV['CHE_CONTAINER_PORT'] || ($hostPort == -1 ? 9000 : $hostPort)).to_i
 $user_data     = ENV['CHE_DATA'] || "."
-
+$vm_name       = ENV['CHE_VM_NAME'] || "artik-ide-vm"
 $provisionProgress = ENV['PROVISION_PROGRESS'] || "basic"
 
 Vagrant.configure(2) do |config|
@@ -44,7 +53,7 @@ Vagrant.configure(2) do |config|
 
   config.vm.provider "virtualbox" do |vb|
     vb.memory = "4096"
-    vb.name = "artik-ide-vm"
+    vb.name = $vm_name
     vb.customize ["modifyvm", :id, "--usb", "on"]
     vb.customize ["modifyvm", :id, "--usbehci", "on"]
     vb.customize ["usbfilter", "add", "0",
@@ -60,6 +69,7 @@ Vagrant.configure(2) do |config|
     IP=$5
     PORT=$6
     PROVISION_PROGRESS=$7
+    DATA=$8
 
     if [ "${IP,,}" = "dhcp" ]; then
        echo "----------------------------------------"
@@ -129,7 +139,7 @@ Vagrant.configure(2) do |config|
        # we sacrifice a few seconds of additional install time for much better progress afterwards
        perform basic yum -y install expect
     fi
-    perform $PROVISION_PROGRESS sudo yum -y update docker-engine
+#    perform $PROVISION_PROGRESS sudo yum -y update docker-engine
 
     echo $(docker --version)
  
@@ -152,45 +162,68 @@ Vagrant.configure(2) do |config|
     fi
     if [ -n "$HTTP_PROXY" ] || [ -n "$HTTPS_PROXY" ]; then
         printf "[Service]\nEnvironment=\"NO_PROXY=${NO_PROXY}\"" > /etc/systemd/system/docker.service.d/no-proxy.conf
-        systemctl daemon-reload
-        systemctl restart docker
     fi
 
-    echo "--------------------------------------"
-    echo "ARTIK IDE: DOWNLOADING ARTIK IDE IMAGE"
-    echo "--------------------------------------"
-    perform $PROVISION_PROGRESS docker pull codenvy/artikide:${CHE_VERSION}
+    systemctl daemon-reload
+    systemctl restart docker
 
-    echo "----------------------------------------"
-    echo "."
-    echo "ARTIK IDE: DOWNLOADING ARTIK RUNTIME SDK"
-    echo "           (950MB TOTAL DOWNLOAD SIZE)  "
-    echo "."
-    echo "----------------------------------------"
-    perform $PROVISION_PROGRESS docker pull codenvy/artik
+    curl -sL https://raw.githubusercontent.com/eclipse/che/CHE-2116/che.sh | tr -d '\15\32' > /home/vagrant/che.sh
+    chmod +x /home/vagrant/che.sh
 
-    echo "------------------------------"
-    echo "ARTIK IDE: BOOTING ECLIPSE CHE"
-    echo "------------------------------"
-    docker run --net=host --name=che --restart=always --detach `
-              `-v /var/run/docker.sock:/var/run/docker.sock `
-              `-v /home/user/che/lib:/home/user/che/lib-copy `
-              `-v /home/user/che/workspaces:/home/user/che/workspaces `
-              `-v /home/user/che/storage:/home/user/che/storage `
-              `-v /home/user/che/conf:/container `
-              `-e CHE_LOCAL_CONF_DIR=/container `
-              `codenvy/artikide:${CHE_VERSION} --remote:${IP} --port:${PORT} run &>/dev/null
+#    perform $PROVISION_PROGRESS docker pull codenvy/artikide:${CHE_VERSION}
+
+    echo "--------------------------------"
+    echo "."
+    echo "ARTIK IDE: DOWNLOADING ARTIK SDK"
+    echo "           (1350MB DOWNLOAD)    "
+    echo "."
+    echo "--------------------------------"
+#    perform $PROVISION_PROGRESS docker pull codenvy/artik
+
+#    docker run --net=host --name=che --restart=always --detach `
+#              `-v /var/run/docker.sock:/var/run/docker.sock `
+#              `-v /home/user/che/lib:/home/user/che/lib-copy `
+#              `-v /home/user/che/workspaces:/home/user/che/workspaces `
+#              `-v /home/user/che/storage:/home/user/che/storage `
+#              `-v /home/user/che/conf:/container `
+#              `-e CHE_LOCAL_CONF_DIR=/container `
+#              `codenvy/artikide:${CHE_VERSION} --remote:${IP} --port:${PORT} run &>/dev/null
+    echo "export CHE_SERVER_IMAGE_NAME=codenvy/artikide" > /etc/profile.d/vars.sh
+    echo "export CHE_SERVER_CONTAINER_NAME=artik-ide" >> /etc/profile.d/vars.sh
+    echo "export CHE_CONF_FOLDER=/home/user/che/conf/" >> /etc/profile.d/vars.sh
+    echo "export CHE_PORT=${PORT}" >> /etc/profile.d/vars.sh
+    echo "export CHE_VERSION=${CHE_VERSION}" >> /etc/profile.d/vars.sh
+    echo "export CHE_HOST_IP=172.17.0.1" >> /etc/profile.d/vars.sh
+    echo "export CHE_HOSTNAME=${IP}" >> /etc/profile.d/vars.sh
+    echo "export CHE_DATA_FOLDER=${DATA}" >> /etc/profile.d/vars.sh
+
   SHELL
 
   config.vm.provision "shell" do |s| 
     s.inline = $script
-    s.args = [$http_proxy, $https_proxy, $no_proxy, $che_version, $ip, $containerPort, $provisionProgress]
+    s.args = [$http_proxy, $https_proxy, $no_proxy, $che_version, $ip, $containerPort, $provisionProgress, $user_data]
   end
 
   $script2 = <<-'SHELL'
     IP=$1
     PORT=$2
     MAPPED_PORT=$3
+
+    # Setup ARTIK profile for Che
+
+    /home/vagrant/che.sh profile add artik
+    /home/vagrant/che.sh profile set artik
+    /home/vagrant/che.sh profile info artik
+
+    echo "---------------------------------------------"
+    echo "ARTIK IDE: DOWNLOADING LATEST ARTIK IDE IMAGE"
+    echo "---------------------------------------------"
+    /home/vagrant/che.sh update
+
+    echo "------------------------------"
+    echo "ARTIK IDE: BOOTING ECLIPSE CHE"
+    echo "------------------------------"
+    /home/vagrant/che.sh restart
 
     if [ "${IP,,}" = "dhcp" ]; then
        DEV=$(grep -l "VAGRANT-BEGIN" /etc/sysconfig/network-scripts/ifcfg-*|xargs grep "DEVICE="|sort|tail -1|cut -d "=" -f 2)
@@ -203,21 +236,8 @@ Vagrant.configure(2) do |config|
 
     # Test the default dashboard page to see when it returns a non-error value.
     # Che is active once it returns success        
-    while [ true ]; do
-      printf "#"
-      curl -v ${CHE_URL}/dashboard &>/dev/null
-      exitcode=$?
-      if [ $exitcode == "0" ]; then
-        echo "${CHE_URL}" > /home/vagrant/che/.che_url
-        echo "${MAPPED_PORT}" > /home/vagrant/che/.che_host_port
-        echo "----------------------------------------"
-        echo "ARTIK IDE: BOOTED AND REACHABLE"
-        echo "ARTIK IDE: http://${IP}:${PORT}         "
-        echo "----------------------------------------"
-        exit 0
-      fi 
-      sleep 10
-    done
+    echo "ARTIK IDE READY AT: ${CHE_URL}"
+
   SHELL
 
   config.vm.provision "shell", run: "always" do |s|
