@@ -11,7 +11,7 @@
 $http_proxy    = ENV['HTTP_PROXY'] || ""
 $https_proxy   = ENV['HTTPS_PROXY'] || ""
 $no_proxy      = ENV['NO_PROXY'] || "localhost,127.0.0.1"
-$che_version   = ENV['CHE_VERSION'] || "latest"
+$che_version   = ENV['CHE_VERSION'] || "nightly"
 $ip            = ENV['CHE_IP'] || "192.168.28.200"
 $hostPort      = (ENV['CHE_PORT'] || 9000).to_i
 $containerPort = (ENV['CHE_CONTAINER_PORT'] || ($hostPort == -1 ? 9000 : $hostPort)).to_i
@@ -139,7 +139,7 @@ Vagrant.configure(2) do |config|
        # we sacrifice a few seconds of additional install time for much better progress afterwards
        perform basic yum -y install expect
     fi
-#    perform $PROVISION_PROGRESS sudo yum -y update docker-engine
+    perform $PROVISION_PROGRESS sudo yum -y update docker-engine
 
     echo $(docker --version)
  
@@ -170,7 +170,7 @@ Vagrant.configure(2) do |config|
     curl -sL https://raw.githubusercontent.com/eclipse/che/CHE-2116/che.sh | tr -d '\15\32' > /home/vagrant/che.sh
     chmod +x /home/vagrant/che.sh
 
-#    perform $PROVISION_PROGRESS docker pull codenvy/artikide:${CHE_VERSION}
+    perform $PROVISION_PROGRESS docker pull codenvy/artikide:${CHE_VERSION}
 
     echo "--------------------------------"
     echo "."
@@ -178,7 +178,7 @@ Vagrant.configure(2) do |config|
     echo "           (1350MB DOWNLOAD)    "
     echo "."
     echo "--------------------------------"
-#    perform $PROVISION_PROGRESS docker pull codenvy/artik
+    perform $PROVISION_PROGRESS docker pull codenvy/artik
 
 #    docker run --net=host --name=che --restart=always --detach `
 #              `-v /var/run/docker.sock:/var/run/docker.sock `
