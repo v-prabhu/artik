@@ -52,7 +52,7 @@ init_global_variables() {
   DEFAULT_CHE_MOUNT_IMAGE_NAME="codenvy/che-mount"
   DEFAULT_CHE_ACTION_IMAGE_NAME="codenvy/che-action"
   DEFAULT_CHE_TEST_IMAGE_NAME="codenvy/che-test"
-  DEFAULT_CHE_SERVER_CONTAINER_NAME="artik-ide"
+  DEFAULT_CHE_SERVER_CONTAINER_NAME="artikide"
   DEFAULT_CHE_VERSION="latest"
   DEFAULT_CHE_CLI_ACTION="help"
 
