@@ -1,4 +1,4 @@
-dnf install gdb-gdbserver.armv7hl -y
+dnf install gdb-gdbserver.armv7hl rsync -y
 
 # Special marker line. Don't modify it.
 echo ">>> end <<<"
