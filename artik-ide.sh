@@ -146,8 +146,14 @@ docker_exec() {
 }
 
 docker_run() {
-  docker_exec run --rm -it -v /var/run/docker.sock:/var/run/docker.sock \
-                  --env-file=$(get_list_of_che_system_environment_variables) "$@"
+  ENV_VARS=$(get_list_of_che_system_environment_variables)
+
+  if [ "$ENV_VARS" = "" ]; then
+    docker_exec run --rm -it -v /var/run/docker.sock:/var/run/docker.sock "$@"
+  else
+    docker_exec run --rm -it -v /var/run/docker.sock:/var/run/docker.sock \
+                    --env-file="tmp" "$@"
+  fi
 
   # Remove temporary file -- only due to POSIX weirdness with --env-file
   rm -rf "tmp" > /dev/null 2>&1
