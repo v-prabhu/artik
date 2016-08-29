@@ -16,7 +16,7 @@ CALL bash --help > nul 2>&1
 IF %ERRORLEVEL% NEQ 0 goto setup
 
 REM Launch matching Bash script which contains commands
-CALL bash --login -i "%~dp0\che.sh" %*
+CALL bash --login -i "%~dp0\artik-ide.sh" %*
 
 goto end
 
