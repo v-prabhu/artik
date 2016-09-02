@@ -29,7 +29,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -74,5 +76,11 @@ public class KeywordDocsService extends Service {
     public String getLink(@PathParam("keyword") String keyword) throws NotFoundException {
         return Optional.ofNullable(docLinks.get(keyword))
                        .orElseThrow(() -> new NotFoundException("Documentation not found for " + keyword));
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public List<String> getAllKeywords() {
+        return new ArrayList<>(docLinks.keySet());
     }
 }

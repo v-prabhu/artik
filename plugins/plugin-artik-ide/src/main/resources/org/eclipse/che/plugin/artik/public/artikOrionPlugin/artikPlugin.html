@@ -1,0 +1,194 @@
+<!--
+
+    Copyright (c) 2016 Samsung Electronics Co., Ltd.
+    All rights reserved. This program and the accompanying materials
+    are made available under the terms of the Eclipse Public License v1.0
+    which accompanies this distribution, and is available at
+    http://www.eclipse.org/legal/epl-v10.html
+
+    Contributors:
+      Codenvy, S.A. - Initial implementation
+      Samsung Electronics Co., Ltd. - Initial implementation
+
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <title>Artik Orion Plugin</title>
+    <script src="lib/plugin.js"></script>
+    <script>
+        var headers = {
+            name: "Artik highlighting",
+            version: "1.0",
+            description: "Extends highlighting in C/C++ files with the Artik specific keywords."
+        };
+        var provider = new orion.PluginProvider(headers);
+
+        var artikKeywords = JSON.parse(httpGet(window.parent.wsAgentURL + "/artikdoc/ws/"));
+
+        // override C grammar
+        var grammarRulesC = [];
+        fillArrayWithC_GrammarRules(grammarRulesC);
+        fillArrayWithArtikGrammarRules(grammarRulesC);
+
+        provider.registerService("orion.edit.highlighter", {}, {
+            id: "orion.c",
+            contentTypes: ["text/x-csrc", "text/x-c"],
+            patterns: grammarRulesC
+        });
+
+        // override C++ grammar
+        var grammarRulesCPP = [];
+        fillArrayWithCPP_GrammarRules(grammarRulesCPP);
+        fillArrayWithArtikGrammarRules(grammarRulesCPP);
+
+
+        provider.registerService("orion.edit.highlighter", {}, {
+            id: "orion.cpp",
+            contentTypes: ["text/x-c++src", "text/x-c++"],
+            patterns: grammarRulesCPP
+        });
+
+        provider.connect(function () {
+                    console.log('Artik Orion plugin connected');
+                },
+                function (e) {
+                    throw e;
+                });
+
+        function httpGet(theUrl) {
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open("GET", theUrl, false);
+            xmlHttp.send(null);
+            return xmlHttp.responseText;
+        }
+
+        function fillArrayWithArtikGrammarRules(patterns) {
+            patterns.push.apply(patterns, [
+                {
+                    match: "\\b(?:" + artikKeywords.join("|") + ")\\b",
+                    name: "keywordArtik"
+                }
+            ]);
+        }
+
+        function fillArrayWithC_GrammarRules(patterns) {
+            // grammar rules were copied from
+            // https://github.com/eclipse/orion.client/blob/master/bundles/org.eclipse.orion.client.editor/web/orion/editor/stylers/text_x-csrc/syntax.js
+
+            var keywords = [
+                "auto",
+                "break",
+                "case", "char", "const", "continue",
+                "default", "double", "do",
+                "else", "enum", "extern",
+                "float", "for",
+                "goto",
+                "if", "inline", "int",
+                "long",
+                "register", "return",
+                "short", "signed", "sizeof", "static", "struct", "switch",
+                "typedef",
+                "union", "unsigned",
+                "void", "volatile",
+                "while",
+                "_Bool", "_Complex", "_Imaginary"
+            ];
+
+            var directives = [
+                "define", "elif", "else", "endif", "error", "ifdef",
+                "ifndef", "if", "include", "line", "pragma", "undef"
+            ];
+
+            patterns.push.apply(patterns, [
+                {include: "orion.lib#string_doubleQuote"},
+                {include: "orion.lib#string_singleQuote"},
+                {include: "orion.c-like#comment_singleLine"},
+                {include: "orion.lib#doc_block"},
+                {include: "orion.c-like#comment_block"},
+                {
+                    match: "#\\s*(?:" + directives.join("|") + ")\\b[^$]*",
+                    name: "meta.preprocessor.c"
+                },
+                {include: "orion.lib#brace_open"},
+                {include: "orion.lib#brace_close"},
+                {include: "orion.lib#bracket_open"},
+                {include: "orion.lib#bracket_close"},
+                {include: "orion.lib#parenthesis_open"},
+                {include: "orion.lib#parenthesis_close"},
+                {include: "orion.lib#operator"},
+                {include: "orion.lib#number_decimal"},
+                {include: "orion.lib#number_hex"},
+                {
+                    match: "\\b(?:" + keywords.join("|") + ")\\b",
+                    name: "keyword.operator.c"
+                }
+            ]);
+        }
+
+        function fillArrayWithCPP_GrammarRules(patterns) {
+            // grammar rules were copied from
+            // https://github.com/eclipse/orion.client/blob/master/bundles/org.eclipse.orion.client.editor/web/orion/editor/stylers/text_x-c__src/syntax.js
+
+            var keywords = [
+                "alignas", "alignof", "asm", "and_eq", "and", "auto",
+                "bitand", "bitor", "bool", "break",
+                "case", "catch", "char16_t", "char32_t", "char", "class",
+                "compl", "constexpr", "const_cast", "const", "continue",
+                "decltype", "default", "delete", "double", "do", "dynamic_cast",
+                "else", "enum", "explicit", "export", "extern",
+                "false", "float", "for", "friend",
+                "goto",
+                "if", "inline", "int",
+                "long",
+                "mutable",
+                "namespace", "new", "noexcept", "not_eq", "not", "nullptr",
+                "operator", "or_eq", "or",
+                "private", "protected", "public",
+                "register", "reinterpret_cast", "return",
+                "short", "signed", "sizeof", "static_assert",
+                "static_cast", "static", "struct", "switch",
+                "template", "this", "thread_local", "throw", "true",
+                "try", "typedef", "typeid", "typename",
+                "union", "unsigned", "using",
+                "virtual", "void", "volatile",
+                "wchar_t", "while",
+                "xor_eq", "xor",
+                "_Bool", "_Complex", "_Imaginary"
+            ];
+
+            var directives = [
+                "define", "elif", "else", "endif", "error", "ifdef",
+                "ifndef", "if", "include", "line", "pragma", "undef"
+            ];
+
+            patterns.push.apply(patterns, [
+                {include: "orion.lib#string_doubleQuote"},
+                {include: "orion.lib#string_singleQuote"},
+                {include: "orion.c-like#comment_singleLine"},
+                {include: "orion.lib#doc_block"},
+                {include: "orion.c-like#comment_block"},
+                {
+                    match: "#\\s*(?:" + directives.join("|") + ")\\b[^$]*",
+                    name: "meta.preprocessor.cpp"
+                },
+                {include: "orion.lib#brace_open"},
+                {include: "orion.lib#brace_close"},
+                {include: "orion.lib#bracket_open"},
+                {include: "orion.lib#bracket_close"},
+                {include: "orion.lib#parenthesis_open"},
+                {include: "orion.lib#parenthesis_close"},
+                {include: "orion.lib#operator"},
+                {include: "orion.lib#number_decimal"},
+                {include: "orion.lib#number_hex"},
+                {
+                    match: "\\b(?:" + keywords.join("|") + ")\\b",
+                    name: "keyword.operator.cpp"
+                }
+            ]);
+        }
+    </script>
+</head>
+<body></body>
+</html>
