@@ -187,4 +187,42 @@ public interface ArtikLocalizationConstant extends Messages {
     @Key("turnProductionMode.action.description")
     String turnProductionModeActionDescription();
 
+    @Key("artik.cloud.get.user.info.action.title")
+    String artikCloudGetUserInfoActionTitle();
+
+    @Key("artik.cloud.get.user.info.action.description")
+    String artikCloudGetUserInfoActionDescription();
+
+    @Key("artik.cloud.login.action.title")
+    String artikCloudLoginActionTitle();
+
+    @Key("artik.cloud.login.action.description")
+    String artikCloudLoginActionDescription();
+
+    @Key("artik.cloud.authorization.dialog.text")
+    String artikAuthorizationDialogText();
+
+    @Key("artik.cloud.authorization.dialog.title")
+    String artikAuthorizationDialogTitle();
+
+    @Key("artik.cloud.user.info.title")
+    String artikUserInfoTitle();
+
+    @Key("artik.cloud.user.info.ok")
+    String artikUserInfoOk();
+
+    @Key("artik.cloud.user.info.name")
+    String artikUserInfoName();
+
+    @Key("artik.cloud.user.info.full.name")
+    String artikUserInfoFullName();
+
+    @Key("artik.cloud.user.info.email")
+    String artikUserInfoEmail();
+
+    @Key("artik.cloud.user.info.identity")
+    String artikUserInfoIdentity();
+
+    @Key("artik.cloud.user.info.account.type")
+    String artikUserInfoAccountType();
 }

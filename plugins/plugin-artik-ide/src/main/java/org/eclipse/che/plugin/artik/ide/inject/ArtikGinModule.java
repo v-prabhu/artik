@@ -19,9 +19,15 @@ import com.google.inject.Singleton;
 import org.eclipse.che.ide.api.extension.ExtensionGinModule;
 import org.eclipse.che.ide.api.machine.CheWsAgentLinksModifier;
 import org.eclipse.che.ide.api.machine.WsAgentURLModifier;
+import org.eclipse.che.ide.api.oauth.OAuth2Authenticator;
 import org.eclipse.che.ide.editor.orion.client.inject.OrionPlugin;
 import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartView;
 import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartViewImpl;
+import org.eclipse.che.plugin.artik.ide.cloud.api.UserInfoView;
+import org.eclipse.che.plugin.artik.ide.cloud.api.UserInfoViewImpl;
+import org.eclipse.che.plugin.artik.ide.oauth.ArtikAuthenticator;
+import org.eclipse.che.plugin.artik.ide.oauth.ArtikCloudAuthenticatorView;
+import org.eclipse.che.plugin.artik.ide.oauth.ArtikCloudAuthenticatorViewImpl;
 import org.eclipse.che.plugin.artik.ide.orionplugin.ArtikOrionPlugin;
 import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClient;
 import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClientImpl;
@@ -55,5 +61,13 @@ public class ArtikGinModule extends AbstractGinModule {
         bind(KeywordDocsServiceClient.class).to(KeywordDocsServiceClientImpl.class).in(Singleton.class);
 
         GinMultibinder.newSetBinder(binder(), OrionPlugin.class).addBinding().to(ArtikOrionPlugin.class);
+
+        configureOAuth();
+    }
+
+    private void configureOAuth() {
+        GinMultibinder.newSetBinder(binder(), OAuth2Authenticator.class).addBinding().to(ArtikAuthenticator.class);
+        bind(ArtikCloudAuthenticatorView.class).to(ArtikCloudAuthenticatorViewImpl.class);
+        bind(UserInfoView.class).to(UserInfoViewImpl.class);
     }
 }

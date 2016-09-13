@@ -29,10 +29,12 @@ import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
 import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartPresenter;
 import org.eclipse.che.plugin.artik.ide.apidocs.ShowDocsAction;
 import org.eclipse.che.plugin.artik.ide.keyworddoc.ShowKeywordDocsAction;
+import org.eclipse.che.plugin.artik.ide.cloud.api.ArtikUserInfoAction;
+import org.eclipse.che.plugin.artik.ide.oauth.ArtikLoginAction;
 import org.eclipse.che.plugin.artik.ide.manage.ManageArtikDevicesAction;
 import org.eclipse.che.plugin.artik.ide.profile.ArtikProfileContextMenuGroup;
-import org.eclipse.che.plugin.artik.ide.profile.TurnDevelopmentModeContextMenuAction;
 import org.eclipse.che.plugin.artik.ide.profile.DevelopmentModeManager;
+import org.eclipse.che.plugin.artik.ide.profile.TurnDevelopmentModeContextMenuAction;
 import org.eclipse.che.plugin.artik.ide.profile.TurnProductionModeContextMenuAction;
 import org.eclipse.che.plugin.artik.ide.resourcemonitor.ResourceMonitor;
 import org.eclipse.che.plugin.artik.ide.scp.PushToDeviceManager;
@@ -50,8 +52,8 @@ import static org.eclipse.che.ide.api.action.IdeActions.GROUP_MAIN_MENU;
 @Extension(title = "Artik", version = "1.0.0")
 public class ArtikExtension {
 
-    public static final String ARTIK_GROUP_MAIN_MENU       = "Artik";
-    public static final String ARTIK_GROUP_MAIN_MENU_ID    = "artik";
+    public static final String ARTIK_GROUP_MAIN_MENU    = "Artik";
+    public static final String ARTIK_GROUP_MAIN_MENU_ID = "artik";
 
     public final String SHOW_KEYWORD_DOCS_ACTION_ID = "showKeywordDocsAction";
 
@@ -90,8 +92,9 @@ public class ArtikExtension {
                                 ResourceMonitor resourceMonitor,
                                 ArtikProfileContextMenuGroup artikProfileContextMenuGroup,
                                 TurnDevelopmentModeContextMenuAction turnDevelopmentModeContextMenuAction,
-                                TurnProductionModeContextMenuAction turnProductionModeContextMenuAction
-    ) {
+                                TurnProductionModeContextMenuAction turnProductionModeContextMenuAction,
+                                ArtikLoginAction artikLoginAction,
+                                ArtikUserInfoAction artikUserInfoAction) {
         final DefaultActionGroup artikGroup = new DefaultActionGroup(ARTIK_GROUP_MAIN_MENU, true, actionManager);
         actionManager.registerAction(ARTIK_GROUP_MAIN_MENU_ID, artikGroup);
 
@@ -107,10 +110,20 @@ public class ArtikExtension {
 
         actionManager.registerAction(SHOW_KEYWORD_DOCS_ACTION_ID, showKeywordDocsAction);
 
-
         DefaultActionGroup profileGroup = new DefaultActionGroup("Profile", true, actionManager);
+        DefaultActionGroup cloudGroup = new DefaultActionGroup("Artik Cloud", true, actionManager);
+
         actionManager.registerAction("artikProfileGroup", profileGroup);
+        actionManager.registerAction("artikCloudGroup", cloudGroup);
+
         artikGroup.add(profileGroup);
+        artikGroup.add(cloudGroup);
+
+        actionManager.registerAction("artikCloudLogin", artikLoginAction);
+        actionManager.registerAction("artikCloudGetUserInfo", artikUserInfoAction);
+
+        cloudGroup.add(artikLoginAction);
+        cloudGroup.add(artikUserInfoAction);
 
         // Consoles tree context menu group
         DefaultActionGroup consolesTreeContextMenu =
@@ -128,5 +141,4 @@ public class ArtikExtension {
 
         keyBindingAgent.getGlobal().addKey(new KeyBuilder().action().charCode('q').build(), SHOW_KEYWORD_DOCS_ACTION_ID);
     }
-
 }

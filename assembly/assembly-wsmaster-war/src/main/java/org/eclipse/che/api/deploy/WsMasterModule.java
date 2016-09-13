@@ -17,6 +17,9 @@ import com.google.inject.name.Names;
 
 import org.eclipse.che.api.machine.shared.Constants;
 import org.eclipse.che.inject.DynaModule;
+import org.eclipse.che.plugin.machine.artik.oauth.ArtikOAuthAuthenticationService;
+import org.eclipse.che.plugin.machine.artik.oauth.ArtikOAuthAuthenticator;
+import org.eclipse.che.security.oauth.OAuthAuthenticator;
 import org.everrest.guice.ServiceBindingHelper;
 
 /** @author andrew00x */
@@ -49,7 +52,6 @@ public class WsMasterModule extends AbstractModule {
                 .to(org.eclipse.che.security.oauth.OAuthAuthenticatorProviderImpl.class);
         bind(org.eclipse.che.api.auth.oauth.OAuthTokenProvider.class)
                 .to(org.eclipse.che.security.oauth.OAuthAuthenticatorTokenProvider.class);
-        bind(org.eclipse.che.security.oauth.OAuthAuthenticationService.class);
 
         bind(org.eclipse.che.api.core.notification.WSocketEventBusServer.class);
         // additional ports for development of extensions
@@ -101,5 +103,12 @@ public class WsMasterModule extends AbstractModule {
         install(new org.eclipse.che.plugin.docker.machine.proxy.DockerProxyModule());
         install(new org.eclipse.che.commons.schedule.executor.ScheduleModule());
         install(new org.eclipse.che.plugin.machine.artik.ArtikMachineModule());
+
+        configureOAuth();
+    }
+
+    private void configureOAuth() {
+        bind(ArtikOAuthAuthenticationService.class).asEagerSingleton();
+        Multibinder.newSetBinder(binder(), OAuthAuthenticator.class).addBinding().to(ArtikOAuthAuthenticator.class);
     }
 }

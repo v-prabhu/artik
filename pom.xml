@@ -35,16 +35,46 @@
         <url>https://github.com/codenvy/artik-ide</url>
     </scm>
     <properties>
+        <artikcloud-java.version>2.0.5</artikcloud-java.version>
         <che.version>4.8.0-artik</che.version>
         <dto-generator-out-directory>${project.build.directory}/generated-sources/dto/</dto-generator-out-directory>
+        <google-http-client.version>1.19.0</google-http-client.version>
+        <httpclient.version>4.5.1</httpclient.version>
         <license_contributor>Codenvy, S.A. - Initial implementation</license_contributor>
         <license_contributor2>Samsung Electronics Co., Ltd. - Initial implementation</license_contributor2>
         <license_copyrightOwner>Samsung Electronics Co., Ltd.</license_copyrightOwner>
         <license_header>license-header2.txt</license_header>
         <license_years>2016</license_years>
+        <okhttp-version>1.10.0</okhttp-version>
     </properties>
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>cloud.artik</groupId>
+                <artifactId>artikcloud-java</artifactId>
+                <version>${artikcloud-java.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.http-client</groupId>
+                <artifactId>google-http-client</artifactId>
+                <version>${google-http-client.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <artifactId>jsr305</artifactId>
+                        <groupId>com.google.code.findbugs</groupId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okio</groupId>
+                <artifactId>okio</artifactId>
+                <version>${okhttp-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>${httpclient.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.eclipse.artik</groupId>
                 <artifactId>artik-ide-assembly-ide-war</artifactId>
