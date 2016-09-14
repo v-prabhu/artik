@@ -64,6 +64,7 @@ import static org.eclipse.che.dto.server.DtoFactory.newDto;
 
 @Path("oauth")
 public class ArtikOAuthAuthenticationService extends OAuthAuthenticationService {
+    @Override
     protected Map<String, List<String>> getRequestParameters(String state) {
         Map<String, List<String>> params = new HashMap<>();
         if (!(state == null || state.isEmpty())) {
@@ -100,6 +101,7 @@ public class ArtikOAuthAuthenticationService extends OAuthAuthenticationService 
         return params;
     }
 
+    @Override
     protected String getState(URL requestUrl) {
         final String query = requestUrl.getQuery();
         if (!(query == null || query.isEmpty())) {

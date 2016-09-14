@@ -135,7 +135,7 @@ public class ArtikOAuthAuthenticator extends OAuthAuthenticator {
         }
     }
 
-    private String getUserId(URL requestUrl) {
+    protected String getUserId(URL requestUrl) {
         try {
             final String queryParams = requestUrl.getQuery();
             final Matcher stateMatcher = statePattern.matcher(queryParams);
