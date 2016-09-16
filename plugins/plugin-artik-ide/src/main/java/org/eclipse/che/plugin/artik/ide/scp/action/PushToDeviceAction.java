@@ -14,7 +14,7 @@ package org.eclipse.che.plugin.artik.ide.scp.action;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 
-import org.eclipse.che.ide.api.action.Action;
+import org.eclipse.che.ide.api.action.AbstractPerspectiveAction;
 import org.eclipse.che.ide.api.action.ActionEvent;
 import org.eclipse.che.ide.api.selection.Selection;
 import org.eclipse.che.ide.api.selection.SelectionAgent;
@@ -28,7 +28,7 @@ import org.eclipse.che.plugin.artik.ide.scp.PushToDeviceManager;
  *
  * @author Dmitry Shnurenko
  */
-public class PushToDeviceAction extends Action {
+public class PushToDeviceAction extends AbstractPerspectiveAction {
 
     private final SelectionAgent      selectionAgent;
     private final PushToDeviceManager scpManager;
@@ -39,7 +39,7 @@ public class PushToDeviceAction extends Action {
                               ArtikLocalizationConstant locale,
                               PushToDeviceManager scpManager,
                               @Assisted String machineName) {
-        super(machineName, locale.pushToDeviceDescription(), null, null);
+        super(null, machineName, locale.pushToDeviceDescription(), null, null);
 
         this.selectionAgent = selectionAgent;
         this.machineName = machineName;
@@ -64,5 +64,10 @@ public class PushToDeviceAction extends Action {
         }
 
         return "";
+    }
+
+    @Override
+    public void updateInPerspective(ActionEvent e) {
+        e.getPresentation().setEnabledAndVisible(true);
     }
 }
