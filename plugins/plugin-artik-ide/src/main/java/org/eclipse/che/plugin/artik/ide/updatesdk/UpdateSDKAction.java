@@ -14,7 +14,7 @@ package org.eclipse.che.plugin.artik.ide.updatesdk;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
-import org.eclipse.che.ide.api.action.Action;
+import org.eclipse.che.ide.api.action.AbstractPerspectiveAction;
 import org.eclipse.che.ide.api.action.ActionEvent;
 import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 
@@ -24,18 +24,23 @@ import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
  * @author Artem Zatsarynnyi
  */
 @Singleton
-public class UpdateSDKAction extends Action {
+public class UpdateSDKAction extends AbstractPerspectiveAction {
 
     private final UpdateSDKPresenter presenter;
 
     @Inject
     public UpdateSDKAction(UpdateSDKPresenter presenter, ArtikLocalizationConstant localizationConstants) {
-        super(localizationConstants.updateSDKActionTitle(), localizationConstants.updateSDKActionDescription());
+        super(null, localizationConstants.updateSDKActionTitle(), localizationConstants.updateSDKActionDescription());
         this.presenter = presenter;
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
         presenter.show();
+    }
+
+    @Override
+    public void updateInPerspective(ActionEvent e) {
+        e.getPresentation().setEnabledAndVisible(true);
     }
 }

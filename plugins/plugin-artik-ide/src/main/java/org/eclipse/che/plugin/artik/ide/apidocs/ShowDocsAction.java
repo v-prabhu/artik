@@ -15,7 +15,7 @@ import com.google.gwt.user.client.Window;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
-import org.eclipse.che.ide.api.action.Action;
+import org.eclipse.che.ide.api.action.AbstractPerspectiveAction;
 import org.eclipse.che.ide.api.action.ActionEvent;
 import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 
@@ -25,13 +25,13 @@ import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
  * @author Artem Zatsarynnyi
  */
 @Singleton
-public class ShowDocsAction extends Action {
+public class ShowDocsAction extends AbstractPerspectiveAction {
 
     private final DocsPartPresenter docsPartPresenter;
 
     @Inject
     public ShowDocsAction(DocsPartPresenter docsPartPresenter, ArtikLocalizationConstant localizationConstants) {
-        super(localizationConstants.showApiDocActionTitle(), localizationConstants.showApiDocActionDescription());
+        super(null, localizationConstants.showApiDocActionTitle(), localizationConstants.showApiDocActionDescription());
 
         this.docsPartPresenter = docsPartPresenter;
     }
@@ -39,5 +39,10 @@ public class ShowDocsAction extends Action {
     @Override
     public void actionPerformed(ActionEvent e) {
         Window.open(docsPartPresenter.getDocURL(), "_blank", null);
+    }
+
+    @Override
+    public void updateInPerspective(ActionEvent e) {
+        e.getPresentation().setEnabledAndVisible(true);
     }
 }
