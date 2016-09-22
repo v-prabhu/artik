@@ -12,7 +12,6 @@
 package org.eclipse.che.plugin.machine.artik.replication.shell;
 
 import com.google.common.annotations.Beta;
-import com.google.common.collect.Lists;
 
 import org.eclipse.che.api.core.ServerException;
 import org.eclipse.che.api.core.util.CommandLine;
@@ -28,14 +27,13 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * @author Dmitry Kuleshov
- *
  * @since 4.5
  */
 @Beta
 @Singleton
 public class ShellCommandExecutor {
-    private static final Logger LOG = getLogger(ShellCommandExecutor.class);
-    private static final int SUCCESS = 0;
+    private static final Logger LOG     = getLogger(ShellCommandExecutor.class);
+    private static final int    SUCCESS = 0;
 
     void execute(CommandLine commandLine) throws IOException, ServerException {
         final ProcessBuilder processBuilder = new ProcessBuilder();
@@ -45,9 +43,12 @@ public class ShellCommandExecutor {
             final int status = process.waitFor();
             if (status != SUCCESS) {
                 process(process, stdout, stderr);
+                final String error = stderr.getText();
 
-                if (isHostAddedWarningMessage(stderr.getText())) {
+                if (isHostAddedWarningMessage(error)) {
                     execute(commandLine);
+                } else if (rsyncCommandIsNotFound(error)) {
+                    LOG.debug("ShellCommand execution failed because 'rsync' command is not found: {}", commandLine);
                 } else {
                     LOG.error("ShellCommand execution failed: {}", commandLine);
                     throw new ServerException(format("ShellCommand execution failed: %s", commandLine));
@@ -63,5 +64,9 @@ public class ShellCommandExecutor {
 
     private boolean isHostAddedWarningMessage(String error) {
         return error.startsWith("Warning: Permanently added") && error.endsWith("to the list of known hosts.");
+    }
+
+    private boolean rsyncCommandIsNotFound(String error) {
+        return error.contains("rsync: command not found") || error.contains("rsync: No such file or directory");
     }
 }
