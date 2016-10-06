@@ -18,15 +18,22 @@ import com.google.inject.Singleton;
 
 import org.eclipse.che.ide.api.extension.ExtensionGinModule;
 import org.eclipse.che.ide.api.machine.CheWsAgentLinksModifier;
+import org.eclipse.che.ide.api.machine.CommandPropertyValueProvider;
 import org.eclipse.che.ide.api.machine.WsAgentURLModifier;
 import org.eclipse.che.ide.editor.orion.client.inject.OrionPlugin;
+import org.eclipse.che.ide.extension.machine.client.command.producer.CommandProducer;
 import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartView;
 import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartViewImpl;
-import org.eclipse.che.plugin.artik.ide.orionplugin.ArtikOrionPlugin;
+import org.eclipse.che.plugin.artik.ide.command.CompileCommandProducer;
+import org.eclipse.che.plugin.artik.ide.command.RunCommandProducer;
+import org.eclipse.che.plugin.artik.ide.command.macro.BinaryNameMacro;
+import org.eclipse.che.plugin.artik.ide.command.macro.CompilationPropertiesMacro;
+import org.eclipse.che.plugin.artik.ide.command.macro.ReplicationFolderMacroFactory;
 import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClient;
 import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClientImpl;
 import org.eclipse.che.plugin.artik.ide.keyworddoc.KeywordDocsServiceClient;
 import org.eclipse.che.plugin.artik.ide.keyworddoc.KeywordDocsServiceClientImpl;
+import org.eclipse.che.plugin.artik.ide.orionplugin.ArtikOrionPlugin;
 import org.eclipse.che.plugin.artik.ide.profile.ArtikModeActionFactory;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceActionFactory;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKView;
@@ -55,5 +62,16 @@ public class ArtikGinModule extends AbstractGinModule {
         bind(KeywordDocsServiceClient.class).to(KeywordDocsServiceClientImpl.class).in(Singleton.class);
 
         GinMultibinder.newSetBinder(binder(), OrionPlugin.class).addBinding().to(ArtikOrionPlugin.class);
+
+        GinMultibinder<CommandProducer> commandProducerMultibinder = GinMultibinder.newSetBinder(binder(), CommandProducer.class);
+        commandProducerMultibinder.addBinding().to(CompileCommandProducer.class);
+        commandProducerMultibinder.addBinding().to(RunCommandProducer.class);
+
+        GinMultibinder<CommandPropertyValueProvider> macrosMultibinder = GinMultibinder.newSetBinder(binder(),
+                                                                                                     CommandPropertyValueProvider.class);
+        macrosMultibinder.addBinding().to(BinaryNameMacro.class);
+        macrosMultibinder.addBinding().to(CompilationPropertiesMacro.class);
+
+        install(new GinFactoryModuleBuilder().build(ReplicationFolderMacroFactory.class));
     }
 }

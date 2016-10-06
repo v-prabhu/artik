@@ -187,4 +187,19 @@ public interface ArtikLocalizationConstant extends Messages {
     @Key("turnProductionMode.action.description")
     String turnProductionModeActionDescription();
 
+
+    @Key("editCompilationOptions.action.title")
+    String editCompilationOptionsActionTitle();
+
+    @Key("editCompilationOptions.action.description")
+    String editCompilationOptionsActionDescription();
+
+    @Key("editCompilationOptions.view.title")
+    String editCompilationOptionsViewTitle();
+
+    @Key("editCompilationOptions.view.binaryName.title")
+    String editCompilationOptionsViewBinaryNameTitle();
+
+    @Key("editCompilationOptions.view.options.title")
+    String editCompilationOptionsViewOptionsTitle();
 }

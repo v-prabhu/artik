@@ -17,7 +17,6 @@ import com.google.web.bindery.event.shared.EventBus;
 
 import org.eclipse.che.ide.api.action.ActionManager;
 import org.eclipse.che.ide.api.action.DefaultActionGroup;
-import org.eclipse.che.ide.api.action.IdeActions;
 import org.eclipse.che.ide.api.constraints.Constraints;
 import org.eclipse.che.ide.api.extension.Extension;
 import org.eclipse.che.ide.api.icon.Icon;
@@ -28,17 +27,22 @@ import org.eclipse.che.ide.api.machine.events.WsAgentStateEvent;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
 import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartPresenter;
 import org.eclipse.che.plugin.artik.ide.apidocs.ShowDocsAction;
+import org.eclipse.che.plugin.artik.ide.command.macro.ReplicationFolderMacroRegistrar;
+import org.eclipse.che.plugin.artik.ide.command.options.EditCompilationOptionsAction;
 import org.eclipse.che.plugin.artik.ide.keyworddoc.ShowKeywordDocsAction;
 import org.eclipse.che.plugin.artik.ide.manage.ManageArtikDevicesAction;
 import org.eclipse.che.plugin.artik.ide.profile.ArtikProfileContextMenuGroup;
-import org.eclipse.che.plugin.artik.ide.profile.TurnDevelopmentModeContextMenuAction;
 import org.eclipse.che.plugin.artik.ide.profile.DevelopmentModeManager;
+import org.eclipse.che.plugin.artik.ide.profile.TurnDevelopmentModeContextMenuAction;
 import org.eclipse.che.plugin.artik.ide.profile.TurnProductionModeContextMenuAction;
 import org.eclipse.che.plugin.artik.ide.resourcemonitor.ResourceMonitor;
 import org.eclipse.che.plugin.artik.ide.scp.PushToDeviceManager;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKAction;
 
+import static org.eclipse.che.ide.api.action.IdeActions.GROUP_CENTER_TOOLBAR;
+import static org.eclipse.che.ide.api.action.IdeActions.GROUP_CONSOLES_TREE_CONTEXT_MENU;
 import static org.eclipse.che.ide.api.action.IdeActions.GROUP_MAIN_MENU;
+import static org.eclipse.che.ide.api.action.IdeActions.GROUP_PROJECT;
 
 /**
  * Artik extension entry point.
@@ -90,8 +94,9 @@ public class ArtikExtension {
                                 ResourceMonitor resourceMonitor,
                                 ArtikProfileContextMenuGroup artikProfileContextMenuGroup,
                                 TurnDevelopmentModeContextMenuAction turnDevelopmentModeContextMenuAction,
-                                TurnProductionModeContextMenuAction turnProductionModeContextMenuAction
-    ) {
+                                TurnProductionModeContextMenuAction turnProductionModeContextMenuAction,
+                                EditCompilationOptionsAction editCompilationOptionsAction,
+                                ReplicationFolderMacroRegistrar replicationFolderMacroRegistrar) {
         final DefaultActionGroup artikGroup = new DefaultActionGroup(ARTIK_GROUP_MAIN_MENU, true, actionManager);
         actionManager.registerAction(ARTIK_GROUP_MAIN_MENU_ID, artikGroup);
 
@@ -113,8 +118,7 @@ public class ArtikExtension {
         artikGroup.add(profileGroup);
 
         // Consoles tree context menu group
-        DefaultActionGroup consolesTreeContextMenu =
-                (DefaultActionGroup)actionManager.getAction(IdeActions.GROUP_CONSOLES_TREE_CONTEXT_MENU);
+        DefaultActionGroup consolesTreeContextMenu = (DefaultActionGroup)actionManager.getAction(GROUP_CONSOLES_TREE_CONTEXT_MENU);
 
         actionManager.registerAction("artikProfileContextMenuGroup", artikProfileContextMenuGroup);
 
@@ -123,10 +127,13 @@ public class ArtikExtension {
         artikProfileContextMenuGroup.add(turnDevelopmentModeContextMenuAction);
         artikProfileContextMenuGroup.add(turnProductionModeContextMenuAction);
 
-        final DefaultActionGroup centerToolbarGroup = (DefaultActionGroup)actionManager.getAction(IdeActions.GROUP_CENTER_TOOLBAR);
+        DefaultActionGroup projectMainMenu = (DefaultActionGroup)actionManager.getAction(GROUP_PROJECT);
+        projectMainMenu.addSeparator();
+        projectMainMenu.add(editCompilationOptionsAction);
+
+        final DefaultActionGroup centerToolbarGroup = (DefaultActionGroup)actionManager.getAction(GROUP_CENTER_TOOLBAR);
         centerToolbarGroup.add(manageDevicesAction, Constraints.FIRST);
 
         keyBindingAgent.getGlobal().addKey(new KeyBuilder().action().charCode('q').build(), SHOW_KEYWORD_DOCS_ACTION_ID);
     }
-
 }
