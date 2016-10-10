@@ -123,7 +123,7 @@
             unpackWARs="true" autoDeploy="false">
 
         <!-- /root/.apidocs/html default location for Artik SDK docs here we will use  ${artik.docs.home} for make it more
-          flexible because folder with Artik Doc can have other location or doe's not exist -->
+          flexible because folder with Artik Doc can have other location or doesn't not exist -->
         <Context docBase="${artik.docs.home}" path="/artikdocs" />
 
 
