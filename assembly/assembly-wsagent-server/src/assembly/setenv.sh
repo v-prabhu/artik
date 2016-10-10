@@ -21,11 +21,24 @@
 
 [ -z "${JPDA_ADDRESS}" ]  && JPDA_ADDRESS="4403"
 
+
+#Going to check is directory with Artik API Docs exist. If it exist set special property to the location of this folder
+#if not map it ro the webapps/ROOT. We need this workaround for staring WS-Agent in any case.
+#Thes property will be use in server.xml of this bundle in Context section.
+# details here https://github.com/codenvy/artik-ide/issues/151
+if [ -d "/root/.apidocs/html" ]; then
+  export ARTIK_DOCS_HOME="/root/.apidocs/html";
+else 
+  export ARTIK_DOCS_HOME="${CATALINA_HOME}/webapps/ROOT";
+fi
+
+
 #Tomcat options
 [ -z "${CATALINA_OPTS}" ]  && CATALINA_OPTS="-Dcom.sun.management.jmxremote  \
                                              -Dcom.sun.management.jmxremote.ssl=false \
                                              -Dcom.sun.management.jmxremote.authenticate=false \
-                                             -Dche.local.conf.dir=${CHE_LOCAL_CONF_DIR}"
+                                             -Dche.local.conf.dir=${CHE_LOCAL_CONF_DIR} \
+                                             -Dartik.docs.home=${ARTIK_DOCS_HOME}"
 
 #Class path
 [ -z "${CLASSPATH}" ]  && CLASSPATH="${CATALINA_HOME}/conf/:${JAVA_HOME}/lib/tools.jar"

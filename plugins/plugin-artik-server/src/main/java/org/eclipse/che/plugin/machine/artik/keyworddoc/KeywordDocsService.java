@@ -28,6 +28,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,15 +59,19 @@ public class KeywordDocsService extends Service {
     @PostConstruct
     private void start() {
         final java.nio.file.Path docPath = Paths.get(docsPath);
-
-        try {
-            Map<String, String> links = KeywordDocsParser.parseFolder(docPath);
-            for (Map.Entry<String, String> entry : links.entrySet()) {
-                docLinks.put(entry.getKey(), "/artikdocs/" + entry.getValue());
+        if (Files.exists(docPath)) {
+            try {
+                Map<String, String> links = KeywordDocsParser.parseFolder(docPath);
+                for (Map.Entry<String, String> entry : links.entrySet()) {
+                    docLinks.put(entry.getKey(), "/artikdocs/" + entry.getValue());
+                }
+            } catch (IOException e) {
+                LOG.warn("Unable to parse Artik API documentation files", e);
             }
-        } catch (IOException e) {
-            LOG.info("Unable to parse Artik API documentation files", e);
+        } else {
+            LOG.warn("Unable to parse Artik API documentation files. Folder with docs not found in your workspace");
         }
+
     }
 
     @GET

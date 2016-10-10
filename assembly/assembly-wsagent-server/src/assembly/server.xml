@@ -119,18 +119,13 @@
 
       <!-- Use the LockOutRealm to prevent attempts to guess user passwords
            via a brute-force attack -->
-      <Realm className="org.apache.catalina.realm.LockOutRealm">
-        <!-- This Realm uses the UserDatabase configured in the global JNDI
-             resources under the key "UserDatabase".  Any edits
-             that are performed against this UserDatabase are immediately
-             available for use by the Realm.  -->
-        <!--Realm className="org.apache.catalina.realm.UserDatabaseRealm"
-               resourceName="UserDatabase"/-->
-      </Realm>
-
       <Host name="localhost"  appBase="webapps"
             unpackWARs="true" autoDeploy="false">
-        <Context docBase="/root/.apidocs/html" path="/artikdocs"/>
+
+        <!-- /root/.apidocs/html default location for Artik SDK docs here we will use  ${artik.docs.home} for make it more
+          flexible because folder with Artik Doc can have other location or doe's not exist -->
+        <Context docBase="${artik.docs.home}" path="/artikdocs" />
+
 
         <!-- SingleSignOn valve, share authentication between web applications
              Documentation at: /docs/config/valve.html -->
@@ -145,6 +140,15 @@
                filename="${catalina.home}/conf/logback-access-localhost.xml" />
 
       </Host>
+
+      <Realm className="org.apache.catalina.realm.LockOutRealm">
+        <!-- This Realm uses the UserDatabase configured in the global JNDI
+             resources under the key "UserDatabase".  Any edits
+             that are performed against this UserDatabase are immediately
+             available for use by the Realm.  -->
+        <!--Realm className="org.apache.catalina.realm.UserDatabaseRealm"
+               resourceName="UserDatabase"/-->
+      </Realm>
     </Engine>
   </Service>
 </Server>
