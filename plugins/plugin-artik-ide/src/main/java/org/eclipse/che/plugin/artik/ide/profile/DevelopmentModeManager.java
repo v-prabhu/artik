@@ -11,6 +11,9 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.artik.ide.profile;
 
+import com.google.gwt.json.client.JSONObject;
+import com.google.gwt.json.client.JSONString;
+import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -18,6 +21,8 @@ import com.google.web.bindery.event.shared.EventBus;
 
 import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.core.model.machine.Machine;
+import org.eclipse.che.api.core.model.machine.MachineConfig;
+import org.eclipse.che.api.core.model.machine.MachineSource;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
 import org.eclipse.che.api.promises.client.Operation;
@@ -28,6 +33,7 @@ import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
 import org.eclipse.che.ide.api.action.ActionManager;
 import org.eclipse.che.ide.api.action.DefaultActionGroup;
 import org.eclipse.che.ide.api.app.AppContext;
+import org.eclipse.che.ide.api.dialogs.CancelCallback;
 import org.eclipse.che.ide.api.dialogs.ConfirmCallback;
 import org.eclipse.che.ide.api.dialogs.DialogFactory;
 import org.eclipse.che.ide.api.machine.MachineServiceClient;
@@ -37,6 +43,8 @@ import org.eclipse.che.ide.commons.exception.UnmarshallerException;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.extension.machine.client.machine.MachineStateEvent;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
+import org.eclipse.che.ide.rest.AsyncRequestFactory;
+import org.eclipse.che.ide.rest.StringUnmarshaller;
 import org.eclipse.che.ide.util.UUID;
 import org.eclipse.che.ide.util.loging.Log;
 import org.eclipse.che.ide.websocket.Message;
@@ -53,8 +61,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.google.gwt.json.client.JSONParser.parseLenient;
+import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.eclipse.che.api.core.model.machine.MachineStatus.RUNNING;
 import static org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper.createFromAsyncRequest;
+import static org.eclipse.che.ide.api.notification.StatusNotification.DisplayMode.FLOAT_MODE;
+import static org.eclipse.che.ide.api.notification.StatusNotification.Status.FAIL;
+import static org.eclipse.che.ide.api.notification.StatusNotification.Status.PROGRESS;
+import static org.eclipse.che.ide.api.notification.StatusNotification.Status.SUCCESS;
+import static org.eclipse.che.ide.rest.HTTPHeader.ACCEPT;
 
 /**
  * Manager for switching profile at Artik devices.
@@ -63,6 +78,9 @@ import static org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper.cr
  */
 @Singleton
 public class DevelopmentModeManager implements MachineStateEvent.Handler {
+
+    private static final String REPLICATION_FOLDER      = "replicationFolder";
+    private static final String DEFAULT_PROJECTS_FOLDER = "projects";
 
     private final ActionManager             actionManager;
     private final MachineServiceClient      machineService;
@@ -74,6 +92,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
     private final ProcessesPanelPresenter   processesPanelPresenter;
     private final DialogFactory             dialogFactory;
     private final NotificationManager       notificationManager;
+    private final AsyncRequestFactory       asyncRequestFactory;
     private final ArtikLocalizationConstant locale;
 
     /**
@@ -100,6 +119,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
                                   ProcessesPanelPresenter processesPanelPresenter,
                                   DialogFactory dialogFactory,
                                   NotificationManager notificationManager,
+                                  AsyncRequestFactory asyncRequestFactory,
                                   ArtikLocalizationConstant locale) {
         this.actionManager = actionManager;
         this.machineService = machineService;
@@ -111,6 +131,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
         this.processesPanelPresenter = processesPanelPresenter;
         this.dialogFactory = dialogFactory;
         this.notificationManager = notificationManager;
+        this.asyncRequestFactory = asyncRequestFactory;
         this.locale = locale;
 
         sshMachines = new HashMap<>();
@@ -123,6 +144,23 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
         console.log(msg);
     }-*/;
 
+    private static String format(final String format, final Object... args) {
+        final String pattern = "%s";
+
+        int start;
+        int last = 0;
+        int argsIndex = 0;
+
+        final StringBuilder result = new StringBuilder();
+        while ((start = format.indexOf(pattern, last)) != -1) {
+            result.append(format.substring(last, start));
+            result.append(args[argsIndex++]);
+            last = start + pattern.length();
+        }
+        result.append(format.substring(last));
+        return result.toString();
+    }
+
     public void turnOnDevelopmentMode(final String machineName) {
         dialogFactory.createConfirmDialog("IDE", "Development mode will install software and dependencies for Artik IDE.<br>" +
                         "Are you sure you want to turn on development mode for <b>" + machineName + "</b>?",
@@ -131,8 +169,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
                     @Override
                     public void accepted() {
                         String notificationMessage = "Turning on development mode for " + machineName;
-                        progressNotification = notificationManager.notify(notificationMessage, StatusNotification.Status.PROGRESS,
-                                StatusNotification.DisplayMode.FLOAT_MODE);
+                        progressNotification = notificationManager.notify(notificationMessage, PROGRESS, FLOAT_MODE);
 
                         Machine machine = sshMachines.get(machineName);
                         String cmd = resources.turnOnDevelopmentProfileCommand().getText();
@@ -141,34 +178,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
                             public void apply(String arg) throws OperationException {
                                 String message = "Development mode has been turned on for " + machineName;
                                 progressNotification.setTitle(message);
-                                progressNotification.setStatus(StatusNotification.Status.SUCCESS);
-                            }
-                        });
-                    }
-                }, null).show();
-    }
-
-    public void turnOnProductionMode(final String machineName) {
-        dialogFactory.createConfirmDialog("IDE",
-                        "Production mode will uninstall software and dependencies for Artik IDE, and delete projects backups.<br>" +
-                        "It cannot be undone!<br>" +
-                        "Are you sure you want to turn on production mode for <b>" + machineName + "</b>?",
-                        "Yes", "Cancel",
-                new ConfirmCallback() {
-                    @Override
-                    public void accepted() {
-                        String notificationMessage = "Turning on production mode for " + machineName;
-                        progressNotification = notificationManager.notify(notificationMessage, StatusNotification.Status.PROGRESS,
-                                StatusNotification.DisplayMode.FLOAT_MODE);
-
-                        Machine machine = sshMachines.get(machineName);
-                        String cmd = resources.turnOnProductionProfileCommand().getText();
-                        executeCommand(cmd, machine.getId()).then(new Operation<String>() {
-                            @Override
-                            public void apply(String arg) throws OperationException {
-                                String message = "Production mode has been turned on for " + machineName;
-                                progressNotification.setTitle(message);
-                                progressNotification.setStatus(StatusNotification.Status.SUCCESS);
+                                progressNotification.setStatus(SUCCESS);
                             }
                         });
                     }
@@ -318,4 +328,95 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
 
     }
 
+    public void turnOnProductionMode(final String machineName) {
+        final String header = "IDE";
+        final String message = "Production mode will uninstall software and dependencies for Artik IDE, and delete projects backups.<br>" +
+                               "It cannot be undone!<br>" +
+                               "Are you sure you want to turn on production mode for <b>" + machineName + "</b>?";
+        final String yes = "Yes";
+        final String no = "Cancel";
+        final ConfirmCallback yesCallback = new YesCallback(machineName);
+        final CancelCallback noCallback = null;
+
+        dialogFactory.createConfirmDialog(header, message, yes, no, yesCallback, noCallback)
+                     .show();
+
+    }
+
+    private class ErrorOperation implements Operation<PromiseError> {
+        @Override
+        public void apply(PromiseError promiseError) throws OperationException {
+            String message = "Production mode has not been turned on due to internal error.";
+            progressNotification.setTitle(message);
+            progressNotification.setStatus(FAIL);
+        }
+    }
+
+    private class RecipeScriptOperation implements Operation<String> {
+        private final Machine machine;
+
+        private RecipeScriptOperation(Machine machine) {
+            this.machine = machine;
+        }
+
+        @Override
+        public void apply(String s) throws OperationException {
+            final JSONObject jsonObject = parseLenient(s).isObject();
+
+            final JSONValue replicationFolderValue = jsonObject.get(REPLICATION_FOLDER);
+            final JSONString replicationFolderString = replicationFolderValue.isString();
+
+            final String replicationFolder = replicationFolderString.stringValue();
+            Log.debug(DevelopmentModeManager.this.getClass(), "replicationFolder: " + replicationFolder);
+
+
+            final String commandText = resources.turnOnProductionProfileCommand().getText();
+            final String command = format(commandText, replicationFolder + "/" + DEFAULT_PROJECTS_FOLDER);
+            Log.debug(DevelopmentModeManager.this.getClass(), "command: " + command);
+
+            executeCommand(command, machine.getId()).then(new ExecuteCommandOperation())
+                                                    .catchError(new ErrorOperation());
+
+        }
+
+        private class ExecuteCommandOperation implements Operation<String> {
+            @Override
+            public void apply(String arg) throws OperationException {
+                String message = "Production mode has been turned on for " + machine.getConfig().getName();
+                progressNotification.setTitle(message);
+                progressNotification.setStatus(SUCCESS);
+            }
+        }
+    }
+
+    private class YesCallback implements ConfirmCallback {
+        private final String machineName;
+
+        public YesCallback(String machineName) {
+            this.machineName = machineName;
+        }
+
+        @Override
+        public void accepted() {
+            final String message = "Turning on production mode for " + machineName;
+            progressNotification = notificationManager.notify(message, PROGRESS, FLOAT_MODE);
+
+            final Machine machine = sshMachines.get(machineName);
+
+            final MachineConfig config = machine.getConfig();
+            Log.debug(DevelopmentModeManager.this.getClass(), "config: " + config);
+
+            final MachineSource source = config.getSource();
+            Log.debug(DevelopmentModeManager.this.getClass(), "source: " + source);
+
+            final String location = source.getLocation();
+            Log.debug(DevelopmentModeManager.this.getClass(), "location: " + location);
+
+            asyncRequestFactory.createGetRequest(location)
+                               .header(ACCEPT, TEXT_PLAIN)
+                               .send(new StringUnmarshaller())
+                               .then(new RecipeScriptOperation(machine))
+                               .catchError(new ErrorOperation());
+        }
+    }
 }

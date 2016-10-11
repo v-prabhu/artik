@@ -52,6 +52,7 @@ import org.eclipse.che.ide.websocket.MessageBusProvider;
 import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
 import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClient;
+import org.eclipse.che.plugin.artik.ide.profile.DevelopmentModeManager;
 import org.eclipse.che.plugin.artik.shared.dto.ArtikDeviceDto;
 
 import java.util.ArrayList;
@@ -76,6 +77,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
     public final static String VALID_NAME     = "[\\w-]*";
 
     private final ManageDevicesView            view;
+    private final DevelopmentModeManager       developmentModeManager;
     private final RecipeServiceClient          recipeServiceClient;
     private final DtoFactory                   dtoFactory;
     private final DtoUnmarshallerFactory       dtoUnmarshallerFactory;
@@ -103,6 +105,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
 
     @Inject
     public ManageDevicesPresenter(final ManageDevicesView view,
+                                  final DevelopmentModeManager developmentModeManager,
                                   final RecipeServiceClient recipeServiceClient,
                                   final DtoFactory dtoFactory,
                                   final DtoUnmarshallerFactory dtoUnmarshallerFactory,
@@ -116,6 +119,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                                   final EventBus eventBus,
                                   final MessageBusProvider messageBusProvider) {
         this.view = view;
+        this.developmentModeManager = developmentModeManager;
         this.recipeServiceClient = recipeServiceClient;
         this.dtoFactory = dtoFactory;
         this.dtoUnmarshallerFactory = dtoUnmarshallerFactory;
@@ -809,9 +813,14 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                     @Override
                     public void apply(MachineDto machineDto) throws OperationException {
                         if (machineDto.getStatus() == RUNNING) {
-                            connectNotification.setTitle(locale.deviceConnectSuccess(machineDto.getConfig().getName()));
+                            final MachineConfigDto machineConfig = machineDto.getConfig();
+                            final String machineName = machineConfig.getName();
+
+                            connectNotification.setTitle(locale.deviceConnectSuccess(machineName));
                             connectNotification.setStatus(StatusNotification.Status.SUCCESS);
-                            updateDevices(machineDto.getConfig().getName());
+                            updateDevices(machineName);
+
+                            developmentModeManager.turnOnDevelopmentMode(machineName);
                         } else {
                             onConnectingFailed(null);
                         }

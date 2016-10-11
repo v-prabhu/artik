@@ -1,4 +1,5 @@
 dnf remove gdb-gdbserver.armv7hl rsync -y
+rm -rf %s
 
 # Special marker line. Don't modify it.
 echo ">>> end <<<"
