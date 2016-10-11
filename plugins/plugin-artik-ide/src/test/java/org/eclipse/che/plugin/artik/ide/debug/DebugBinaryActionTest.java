@@ -62,6 +62,6 @@ public class DebugBinaryActionTest {
     public void shouldCallConnector() throws Exception {
         action.actionPerformed(null);
 
-        verify(debuggerConnector).connect(eq(machine));
+        verify(debuggerConnector).debug(eq(machine));
     }
 }

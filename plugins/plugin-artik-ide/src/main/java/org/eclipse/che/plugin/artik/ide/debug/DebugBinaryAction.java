@@ -53,6 +53,6 @@ public class DebugBinaryAction extends AbstractPerspectiveAction {
 
     @Override
     public void actionPerformed(ActionEvent event) {
-        debuggerConnector.connect(machine);
+        debuggerConnector.debug(machine);
     }
 }
