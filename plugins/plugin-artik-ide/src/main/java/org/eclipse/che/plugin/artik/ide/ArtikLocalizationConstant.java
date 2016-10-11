@@ -202,4 +202,11 @@ public interface ArtikLocalizationConstant extends Messages {
 
     @Key("editCompilationOptions.view.options.title")
     String editCompilationOptionsViewOptionsTitle();
+
+
+    @Key("debug.action.title")
+    String debugActionTitle();
+
+    @Key("debug.action.description")
+    String debugActionDescription();
 }
