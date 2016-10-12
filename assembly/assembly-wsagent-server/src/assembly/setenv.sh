@@ -23,8 +23,8 @@
 
 
 #Going to check is directory with Artik API Docs exist. If it exist set special property to the location of this folder
-#if not map it ro the webapps/ROOT. We need this workaround for staring WS-Agent in any case.
-#Thes property will be use in server.xml of this bundle in Context section.
+#if not map it to the webapps/ROOT. We need this workaround for staring WS-Agent in any case.
+#This property is used in server.xml of this bundle in Context section.
 # details here https://github.com/codenvy/artik-ide/issues/151
 if [ -d "/root/.apidocs/html" ]; then
   export ARTIK_DOCS_HOME="/root/.apidocs/html";

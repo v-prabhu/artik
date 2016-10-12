@@ -51,7 +51,7 @@ public class KeywordDocsService extends Service {
     private final String              docsPath;
 
     @Inject
-    public KeywordDocsService(@Named("artik.apidocs.path") String docsPath) {
+    public KeywordDocsService(@Named("sys.artik.docs.home") String docsPath) {
         this.docsPath = docsPath;
         docLinks = new HashMap<>();
     }
