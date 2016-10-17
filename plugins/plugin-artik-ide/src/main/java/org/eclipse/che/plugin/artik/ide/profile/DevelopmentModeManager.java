@@ -162,27 +162,34 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
     }
 
     public void turnOnDevelopmentMode(final String machineName) {
-        dialogFactory.createConfirmDialog("IDE", "Development mode will install software and dependencies for Artik IDE.<br>" +
-                        "Are you sure you want to turn on development mode for <b>" + machineName + "</b>?",
-                        "Yes", "Cancel",
-                new ConfirmCallback() {
-                    @Override
-                    public void accepted() {
-                        String notificationMessage = "Turning on development mode for " + machineName;
-                        progressNotification = notificationManager.notify(notificationMessage, PROGRESS, FLOAT_MODE);
+        final String title = "Development Mode";
+        final String content = "Development mode will install software and dependencies for Artik IDE.<br>" +
+                               "Are you sure you want to turn on development mode for <b>" + machineName + "</b>?";
+        final String yesMessage = "Yes";
+        final String cancelMessage = "Cancel";
 
-                        Machine machine = sshMachines.get(machineName);
-                        String cmd = resources.turnOnDevelopmentProfileCommand().getText();
-                        executeCommand(cmd, machine.getId()).then(new Operation<String>() {
-                            @Override
-                            public void apply(String arg) throws OperationException {
-                                String message = "Development mode has been turned on for " + machineName;
-                                progressNotification.setTitle(message);
-                                progressNotification.setStatus(SUCCESS);
-                            }
-                        });
+        final ConfirmCallback confirmCallback = new ConfirmCallback() {
+            @Override
+            public void accepted() {
+                String notificationMessage = "Turning on development mode for " + machineName;
+                progressNotification = notificationManager.notify(notificationMessage, PROGRESS, FLOAT_MODE);
+
+                Machine machine = sshMachines.get(machineName);
+                String cmd = resources.turnOnDevelopmentProfileCommand().getText();
+                executeCommand(cmd, machine.getId()).then(new Operation<String>() {
+                    @Override
+                    public void apply(String arg) throws OperationException {
+                        String message = "Development mode has been turned on for " + machineName;
+                        progressNotification.setTitle(message);
+                        progressNotification.setStatus(SUCCESS);
                     }
-                }, null).show();
+                });
+            }
+        };
+        final CancelCallback cancelCallback = null;
+
+        dialogFactory.createConfirmDialog(title, content, yesMessage, cancelMessage, confirmCallback, cancelCallback)
+                     .show();
     }
 
     /**
@@ -329,16 +336,42 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
     }
 
     public void turnOnProductionMode(final String machineName) {
-        final String header = "IDE";
+        final String title = "Production Mode";
         final String message = "Production mode will uninstall software and dependencies for Artik IDE, and delete projects backups.<br>" +
                                "It cannot be undone!<br>" +
                                "Are you sure you want to turn on production mode for <b>" + machineName + "</b>?";
-        final String yes = "Yes";
-        final String no = "Cancel";
-        final ConfirmCallback yesCallback = new YesCallback(machineName);
-        final CancelCallback noCallback = null;
+        final String yesMessage = "Yes";
+        final String noMessage = "Cancel";
+        final String machineName1 = machineName;
+        final ConfirmCallback confirmCallback = new ConfirmCallback() {
+            private final String machineName = machineName1;
 
-        dialogFactory.createConfirmDialog(header, message, yes, no, yesCallback, noCallback)
+            @Override
+            public void accepted() {
+                final String message = "Turning on production mode for " + machineName;
+                progressNotification = notificationManager.notify(message, PROGRESS, FLOAT_MODE);
+
+                final Machine machine = sshMachines.get(machineName);
+
+                final MachineConfig config = machine.getConfig();
+                Log.debug(DevelopmentModeManager.this.getClass(), "config: " + config);
+
+                final MachineSource source = config.getSource();
+                Log.debug(DevelopmentModeManager.this.getClass(), "source: " + source);
+
+                final String location = source.getLocation();
+                Log.debug(DevelopmentModeManager.this.getClass(), "location: " + location);
+
+                asyncRequestFactory.createGetRequest(location)
+                                   .header(ACCEPT, TEXT_PLAIN)
+                                   .send(new StringUnmarshaller())
+                                   .then(new RecipeScriptOperation(machine))
+                                   .catchError(new ErrorOperation());
+            }
+        };
+        final CancelCallback cancelCallback = null;
+
+        dialogFactory.createConfirmDialog(title, message, yesMessage, noMessage, confirmCallback, cancelCallback)
                      .show();
 
     }
@@ -389,34 +422,4 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
         }
     }
 
-    private class YesCallback implements ConfirmCallback {
-        private final String machineName;
-
-        public YesCallback(String machineName) {
-            this.machineName = machineName;
-        }
-
-        @Override
-        public void accepted() {
-            final String message = "Turning on production mode for " + machineName;
-            progressNotification = notificationManager.notify(message, PROGRESS, FLOAT_MODE);
-
-            final Machine machine = sshMachines.get(machineName);
-
-            final MachineConfig config = machine.getConfig();
-            Log.debug(DevelopmentModeManager.this.getClass(), "config: " + config);
-
-            final MachineSource source = config.getSource();
-            Log.debug(DevelopmentModeManager.this.getClass(), "source: " + source);
-
-            final String location = source.getLocation();
-            Log.debug(DevelopmentModeManager.this.getClass(), "location: " + location);
-
-            asyncRequestFactory.createGetRequest(location)
-                               .header(ACCEPT, TEXT_PLAIN)
-                               .send(new StringUnmarshaller())
-                               .then(new RecipeScriptOperation(machine))
-                               .catchError(new ErrorOperation());
-        }
-    }
 }
