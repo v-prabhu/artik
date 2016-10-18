@@ -50,6 +50,9 @@ public interface ArtikResources extends ClientBundle {
     @Source("profile/turnOnProductionProfile")
     TextResource turnOnProductionProfileCommand();
 
+    @Source("debug/debug.svg")
+    SVGResource debug();
+
     /** The CssResource interface for the Artik extension. */
     interface Css extends CssResource {
 
