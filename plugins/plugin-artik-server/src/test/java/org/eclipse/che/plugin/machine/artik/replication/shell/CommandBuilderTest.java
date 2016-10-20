@@ -42,7 +42,7 @@ public class CommandBuilderTest {
     private static final String SCP_COMMAND_LINE   = format("sshpass -p %s scp -P %s -o StrictHostKeyChecking=no -r %s %s@%s:%s",
                                                             PASSWORD, PORT, SOURCE, USERNAME, HOST, TARGET);
 
-    private static final String RSYNC_COMMAND_LINE   = format("rsync.sh %s %s %s %s %s", USERNAME, PASSWORD, SOURCE, HOST, TARGET);
+    private static final String RSYNC_COMMAND_LINE   = format("rsync.sh %s %s %s %s %s %s", USERNAME, PASSWORD, SOURCE, HOST, TARGET, PORT);
 
     @Mock
     private ScpCommandContext   scpCommandContext;

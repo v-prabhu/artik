@@ -45,7 +45,8 @@ class CommandBuilder {
                                 .add(ctx.getPassword())
                                 .add(ctx.getSourcePath())
                                 .add(ctx.getHost())
-                                .add(ctx.getTargetPath());
+                                .add(ctx.getTargetPath())
+                                .add(ctx.getPort());
     }
 
     /**

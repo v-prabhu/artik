@@ -52,7 +52,7 @@ public class ShellCommandManagerTest {
     private static final String SCP_COMMAND_LINE = format("sshpass -p %s scp -P %s -o StrictHostKeyChecking=no  %s %s@%s:%s%s",
                                                           PASSWORD, PORT, SOURCE, USERNAME, HOST, REPLICATION, TARGET);
 
-    private static final String RSYNC_COMMAND_LINE = format("rsync.sh %s %s %s %s %s", USERNAME, PASSWORD, SOURCE, HOST, REPLICATION);
+    private static final String RSYNC_COMMAND_LINE = format("rsync.sh %s %s %s %s %s %s", USERNAME, PASSWORD, SOURCE, HOST, REPLICATION, PORT);
     @Mock
     private JsonValueHelper      jsonValueHelper;
     @Mock
