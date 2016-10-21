@@ -47,6 +47,18 @@ public interface ArtikResources extends ClientBundle {
     @Source("profile/turnOnDevelopmentProfile")
     TextResource turnOnDevelopmentProfileCommand();
 
+    @Source("software/RsyncInstallationCommand")
+    TextResource rsyncInstallationCommand();
+
+    @Source("software/GdbServerInstallationCommand")
+    TextResource gdbServerInstallationCommand();
+
+    @Source("software/RsyncVerificationCommand")
+    TextResource rsyncVerificationCommand();
+
+    @Source("software/GdbServerVerificationCommand")
+    TextResource gdbServerVerificationCommand();
+
     @Source("profile/turnOnProductionProfile")
     TextResource turnOnProductionProfileCommand();
 

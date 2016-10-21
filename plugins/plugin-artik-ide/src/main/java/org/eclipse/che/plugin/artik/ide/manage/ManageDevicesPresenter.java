@@ -53,6 +53,7 @@ import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
 import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClient;
 import org.eclipse.che.plugin.artik.ide.profile.DevelopmentModeManager;
+import org.eclipse.che.plugin.artik.ide.profile.SoftwareManager;
 import org.eclipse.che.plugin.artik.shared.dto.ArtikDeviceDto;
 
 import java.util.ArrayList;
@@ -90,6 +91,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
     private final DeviceDiscoveryServiceClient deviceDiscoveryService;
     private final EventBus                     eventBus;
     private final MessageBusProvider           messageBusProvider;
+    private final SoftwareManager softwareManager;
 
     private final List<Device> devices = new ArrayList<>();
     private Device selectedDevice;
@@ -117,7 +119,8 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                                   final WorkspaceServiceClient workspaceServiceClient,
                                   final DeviceDiscoveryServiceClient deviceDiscoveryService,
                                   final EventBus eventBus,
-                                  final MessageBusProvider messageBusProvider) {
+                                  final MessageBusProvider messageBusProvider,
+                                  final SoftwareManager softwareManager) {
         this.view = view;
         this.developmentModeManager = developmentModeManager;
         this.recipeServiceClient = recipeServiceClient;
@@ -132,6 +135,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         this.deviceDiscoveryService = deviceDiscoveryService;
         this.eventBus = eventBus;
         this.messageBusProvider = messageBusProvider;
+        this.softwareManager = softwareManager;
 
         view.setDelegate(this);
 
@@ -820,7 +824,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                             connectNotification.setStatus(StatusNotification.Status.SUCCESS);
                             updateDevices(machineName);
 
-                            developmentModeManager.turnOnDevelopmentMode(machineName);
+                            softwareManager.checkAndInstall(machineName);
                         } else {
                             onConnectingFailed(null);
                         }

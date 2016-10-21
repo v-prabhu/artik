@@ -1,0 +1,1 @@
+rpm -qa | grep rsync.*.armv7hl
