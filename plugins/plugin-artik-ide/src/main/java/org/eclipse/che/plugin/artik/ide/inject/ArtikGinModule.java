@@ -16,6 +16,7 @@ import com.google.gwt.inject.client.assistedinject.GinFactoryModuleBuilder;
 import com.google.gwt.inject.client.multibindings.GinMapBinder;
 import com.google.gwt.inject.client.multibindings.GinMultibinder;
 import com.google.inject.Singleton;
+import com.google.inject.name.Names;
 
 import org.eclipse.che.ide.api.component.Component;
 import org.eclipse.che.ide.api.extension.ExtensionGinModule;
@@ -42,6 +43,8 @@ import org.eclipse.che.plugin.artik.ide.profile.ArtikModeActionFactory;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceActionFactory;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKView;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKViewImpl;
+
+import javax.inject.Named;
 
 /**
  * Gin module for Artik extension.
@@ -82,5 +85,7 @@ public class ArtikGinModule extends AbstractGinModule {
                     .addBinding("Debug binary actions manager")
                     .to(DebugBinaryActionsManager.class);
         install(new GinFactoryModuleBuilder().build(DebugBinaryActionFactory.class));
+
+        bindConstant().annotatedWith(Names.named("machine.extension.central.toolbar.visibility")).to(false);
     }
 }

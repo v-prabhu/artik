@@ -15,6 +15,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.web.bindery.event.shared.EventBus;
 
+import org.eclipse.che.ide.api.action.ActionEvent;
 import org.eclipse.che.ide.api.action.ActionManager;
 import org.eclipse.che.ide.api.action.DefaultActionGroup;
 import org.eclipse.che.ide.api.constraints.Constraints;
@@ -39,9 +40,9 @@ import org.eclipse.che.plugin.artik.ide.resourcemonitor.ResourceMonitor;
 import org.eclipse.che.plugin.artik.ide.scp.PushToDeviceManager;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKAction;
 
-import static org.eclipse.che.ide.api.action.IdeActions.GROUP_CENTER_TOOLBAR;
 import static org.eclipse.che.ide.api.action.IdeActions.GROUP_CONSOLES_TREE_CONTEXT_MENU;
 import static org.eclipse.che.ide.api.action.IdeActions.GROUP_MAIN_MENU;
+import static org.eclipse.che.ide.api.action.IdeActions.GROUP_MAIN_TOOLBAR;
 import static org.eclipse.che.ide.api.action.IdeActions.GROUP_PROJECT;
 
 /**
@@ -131,9 +132,23 @@ public class ArtikExtension {
         projectMainMenu.addSeparator();
         projectMainMenu.add(editCompilationOptionsAction);
 
-        final DefaultActionGroup centerToolbarGroup = (DefaultActionGroup)actionManager.getAction(GROUP_CENTER_TOOLBAR);
-        centerToolbarGroup.add(manageDevicesAction, Constraints.FIRST);
+        DefaultActionGroup actionsToolbarGroup = new ManageDeviceActionGroup(actionManager);
+        actionsToolbarGroup.add(manageDevicesAction);
+        DefaultActionGroup mainToolbarGroup = (DefaultActionGroup)actionManager.getAction(GROUP_MAIN_TOOLBAR);
+        mainToolbarGroup.add(actionsToolbarGroup, Constraints.LAST);
 
         keyBindingAgent.getGlobal().addKey(new KeyBuilder().action().charCode('q').build(), SHOW_KEYWORD_DOCS_ACTION_ID);
+    }
+
+    private class ManageDeviceActionGroup extends DefaultActionGroup {
+
+        ManageDeviceActionGroup(ActionManager actionManager) {
+            super(actionManager);
+        }
+
+        @Override
+        public void update(ActionEvent e) {
+            e.getPresentation().setEnabledAndVisible(true);
+        }
     }
 }
