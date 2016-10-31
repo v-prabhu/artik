@@ -18,11 +18,9 @@ import com.google.inject.assistedinject.Assisted;
 import org.eclipse.che.api.core.ApiException;
 import org.eclipse.che.api.core.ServerException;
 import org.eclipse.che.commons.json.JsonParseException;
-import org.eclipse.che.plugin.machine.artik.replication.ApiRequestHelper;
+import org.eclipse.che.plugin.machine.artik.ArtikDeviceManager;
 import org.everrest.core.impl.provider.json.JsonValue;
 import org.slf4j.Logger;
-
-import java.io.IOException;
 
 import static org.eclipse.che.commons.json.JsonHelper.parseJson;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -48,11 +46,11 @@ public class JsonValueHelper {
     private final JsonValue jsonValue;
 
     @Inject
-    public JsonValueHelper(@Assisted String machineId, ApiRequestHelper apiRequestHelper) throws ServerException {
+    public JsonValueHelper(@Assisted String deviceId, ArtikDeviceManager artikDeviceManager) throws ServerException {
         try {
-            final String script = apiRequestHelper.getScript(machineId);
+            final String script = artikDeviceManager.getDeviceById(deviceId).getConfig().getSource().getContent();
             jsonValue = parseJson(script);
-        } catch (IOException | ApiException | JsonParseException e) {
+        } catch (ApiException | JsonParseException e) {
             LOG.error("Something went wrong when we tried to get or parse machine's script: {}", e.getMessage(), e);
             throw new ServerException(e.getMessage());
         }

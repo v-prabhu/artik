@@ -11,13 +11,8 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.artik.ide.debug;
 
-import com.google.gwt.http.client.Request;
-import com.google.gwt.http.client.RequestBuilder;
-import com.google.gwt.http.client.RequestCallback;
-import com.google.gwt.http.client.RequestException;
-import com.google.gwt.http.client.Response;
-import com.google.gwt.json.client.JSONParser;
-import com.google.gwt.json.client.JSONValue;
+import com.google.common.base.Strings;
+import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -33,31 +28,32 @@ import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
 import org.eclipse.che.api.promises.client.js.JsPromiseError;
 import org.eclipse.che.api.promises.client.js.Promises;
+import org.eclipse.che.ide.api.command.CommandImpl;
 import org.eclipse.che.ide.api.debug.DebugConfiguration;
 import org.eclipse.che.ide.api.debug.DebugConfigurationType;
 import org.eclipse.che.ide.api.debug.DebugConfigurationsManager;
-import org.eclipse.che.ide.api.machine.MachineServiceClient;
+import org.eclipse.che.ide.api.macro.MacroProcessor;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.dto.DtoFactory;
-import org.eclipse.che.ide.extension.machine.client.command.CommandManager;
-import org.eclipse.che.ide.extension.machine.client.command.custom.CustomCommandConfiguration;
-import org.eclipse.che.ide.extension.machine.client.command.custom.CustomCommandType;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandConsoleFactory;
-import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandOutputConsole;
+import org.eclipse.che.ide.extension.machine.client.outputspanel.console.DefaultOutputConsole;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
 import org.eclipse.che.ide.util.UUID;
 import org.eclipse.che.ide.util.loging.Log;
 import org.eclipse.che.ide.websocket.MessageBus;
 import org.eclipse.che.ide.websocket.MessageBusProvider;
 import org.eclipse.che.ide.websocket.WebSocketException;
+import org.eclipse.che.ide.websocket.events.MessageHandler;
 import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
 import org.eclipse.che.plugin.artik.ide.command.macro.ReplicationFolderMacro;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 import org.eclipse.che.plugin.artik.ide.updatesdk.OutputMessageUnmarshaller;
 import org.eclipse.che.plugin.debugger.ide.configuration.DebugConfigurationTypeRegistry;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.google.gwt.json.client.JSONParser.parseLenient;
 import static org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper.createFromAsyncRequest;
 
 /**
@@ -69,12 +65,12 @@ import static org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper.cr
 public class DebuggerConnector {
 
     private final DtoFactory                     dtoFactory;
-    private final CustomCommandType              customCommandType;
-    private final CommandManager                 commandManager;
+    private final ProcessListener                processListener;
+    private final DeviceServiceClient            deviceServiceClient;
+    private final MacroProcessor                 macroProcessor;
     private final DebugConfigurationTypeRegistry debugConfigurationTypeRegistry;
     private final DebugConfigurationsManager     debugConfigurationsManager;
     private final NotificationManager            notificationManager;
-    private final MachineServiceClient           machineServiceClient;
 
     private final MessageBus              messageBus;
     private final ProcessesPanelPresenter processesPanelPresenter;
@@ -84,23 +80,23 @@ public class DebuggerConnector {
 
     @Inject
     public DebuggerConnector(DtoFactory dtoFactory,
-                             CustomCommandType customCommandType,
-                             CommandManager commandManager,
+                             ProcessListener processListener,
+                             MacroProcessor macroProcessor,
                              DebugConfigurationTypeRegistry debugConfigurationTypeRegistry,
                              DebugConfigurationsManager debugConfigurationsManager,
                              NotificationManager notificationManager,
-                             MachineServiceClient machineServiceClient,
+                             DeviceServiceClient deviceServiceClient,
                              MessageBusProvider messageBusProvider,
                              ProcessesPanelPresenter processesPanelPresenter,
                              CommandConsoleFactory commandConsoleFactory) {
         this.dtoFactory = dtoFactory;
-        this.customCommandType = customCommandType;
-        this.commandManager = commandManager;
+        this.processListener = processListener;
+        this.deviceServiceClient = deviceServiceClient;
+        this.macroProcessor = macroProcessor;
         this.debugConfigurationTypeRegistry = debugConfigurationTypeRegistry;
         this.debugConfigurationsManager = debugConfigurationsManager;
         this.notificationManager = notificationManager;
-        this.machineServiceClient = machineServiceClient;
-        this.messageBus = messageBusProvider.getMessageBus();
+        this.messageBus = messageBusProvider.getMachineMessageBus();
         this.processesPanelPresenter = processesPanelPresenter;
         this.commandConsoleFactory = commandConsoleFactory;
     }
@@ -168,33 +164,37 @@ public class DebuggerConnector {
         final String launchGdbServerCommand = "cd " + ReplicationFolderMacro.KEY.replace("%machineId%", machine.getId()) +
                                               "${explorer.current.file.parent.path} && gdbserver :" + debugPort + " ${binary.name}";
 
-        final CommandDto commandDto = dtoFactory.createDto(CommandDto.class)
-                                                .withName("run gdbserver")
-                                                .withType("custom")
-                                                .withCommandLine(launchGdbServerCommand);
-        final CustomCommandConfiguration commandConfiguration = customCommandType.getConfigurationFactory().createFromDto(commandDto);
+        final String commandName = "run gdbserver";
+        final String commandType = "custom";
 
-        final CommandOutputConsole console = commandConsoleFactory.create(commandConfiguration, machine);
-        console.listenToOutput(chanel);
-        processesPanelPresenter.addCommandOutput(machine.getId(), console);
+        CommandImpl command = new CommandImpl(commandName, launchGdbServerCommand, commandType);
+        final DefaultOutputConsole console = (DefaultOutputConsole)commandConsoleFactory.create(command.getName());
+        final MessageHandler handler = new MessageHandler() {
+            @Override
+            public void onMessage(String message) {
+                console.printText(message);
+            }
+        };
+        try {
+            messageBus.subscribe(chanel, handler);
+        } catch (WebSocketException e) {
+            //do nothing
+        }
 
-        commandManager.substituteProperties(launchGdbServerCommand).then(new Operation<String>() {
+        macroProcessor.expandMacros(launchGdbServerCommand).then(new Operation<String>() {
             @Override
             public void apply(String arg) throws OperationException {
                 final CommandDto command = dtoFactory.createDto(CommandDto.class)
-                                                     .withName("run gdbserver")
+                                                     .withName(commandName)
                                                      .withCommandLine(arg)
-                                                     .withType("custom");
+                                                     .withType(commandType);
 
-                final Promise<MachineProcessDto> processPromise =
-                        machineServiceClient.executeCommand(machine.getWorkspaceId(),
-                                                            machine.getId(),
-                                                            command,
-                                                            chanel);
+                final Promise<MachineProcessDto> processPromise = deviceServiceClient.executeCommand(machine.getId(), command, chanel);
                 processPromise.then(new Operation<MachineProcessDto>() {
                     @Override
                     public void apply(MachineProcessDto process) throws OperationException {
-                        console.attachToProcess(process);
+                        processesPanelPresenter.addCommandOutput(machine.getId(), console);
+                        processListener.attachToProcess(process, machine, chanel, handler);
                     }
                 });
             }
@@ -212,7 +212,7 @@ public class DebuggerConnector {
 
         final Map<String, String> connectionProperties = new HashMap<>();
 
-        commandManager.substituteProperties("${explorer.current.file.parent.path}/${binary.name}").then(new Operation<String>() {
+        macroProcessor.expandMacros("${explorer.current.file.parent.path}/${binary.name}").then(new Operation<String>() {
             @Override
             public void apply(String cmd) throws OperationException {
                 connectionProperties.put("BINARY", cmd);
@@ -246,38 +246,12 @@ public class DebuggerConnector {
                                                                        " isn't Artik device.")));
         }
 
-        final String location = source.getLocation();
-
-        final RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, location);
-
-        return AsyncPromiseHelper.createFromAsyncRequest(new AsyncPromiseHelper.RequestCall<String>() {
-            @Override
-            public void makeCall(final AsyncCallback<String> callback) {
-                requestBuilder.setCallback(new RequestCallback() {
-                    @Override
-                    public void onResponseReceived(Request request, Response response) {
-                        try {
-                            JSONValue jsonValue = JSONParser.parseStrict(response.getText());
-                            JSONValue host = jsonValue.isObject().get("host");
-
-                            callback.onSuccess(host.isString().stringValue());
-                        } catch (Exception e) {
-                            callback.onFailure(e);
-                        }
-                    }
-
-                    @Override
-                    public void onError(Request request, Throwable exception) {
-                        callback.onFailure(exception);
-                    }
-                });
-
-                try {
-                    requestBuilder.send();
-                } catch (RequestException e) {
-                    callback.onFailure(e);
-                }
-            }
-        });
+        final String content = machine.getConfig().getSource().getContent();
+        if (Strings.isNullOrEmpty(content)) {
+            return Promises.resolve("");
+        }
+        final JSONObject jsonObject = parseLenient(content).isObject();
+        final String host = jsonObject.get("host").isString().stringValue();
+        return Promises.resolve(host);
     }
 }

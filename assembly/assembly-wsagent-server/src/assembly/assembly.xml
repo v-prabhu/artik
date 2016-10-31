@@ -16,6 +16,7 @@
     <id>tomcat-zip</id>
     <formats>
         <format>zip</format>
+        <format>tar.gz</format>
     </formats>
     <includeBaseDirectory>false</includeBaseDirectory>
     <dependencySets>
@@ -27,17 +28,17 @@
             </includes>
         </dependencySet>
         <dependencySet>
-        <unpack>false</unpack>
-        <outputDirectory>maven-server</outputDirectory>
-        <includes>
-            <include>org.eclipse.che.plugin:maven-server-impl</include>
-            <include>org.eclipse.che.plugin:maven-server-api</include>
-            <include>log4j:log4j</include>
-            <include>org.jdom:jdom</include>
-            <include>org.eclipse.che.core:che-core-commons-lang</include>
-            <include>org.apache.maven.shared:maven-dependency-tree</include>
-        </includes>
-    </dependencySet>
+            <unpack>false</unpack>
+            <outputDirectory>maven-server</outputDirectory>
+            <includes>
+                <include>org.eclipse.che.plugin:maven-server-impl</include>
+                <include>org.eclipse.che.plugin:maven-server-api</include>
+                <include>log4j:log4j</include>
+                <include>org.jdom:jdom</include>
+                <include>org.eclipse.che.core:che-core-commons-lang</include>
+                <include>org.apache.maven.shared:maven-dependency-tree</include>
+            </includes>
+        </dependencySet>
         <dependencySet>
             <useProjectArtifact>false</useProjectArtifact>
             <unpack>false</unpack>
@@ -45,6 +46,15 @@
             <outputFileNameMapping>wsagent.war</outputFileNameMapping>
             <includes>
                 <include>org.eclipse.artik:artik-ide-assembly-wsagent-war</include>
+            </includes>
+        </dependencySet>
+        <dependencySet>
+            <useProjectArtifact>false</useProjectArtifact>
+            <unpack>false</unpack>
+            <outputDirectory>lib/linux_arm7/terminal</outputDirectory>
+            <outputFileNameMapping>websocket-terminal-linux_arm7.tar.gz</outputFileNameMapping>
+            <includes>
+                <include>org.eclipse.che.lib:che-websocket-terminal:tar.gz:linux_arm7</include>
             </includes>
         </dependencySet>
     </dependencySets>

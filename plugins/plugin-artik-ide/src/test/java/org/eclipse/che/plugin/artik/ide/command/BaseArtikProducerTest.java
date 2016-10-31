@@ -18,8 +18,6 @@ import org.eclipse.che.ide.api.resources.File;
 import org.eclipse.che.ide.api.resources.Project;
 import org.eclipse.che.ide.api.resources.Resource;
 import org.eclipse.che.ide.dto.DtoFactory;
-import org.eclipse.che.ide.extension.machine.client.command.CommandConfigurationFactory;
-import org.eclipse.che.ide.extension.machine.client.command.custom.CustomCommandConfiguration;
 import org.eclipse.che.ide.extension.machine.client.command.custom.CustomCommandType;
 import org.junit.Before;
 import org.junit.runner.RunWith;
@@ -39,9 +37,6 @@ public abstract class BaseArtikProducerTest {
     protected DtoFactory        dtoFactory;
     @Mock
     protected AppContext        appContext;
-
-    @Mock
-    protected CommandConfigurationFactory<CustomCommandConfiguration> commandConfigurationFactory;
 
     protected Project currentProject;
     protected File    currentResource;

@@ -34,8 +34,13 @@ public class BinaryNameMacro extends ProjectAttributeMacro {
     }
 
     @Override
-    public String getKey() {
+    public String getName() {
         return "${binary.name}";
+    }
+
+    @Override
+    public String getDescription() {
+        return "provides binary name";
     }
 
     @Override

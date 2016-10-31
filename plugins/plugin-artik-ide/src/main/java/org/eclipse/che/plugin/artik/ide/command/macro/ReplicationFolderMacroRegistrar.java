@@ -19,13 +19,12 @@ import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
 import org.eclipse.che.api.promises.client.Operation;
 import org.eclipse.che.api.promises.client.OperationException;
-import org.eclipse.che.ide.api.app.AppContext;
-import org.eclipse.che.ide.api.machine.CommandPropertyValueProvider;
-import org.eclipse.che.ide.api.machine.CommandPropertyValueProviderRegistry;
-import org.eclipse.che.ide.api.machine.MachineServiceClient;
+import org.eclipse.che.ide.api.machine.events.MachineStateEvent;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateEvent;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
-import org.eclipse.che.ide.extension.machine.client.machine.MachineStateEvent;
+import org.eclipse.che.ide.api.macro.Macro;
+import org.eclipse.che.ide.api.macro.MacroRegistry;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,23 +40,20 @@ import java.util.Set;
 @Singleton
 public class ReplicationFolderMacroRegistrar implements WsAgentStateHandler, MachineStateEvent.Handler {
 
-    private final ReplicationFolderMacroFactory        replicationFolderMacroFactory;
-    private final CommandPropertyValueProviderRegistry commandPropertyValueProviderRegistry;
-    private final AppContext                           appContext;
-    private final MachineServiceClient                 machineServiceClient;
+    private final ReplicationFolderMacroFactory replicationFolderMacroFactory;
+    private final MacroRegistry                 commandPropertyValueProviderRegistry;
+    private final DeviceServiceClient           deviceServiceClient;
 
-    private final Map<Machine, CommandPropertyValueProvider> macrosByMachines;
+    private final Map<Machine, Macro> macrosByMachines;
 
     @Inject
     public ReplicationFolderMacroRegistrar(EventBus eventBus,
                                            ReplicationFolderMacroFactory replicationFolderMacroFactory,
-                                           CommandPropertyValueProviderRegistry commandPropertyValueProviderRegistry,
-                                           AppContext appContext,
-                                           MachineServiceClient machineServiceClient) {
+                                           MacroRegistry commandPropertyValueProviderRegistry,
+                                           DeviceServiceClient deviceServiceClient) {
         this.replicationFolderMacroFactory = replicationFolderMacroFactory;
         this.commandPropertyValueProviderRegistry = commandPropertyValueProviderRegistry;
-        this.appContext = appContext;
-        this.machineServiceClient = machineServiceClient;
+        this.deviceServiceClient = deviceServiceClient;
 
         macrosByMachines = new HashMap<>();
 
@@ -67,20 +63,32 @@ public class ReplicationFolderMacroRegistrar implements WsAgentStateHandler, Mac
 
     @Override
     public void onWsAgentStarted(WsAgentStateEvent event) {
-        machineServiceClient.getMachines(appContext.getWorkspaceId()).then(new Operation<List<MachineDto>>() {
+        deviceServiceClient.getDevices().then(new Operation<List<MachineDto>>() {
             @Override
             public void apply(List<MachineDto> arg) throws OperationException {
                 for (MachineDto machine : arg) {
-                    registerMacroForMachine(machine);
+                    if (!isAlreadyRegistered(machine)) {
+                        registerMacroForMachine(machine);
+                    }
                 }
             }
         });
     }
 
-    private void registerMacroForMachine(Machine machine) {
-        Set<CommandPropertyValueProvider> valueProviders = new HashSet<>();
+    private boolean isAlreadyRegistered(Machine machineDto) {
+        for (Machine machine : macrosByMachines.keySet()) {
+            if (machine.getId().equals(machineDto.getId())) {
+                return true;
+            }
+        }
 
-        CommandPropertyValueProvider macro = replicationFolderMacroFactory.create(machine);
+        return false;
+    }
+
+    private void registerMacroForMachine(Machine machine) {
+        Set<Macro> valueProviders = new HashSet<>();
+
+        Macro macro = replicationFolderMacroFactory.create(machine);
         valueProviders.add(macro);
 
         commandPropertyValueProviderRegistry.register(valueProviders);
@@ -98,12 +106,15 @@ public class ReplicationFolderMacroRegistrar implements WsAgentStateHandler, Mac
 
     @Override
     public void onMachineRunning(MachineStateEvent event) {
-        registerMacroForMachine(event.getMachine());
+        Machine machine = event.getMachine();
+        if (!isAlreadyRegistered(machine)) {
+            registerMacroForMachine(machine);
+        }
     }
 
     @Override
     public void onMachineDestroyed(MachineStateEvent event) {
-        CommandPropertyValueProvider macro = macrosByMachines.remove(event.getMachine());
+        Macro macro = macrosByMachines.remove(event.getMachine());
         if (macro != null) {
             commandPropertyValueProviderRegistry.unregister(macro);
         }

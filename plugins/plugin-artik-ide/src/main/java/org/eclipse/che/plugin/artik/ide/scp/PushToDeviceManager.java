@@ -27,14 +27,13 @@ import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.ide.api.action.Action;
 import org.eclipse.che.ide.api.action.ActionManager;
 import org.eclipse.che.ide.api.action.DefaultActionGroup;
-import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.constraints.Constraints;
-import org.eclipse.che.ide.api.machine.MachineServiceClient;
+import org.eclipse.che.ide.api.machine.events.MachineStateEvent;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
-import org.eclipse.che.ide.extension.machine.client.machine.MachineStateEvent;
 import org.eclipse.che.ide.util.loging.Log;
 import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 import org.eclipse.che.plugin.artik.ide.scp.action.ChooseTargetAction;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceAction;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceActionFactory;
@@ -51,65 +50,60 @@ import static org.eclipse.che.ide.api.notification.StatusNotification.Status.SUC
 
 /**
  * The class which contains business logic to work with secure copy. The business logic reacts on connecting and disconnecting to
- * ssh machine and adds or removes actions in 'Push To Device' action group. Also manager stores all started ssh machines.
+ * Artik device and adds or removes actions in 'Push To Device' action group. Also manager stores all connected devices.
  *
  * @author Dmitry Shnurenko
  */
 @Singleton
 public class PushToDeviceManager implements MachineStateEvent.Handler {
-    private final Map<String, String>          sshMachines;
+    private final Map<String, String>          devices;
     private final PushToDeviceServiceClient    scpService;
     private final NotificationManager          notificationManager;
     private final ArtikLocalizationConstant    locale;
     private final ActionManager                actionManager;
     private final PushToDeviceActionFactory    pushToDeviceActionFactory;
     private final DefaultActionGroup           pushToDeviceGroup;
-    private final MachineServiceClient         machineService;
-    private final AppContext                   appContext;
     private final Provider<ChooseTargetAction> chooseTargetActionProvider;
+    private final DeviceServiceClient          deviceServiceClient;
 
     @Inject
     public PushToDeviceManager(PushToDeviceServiceClient scpService,
+                               DeviceServiceClient deviceServiceClient,
                                NotificationManager notificationManager,
                                ArtikLocalizationConstant locale,
-                               MachineServiceClient machineService,
-                               AppContext appContext,
                                EventBus eventBus,
                                ActionManager actionManager,
                                PushToDeviceActionFactory pushToDeviceActionFactory,
                                Provider<ChooseTargetAction> chooseTargetActionProvider) {
-        this.sshMachines = new HashMap<>();
+        this.deviceServiceClient = deviceServiceClient;
+        this.devices = new HashMap<>();
         this.scpService = scpService;
         this.notificationManager = notificationManager;
         this.locale = locale;
         this.actionManager = actionManager;
         this.pushToDeviceActionFactory = pushToDeviceActionFactory;
-        this.machineService = machineService;
-        this.appContext = appContext;
         this.chooseTargetActionProvider = chooseTargetActionProvider;
         this.pushToDeviceGroup = new DefaultActionGroup("Push To Device", true, actionManager);
 
         eventBus.addHandler(MachineStateEvent.TYPE, this);
     }
 
-    /** The method fetches all ssh machines from workspace converts them to actions and adds to push to device action group. */
+    /** The method fetches all devices and adds to push to device action group. */
     public void fetchSshMachines() {
         DefaultActionGroup resourceOperationGroup = (DefaultActionGroup)actionManager.getAction("resourceOperation");
         resourceOperationGroup.add(pushToDeviceGroup);
-
-        Promise<List<MachineDto>> machines = machineService.getMachines(appContext.getWorkspaceId());
-        machines.then(new Operation<List<MachineDto>>() {
+        deviceServiceClient.getDevices().then(new Operation<List<MachineDto>>() {
             @Override
-            public void apply(List<MachineDto> machines) throws OperationException {
-                for (Machine machine : machines) {
-                    MachineConfig config = machine.getConfig();
-                    if (isArtikOrSsh(machine) && RUNNING.equals(machine.getStatus())) {
-                        String machineId = machine.getId();
-                        String machineName = config.getName();
+            public void apply(List<MachineDto> devices) throws OperationException {
+                for (Machine device : devices) {
+                    if (RUNNING.equals(device.getStatus())) {
+                        MachineConfig config = device.getConfig();
+                        String deviceId = device.getId();
+                        String deviceName = config.getName();
 
-                        sshMachines.put(machineName, machineId);
+                        PushToDeviceManager.this.devices.put(deviceName, deviceId);
 
-                        addPushToDeviceAction(machineName, machineId);
+                        addPushToDeviceAction(deviceName, deviceId);
                     }
                 }
                 pushToDeviceGroup.addSeparator();
@@ -124,25 +118,27 @@ public class PushToDeviceManager implements MachineStateEvent.Handler {
     }
 
     /**
-     * The method send request to service to do secure copy file or folder to ssh machine.
+     * The method send request to service to do secure copy file or folder to device.
      *
-     * @param machineName
-     *         name of machine to which file will be copied
+     * @param deviceName
+     *         name of device to which file will be copied
      * @param sourcePath
      *         path to file or folder which will be copied
      * @param targetPath
      *         destination path where file or folder will be copied
      */
-    public void pushToDevice(String machineName, String sourcePath, final String targetPath) {
-        String machineId = sshMachines.get(machineName);
+    public void pushToDevice(String deviceName, String sourcePath, final String targetPath) {
+        String deviceId = devices.get(deviceName);
 
         final String fileName = getFileName(sourcePath);
 
-        Promise<Void> promise = scpService.pushToDevice(machineId, sourcePath, targetPath);
+        Promise<Void> promise = scpService.pushToDevice(deviceId, sourcePath, targetPath);
         promise.then(new Operation<Void>() {
             @Override
             public void apply(Void arg) throws OperationException {
-                notificationManager.notify(locale.pushToDeviceSuccess(fileName, targetPath), SUCCESS, StatusNotification.DisplayMode.FLOAT_MODE);
+                notificationManager.notify(locale.pushToDeviceSuccess(fileName, targetPath),
+                                           SUCCESS,
+                                           StatusNotification.DisplayMode.FLOAT_MODE);
             }
         }).catchError(new Operation<PromiseError>() {
             @Override
@@ -152,14 +148,14 @@ public class PushToDeviceManager implements MachineStateEvent.Handler {
         });
     }
 
-    /** Returns <code>true</code> if ssh machine exists, <code>false</code> otherwise. */
+    /** Returns <code>true</code> if device exists, <code>false</code> otherwise. */
     public boolean isSshDeviceExist() {
-        return !sshMachines.isEmpty();
+        return !devices.isEmpty();
     }
 
-    /** Returns set of ssh machines' names. */
-    public Set<String> getMachineNames() {
-        return sshMachines.keySet();
+    /** Returns set of devices' names. */
+    public Set<String> getDeviceNames() {
+        return devices.keySet();
     }
 
     private String getFileName(String sourcePath) {
@@ -176,40 +172,43 @@ public class PushToDeviceManager implements MachineStateEvent.Handler {
 
     @Override
     public void onMachineRunning(MachineStateEvent event) {
-        Machine machine = event.getMachine();
-        if (!isArtikOrSsh(machine)) {
+        Machine device = event.getMachine();
+        if (!isArtik(device)) {
             return;
         }
 
-        String machineName = machine.getConfig().getName();
-        String machineId = machine.getId();
-        sshMachines.put(machineName, machineId);
+        String deviceName = device.getConfig().getName();
+        String deviceId = device.getId();
+        devices.put(deviceName, deviceId);
 
-        addPushToDeviceAction(machineName, machineId);
+        addPushToDeviceAction(deviceName, deviceId);
     }
 
-    private boolean isArtikOrSsh(Machine machine) {
-        String type = machine.getConfig().getType();
-        return "ssh".equals(type) || "artik".equals(type);
+    private boolean isArtik(Machine device) {
+        String type = device.getConfig().getType();
+        return "artik".equals(type);
     }
 
-    private void addPushToDeviceAction(String machineName, String machineId) {
-        PushToDeviceAction pushToDeviceAction = pushToDeviceActionFactory.create(machineName);
-        actionManager.registerAction(machineId, pushToDeviceAction);
+    private void addPushToDeviceAction(String deviceName, String deviceId) {
+        if (actionManager.getAction(deviceId) != null) {
+            return;
+        }
+        PushToDeviceAction pushToDeviceAction = pushToDeviceActionFactory.create(deviceName);
+        actionManager.registerAction(deviceId, pushToDeviceAction);
 
         pushToDeviceGroup.add(pushToDeviceAction, Constraints.FIRST);
     }
 
     @Override
     public void onMachineDestroyed(MachineStateEvent event) {
-        Machine machine = event.getMachine();
-        if (!isArtikOrSsh(machine)) {
+        Machine device = event.getMachine();
+        if (!isArtik(device)) {
             return;
         }
 
-        sshMachines.remove(machine.getConfig().getName());
+        devices.remove(device.getConfig().getName());
 
-        Action action = actionManager.getAction(machine.getId());
+        Action action = actionManager.getAction(device.getId());
         pushToDeviceGroup.remove(action);
     }
 }

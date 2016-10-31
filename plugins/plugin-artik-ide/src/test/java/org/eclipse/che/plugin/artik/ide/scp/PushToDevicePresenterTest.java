@@ -46,7 +46,7 @@ public class PushToDevicePresenterTest {
     public void dialogWithSshMachinesShouldBeShown() {
         presenter.show("path");
 
-        verify(scpManager).getMachineNames();
+        verify(scpManager).getDeviceNames();
         verify(view).show(Matchers.<Set<String>>anyObject());
     }
 

@@ -74,7 +74,7 @@ public class ArtikExtension {
             public void onWsAgentStarted(WsAgentStateEvent wsAgentStateEvent) {
                 docsPartPresenter.open();
                 pushToDeviceManager.fetchSshMachines();
-                developmentModeManager.fetchSshMachines();
+                developmentModeManager.fetchDevices();
             }
 
             @Override

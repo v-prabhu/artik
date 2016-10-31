@@ -24,80 +24,86 @@ import org.eclipse.che.ide.api.action.Action;
 import org.eclipse.che.ide.api.action.ActionEvent;
 import org.eclipse.che.ide.api.action.ActionManager;
 import org.eclipse.che.ide.api.action.DefaultActionGroup;
-import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.component.Component;
 import org.eclipse.che.ide.api.constraints.Constraints;
-import org.eclipse.che.ide.api.machine.MachineServiceClient;
-import org.eclipse.che.ide.extension.machine.client.machine.MachineStateEvent;
+import org.eclipse.che.ide.api.machine.events.MachineStateEvent;
+import org.eclipse.che.ide.api.machine.events.WsAgentStateEvent;
+import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
 import org.eclipse.che.plugin.artik.ide.ArtikResources;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
+import org.eclipse.che.plugin.artik.ide.run.RunBinaryAction;
+import org.eclipse.che.plugin.artik.ide.run.RunBinaryActionFactory;
 
 import java.util.List;
 
+import static org.eclipse.che.api.core.model.machine.MachineStatus.RUNNING;
 import static org.eclipse.che.ide.api.action.IdeActions.GROUP_MAIN_TOOLBAR;
 
 /**
  * Listens for the events of creating/destroying machines and crates/removes
- * an appropriate actions for connecting to the debugger on the related machine.
+ * an appropriate actions for connecting to the debugger on the related machine and run binary.
  *
  * @author Artem Zatsarynnyi
+ * @author Valeriy Svydenko
  */
 @Singleton
-public class DebugBinaryActionsManager implements MachineStateEvent.Handler, Component {
+public class DebugAndRunBinaryActionsManager implements MachineStateEvent.Handler, WsAgentStateHandler, Component {
 
     private final ActionManager            actionManager;
     private final DebugBinaryActionFactory debugBinaryActionFactory;
-    private final MachineServiceClient     machineServiceClient;
-    private final AppContext               appContext;
+    private final RunBinaryActionFactory   runBinaryActionFactory;
+    private final DeviceServiceClient      deviceServiceClient;
     private final ArtikResources           resources;
 
     private DefaultActionGroup debugActionsPopUpGroup;
+    private DefaultActionGroup runActionsPopUpGroup;
 
     @Inject
-    public DebugBinaryActionsManager(EventBus eventBus,
-                                     ActionManager actionManager,
-                                     DebugBinaryActionFactory debugBinaryActionFactory,
-                                     MachineServiceClient machineServiceClient,
-                                     AppContext appContext,
-                                     ArtikResources resources) {
+    public DebugAndRunBinaryActionsManager(EventBus eventBus,
+                                           ActionManager actionManager,
+                                           DebugBinaryActionFactory debugBinaryActionFactory,
+                                           RunBinaryActionFactory runBinaryActionFactory,
+                                           DeviceServiceClient deviceServiceClient,
+                                           ArtikResources resources) {
         this.actionManager = actionManager;
         this.debugBinaryActionFactory = debugBinaryActionFactory;
-        this.machineServiceClient = machineServiceClient;
-        this.appContext = appContext;
+        this.runBinaryActionFactory = runBinaryActionFactory;
+        this.deviceServiceClient = deviceServiceClient;
         this.resources = resources;
+
+        runActionsPopUpGroup = new DefaultActionGroup("Run Binary", true, actionManager);
+        actionManager.registerAction("runActionsPopUpGroup", runActionsPopUpGroup);
+
+        debugActionsPopUpGroup = new DefaultActionGroup("Debug Binary", true, actionManager);
+        actionManager.registerAction("debugActionsPopUpGroup", debugActionsPopUpGroup);
 
         eventBus.addHandler(MachineStateEvent.TYPE, this);
     }
 
     @Override
     public void start(Callback<Component, Exception> callback) {
-        callback.onSuccess(DebugBinaryActionsManager.this);
+        callback.onSuccess(DebugAndRunBinaryActionsManager.this);
 
-        debugActionsPopUpGroup = new DefaultActionGroup("Debug", true, actionManager);
-        actionManager.registerAction("debugActionsPopUpGroup", debugActionsPopUpGroup);
         debugActionsPopUpGroup.getTemplatePresentation().setDescription("Debug Binary");
         debugActionsPopUpGroup.getTemplatePresentation().setSVGResource(resources.debug());
+
+        runActionsPopUpGroup.getTemplatePresentation().setDescription("Run Binary");
+        runActionsPopUpGroup.getTemplatePresentation().setSVGResource(resources.run());
 
         // add debug group to the context menu
         DefaultActionGroup resourceOperationGroup = (DefaultActionGroup)actionManager.getAction("resourceOperation");
         resourceOperationGroup.addSeparator();
+        resourceOperationGroup.add(runActionsPopUpGroup);
+        resourceOperationGroup.addSeparator();
         resourceOperationGroup.add(debugActionsPopUpGroup);
 
         // add debug pop-up group to the main toolbar
-        DefaultActionGroup debugActionsToolbarGroup = new DebugActionsToolbarGroup(actionManager);
+        DefaultActionGroup debugActionsToolbarGroup = new DebugAndRunActionsToolbarGroup(actionManager);
+        debugActionsToolbarGroup.add(runActionsPopUpGroup);
+        debugActionsToolbarGroup.addSeparator();
         debugActionsToolbarGroup.add(debugActionsPopUpGroup);
         DefaultActionGroup mainToolbarGroup = (DefaultActionGroup)actionManager.getAction(GROUP_MAIN_TOOLBAR);
         mainToolbarGroup.add(debugActionsToolbarGroup);
-
-        machineServiceClient.getMachines(appContext.getWorkspaceId()).then(new Operation<List<MachineDto>>() {
-            @Override
-            public void apply(List<MachineDto> arg) throws OperationException {
-                for (MachineDto machineDto : arg) {
-                    if (isArtikOrSsh(machineDto)) {
-                        addDebugAction(machineDto);
-                    }
-                }
-            }
-        });
     }
 
     @Override
@@ -106,11 +112,11 @@ public class DebugBinaryActionsManager implements MachineStateEvent.Handler, Com
 
     @Override
     public void onMachineRunning(MachineStateEvent event) {
-        addDebugAction(event.getMachine());
+        addAction(event.getMachine());
     }
 
-    private void addDebugAction(Machine machine) {
-        if (!isArtikOrSsh(machine)) {
+    private void addAction(Machine machine) {
+        if (!isArtik(machine)) {
             return;
         }
 
@@ -118,6 +124,11 @@ public class DebugBinaryActionsManager implements MachineStateEvent.Handler, Com
         actionManager.registerAction("debug" + machine.getId(), debugBinaryAction);
 
         debugActionsPopUpGroup.add(debugBinaryAction, Constraints.FIRST);
+
+        RunBinaryAction runBinaryAction = runBinaryActionFactory.create(machine);
+        actionManager.registerAction("run" + machine.getId(), runBinaryAction);
+
+        runActionsPopUpGroup.add(runBinaryAction, Constraints.FIRST);
     }
 
     @Override
@@ -126,7 +137,7 @@ public class DebugBinaryActionsManager implements MachineStateEvent.Handler, Com
     }
 
     private void removeDebugAction(Machine machine) {
-        if (!isArtikOrSsh(machine)) {
+        if (!isArtik(machine)) {
             return;
         }
 
@@ -134,20 +145,43 @@ public class DebugBinaryActionsManager implements MachineStateEvent.Handler, Com
         actionManager.unregisterAction("debug" + machine.getId());
 
         debugActionsPopUpGroup.remove(action);
+
+        Action runAction = actionManager.getAction("run" + machine.getId());
+        actionManager.unregisterAction("run" + machine.getId());
+
+        runActionsPopUpGroup.remove(runAction);
     }
 
-    private boolean isArtikOrSsh(Machine machine) {
+    private boolean isArtik(Machine machine) {
         String type = machine.getConfig().getType();
-        return "ssh".equals(type) || "artik".equals(type);
+        return "artik".equals(type);
+    }
+
+    @Override
+    public void onWsAgentStarted(WsAgentStateEvent event) {
+        deviceServiceClient.getDevices().then(new Operation<List<MachineDto>>() {
+            @Override
+            public void apply(List<MachineDto> arg) throws OperationException {
+                for (MachineDto machineDto : arg) {
+                    if (isArtik(machineDto) && RUNNING.equals(machineDto.getStatus())) {
+                        addAction(machineDto);
+                    }
+                }
+            }
+        });
+    }
+
+    @Override
+    public void onWsAgentStopped(WsAgentStateEvent event) {
     }
 
     /**
-     * Action group for placing {@link DebugBinaryAction}s on the toolbar.
-     * It's visible when at least one {@link DebugBinaryAction} exists.
+     * Action group for placing {@link DebugBinaryAction} and {@link RunBinaryAction} on the toolbar.
+     * It's visible when at least one {@link DebugBinaryAction} or {@link RunBinaryAction} exists.
      */
-    private class DebugActionsToolbarGroup extends DefaultActionGroup {
+    private class DebugAndRunActionsToolbarGroup extends DefaultActionGroup {
 
-        DebugActionsToolbarGroup(ActionManager actionManager) {
+        DebugAndRunActionsToolbarGroup(ActionManager actionManager) {
             super(actionManager);
         }
 

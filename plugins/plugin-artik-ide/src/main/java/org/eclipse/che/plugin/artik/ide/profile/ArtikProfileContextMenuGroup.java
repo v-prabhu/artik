@@ -60,7 +60,7 @@ public class ArtikProfileContextMenuGroup extends DefaultActionGroup {
         Machine machine = (Machine)processTreeNode.getData();
 
         String type = machine.getConfig().getType();
-        if (!"ssh".equals(type) && !"artik".equals(type)) {
+        if (!"artik".equals(type)) {
             event.getPresentation().setEnabled(false);
             event.getPresentation().setVisible(false);
             return;

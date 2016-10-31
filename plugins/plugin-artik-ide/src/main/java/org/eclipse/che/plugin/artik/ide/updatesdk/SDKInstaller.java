@@ -16,8 +16,6 @@ import com.google.inject.Inject;
 
 import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
-import org.eclipse.che.api.machine.shared.dto.MachineConfigDto;
-import org.eclipse.che.api.machine.shared.dto.MachineSourceDto;
 import org.eclipse.che.api.machine.shared.dto.recipe.NewRecipe;
 import org.eclipse.che.api.machine.shared.dto.recipe.RecipeDescriptor;
 import org.eclipse.che.api.promises.client.Function;
@@ -25,6 +23,8 @@ import org.eclipse.che.api.promises.client.FunctionException;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper.RequestCall;
 import org.eclipse.che.api.workspace.shared.dto.EnvironmentDto;
+import org.eclipse.che.api.workspace.shared.dto.EnvironmentRecipeDto;
+import org.eclipse.che.api.workspace.shared.dto.ExtendedMachineDto;
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.machine.MachineServiceClient;
@@ -38,13 +38,15 @@ import org.eclipse.che.ide.websocket.WebSocketException;
 import org.eclipse.che.ide.websocket.rest.StringUnmarshallerWS;
 import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
 import org.eclipse.che.plugin.artik.ide.ArtikResources;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static java.util.Collections.singletonList;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonMap;
 import static org.eclipse.che.api.machine.shared.Constants.LINK_REL_GET_RECIPE_SCRIPT;
 import static org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper.createFromAsyncRequest;
 
@@ -57,8 +59,9 @@ public class SDKInstaller {
 
     private final AppContext             appContext;
     private final MachineServiceClient   machineServiceClient;
+    private final DeviceServiceClient    deviceServiceClient;
     private final DtoFactory             dtoFactory;
-    private final MessageBus             messageBus;
+    private final MessageBusProvider     messageBusProvider;
     private final ArtikResources         resources;
     private final RecipeServiceClient    recipeServiceClient;
     private final WorkspaceServiceClient workspaceServiceClient;
@@ -70,6 +73,7 @@ public class SDKInstaller {
     @Inject
     public SDKInstaller(AppContext appContext,
                         MachineServiceClient machineServiceClient,
+                        DeviceServiceClient deviceServiceClient,
                         DtoFactory dtoFactory,
                         MessageBusProvider messageBusProvider,
                         ArtikResources resources,
@@ -77,8 +81,9 @@ public class SDKInstaller {
                         WorkspaceServiceClient workspaceServiceClient) {
         this.appContext = appContext;
         this.machineServiceClient = machineServiceClient;
+        this.deviceServiceClient = deviceServiceClient;
         this.dtoFactory = dtoFactory;
-        this.messageBus = messageBusProvider.getMessageBus();
+        this.messageBusProvider = messageBusProvider;
         this.resources = resources;
         this.recipeServiceClient = recipeServiceClient;
         this.workspaceServiceClient = workspaceServiceClient;
@@ -96,7 +101,7 @@ public class SDKInstaller {
         final Set<String> versions = new HashSet<>();
 
         try {
-            messageBus.subscribe(chanel, new SubscriptionHandler<String>(new OutputMessageUnmarshaller()) {
+            messageBusProvider.getMessageBus().subscribe(chanel, new SubscriptionHandler<String>(new OutputMessageUnmarshaller()) {
                 @Override
                 protected void onMessageReceived(String message) {
                     if (isErrorMessage(message)) {
@@ -137,8 +142,12 @@ public class SDKInstaller {
     }
 
     /** Get version of Artik SDK which is installed on the device with the specified ID. */
-    public Promise<String> getInstalledSDKVersion(String deviceId) {
+    public Promise<String> getInstalledSDKVersion(TargetForUpdate target) {
         final String chanel = "process:output:" + UUID.uuid();
+        final String deviceId = target.getId();
+        final MessageBus messageBus = isWsAgent(target) ?
+                                      messageBusProvider.getMessageBus() :
+                                      messageBusProvider.getMachineMessageBus();
 
         try {
             messageBus.subscribe(chanel, new SubscriptionHandler<String>(new OutputMessageUnmarshaller()) {
@@ -174,19 +183,26 @@ public class SDKInstaller {
                                           .withName("get_installed_SDK_version")
                                           .withType("custom")
                                           .withCommandLine(cmd);
-
-        machineServiceClient.executeCommand(appContext.getWorkspaceId(), deviceId, command, chanel);
+        if (isWsAgent(target)) {
+            machineServiceClient.executeCommand(appContext.getWorkspaceId(), deviceId, command, chanel);
+        } else {
+            deviceServiceClient.executeCommand(deviceId, command, chanel);
+        }
 
         return promise;
     }
 
     /** Update Artik SDK on the device with the specified ID. */
-    public Promise<String> installSDK(String targetId, String sdkVersion) {
+    public Promise<String> installSDK(TargetForUpdate target, String sdkVersion) {
+        final String targetId = target.getId();
         if (targetId.equals(appContext.getDevMachine().getId())) {
             return installSdkOnWsAgent(targetId, sdkVersion);
         }
 
         final String chanel = "process:output:" + UUID.uuid();
+        final MessageBus messageBus = isWsAgent(target) ?
+                                      messageBusProvider.getMessageBus() :
+                                      messageBusProvider.getMachineMessageBus();
 
         try {
             messageBus.subscribe(chanel, new SubscriptionHandler<String>(new StringUnmarshallerWS()) {
@@ -221,8 +237,11 @@ public class SDKInstaller {
                                           .withName("install_SDK")
                                           .withType("custom")
                                           .withCommandLine(cmd.replace("${sdk.version}", sdkVersion));
-
-        machineServiceClient.executeCommand(appContext.getWorkspaceId(), targetId, command, chanel);
+        if (isWsAgent(target)) {
+            machineServiceClient.executeCommand(appContext.getWorkspaceId(), targetId, command, chanel);
+        } else {
+            deviceServiceClient.executeCommand(targetId, command, chanel);
+        }
 
         return promise;
     }
@@ -241,23 +260,22 @@ public class SDKInstaller {
         }).then(new Function<String, EnvironmentDto>() {
             @Override
             public EnvironmentDto apply(String recipeLink) throws FunctionException {
-                final MachineConfigDto machineConfig = appContext.getWorkspace()
-                                                                 .getConfig()
-                                                                 .getEnvironments().get(0)
-                                                                 .getMachineConfigs().get(0);
-
-                machineConfig.setSource(dtoFactory.createDto(MachineSourceDto.class)
-                                                  .withType("dockerfile")
-                                                  .withLocation(recipeLink));
-
                 return dtoFactory.createDto(EnvironmentDto.class)
-                                 .withName(targetId)
-                                 .withMachineConfigs(singletonList(machineConfig));
+                                 .withMachines(singletonMap("dev-machine",
+                                                            dtoFactory.createDto(ExtendedMachineDto.class)
+                                                                      .withAgents(asList("org.eclipse.che.terminal",
+                                                                                         "org.eclipse.che.ws-agent"))))
+                                 .withRecipe(dtoFactory.createDto(EnvironmentRecipeDto.class)
+                                                       .withType("dockerfile")
+                                                       .withContentType("text/x-dockerfile")
+                                                       .withLocation(recipeLink));
             }
         }).thenPromise(new Function<EnvironmentDto, Promise<WorkspaceDto>>() {
             @Override
             public Promise<WorkspaceDto> apply(EnvironmentDto environment) throws FunctionException {
-                return workspaceServiceClient.addEnvironment(appContext.getWorkspaceId(), environment).thenPromise(
+                return workspaceServiceClient.addEnvironment(appContext.getWorkspaceId(),
+                                                             targetId,
+                                                             environment).thenPromise(
                         new Function<WorkspaceDto, Promise<WorkspaceDto>>() {
                             @Override
                             public Promise<WorkspaceDto> apply(WorkspaceDto arg) throws FunctionException {
@@ -272,5 +290,9 @@ public class SDKInstaller {
                 return "Workspace has been successfully updated";
             }
         });
+    }
+
+    private boolean isWsAgent(TargetForUpdate target) {
+        return "Workspace".equals(target.getName());
     }
 }

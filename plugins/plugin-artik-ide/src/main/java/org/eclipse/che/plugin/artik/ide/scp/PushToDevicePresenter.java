@@ -43,7 +43,7 @@ public class PushToDevicePresenter implements PushToDeviceView.ActionDelegate {
     public void show(String sourcePath) {
         this.sourcePath = sourcePath;
 
-        view.show(scpManager.getMachineNames());
+        view.show(scpManager.getDeviceNames());
     }
 
     public boolean isSshDeviceExist() {

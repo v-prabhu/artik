@@ -16,6 +16,7 @@ import com.google.common.annotations.Beta;
 import org.eclipse.che.api.core.ApiException;
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.commons.schedule.executor.ThreadPullLauncher;
+import org.eclipse.che.plugin.machine.artik.ArtikDeviceManager;
 import org.eclipse.che.plugin.machine.artik.replication.shell.JsonValueHelperFactory;
 import org.eclipse.che.plugin.machine.artik.replication.shell.ShellCommandManager;
 import org.slf4j.Logger;
@@ -44,17 +45,17 @@ public class RsyncService {
     private static final String DEFAULT_PROJECT_LOCATION = "/projects";
     private static final String ARTIK                    = "artik";
 
-    private final ApiRequestHelper       apiRequestHelper;
     private final ShellCommandManager    shellCommandManager;
+    private final ArtikDeviceManager     artikDeviceManager;
     private final JsonValueHelperFactory jsonValueHelperFactory;
 
     @Inject
-    public RsyncService(ApiRequestHelper apiRequestHelper,
-                        ShellCommandManager shellCommandManager,
+    public RsyncService(ShellCommandManager shellCommandManager,
+                        ArtikDeviceManager artikDeviceManager,
                         JsonValueHelperFactory jsonValueHelperFactory,
                         ThreadPullLauncher launcher) {
-        this.apiRequestHelper = apiRequestHelper;
         this.shellCommandManager = shellCommandManager;
+        this.artikDeviceManager = artikDeviceManager;
         this.jsonValueHelperFactory = jsonValueHelperFactory;
 
         LOG.info("LAUNCHING RSYNC SERVICE");
@@ -72,10 +73,10 @@ public class RsyncService {
     }
 
     private List<Machine> getMachines() throws ApiException, IOException {
-        return apiRequestHelper.getMachines()
-                               .stream()
-                               .filter(it -> RUNNING.equals(it.getStatus()))
-                               .filter(it -> ARTIK.equals(it.getConfig().getType()))
-                               .collect(toList());
+        return artikDeviceManager.getDevices()
+                                 .stream()
+                                 .filter(it -> RUNNING.equals(it.getStatus()))
+                                 .filter(it -> ARTIK.equals(it.getConfig().getType()))
+                                 .collect(toList());
     }
 }

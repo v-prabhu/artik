@@ -37,8 +37,13 @@ public class CompilationPropertiesMacro extends ProjectAttributeMacro {
     }
 
     @Override
-    public String getKey() {
+    public String getName() {
         return "${compilation.options}";
+    }
+
+    @Override
+    public String getDescription() {
+        return "provides compilation properties";
     }
 
     @Override

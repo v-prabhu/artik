@@ -11,32 +11,31 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.artik.ide.command.macro;
 
-import com.google.gwt.http.client.Request;
-import com.google.gwt.http.client.RequestBuilder;
-import com.google.gwt.http.client.RequestCallback;
-import com.google.gwt.http.client.RequestException;
-import com.google.gwt.http.client.Response;
-import com.google.gwt.json.client.JSONParser;
+import com.google.gwt.json.client.JSONObject;
+import com.google.gwt.json.client.JSONString;
 import com.google.gwt.json.client.JSONValue;
-import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.core.model.machine.MachineSource;
 import org.eclipse.che.api.promises.client.Promise;
-import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
 import org.eclipse.che.api.promises.client.js.Promises;
-import org.eclipse.che.ide.api.machine.CommandPropertyValueProvider;
+import org.eclipse.che.ide.api.macro.Macro;
+
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.gwt.json.client.JSONParser.parseLenient;
 
 /**
  * Macro which provides path to the replication folder on Artik device.
  *
  * @author Artem Zatsarynnyi
+ * @author Valeriy Svydenko
  */
-public class ReplicationFolderMacro implements CommandPropertyValueProvider {
+public class ReplicationFolderMacro implements Macro {
 
-    public static final String KEY = "${artik.replication.folder.%machineId%}";
+    public static final  String KEY                = "${artik.replication.folder.%machineId%}";
+    private static final String REPLICATION_FOLDER = "replicationFolder";
 
     private final Machine machine;
     private final String  key;
@@ -48,49 +47,32 @@ public class ReplicationFolderMacro implements CommandPropertyValueProvider {
     }
 
     @Override
-    public String getKey() {
+    public String getName() {
         return key;
     }
 
     @Override
-    public Promise<String> getValue() {
+    public String getDescription() {
+        return "provides path to the replication folder on Artik device";
+    }
+
+    @Override
+    public Promise<String> expand() {
         final MachineSource source = machine.getConfig().getSource();
         if (!"ssh-config".equals(source.getType())) {
             return Promises.resolve("");
         }
 
-        final String location = source.getLocation();
+        final String content = source.getContent();
+        if (isNullOrEmpty(content)) {
+            return Promises.resolve("");
+        }
+        final JSONObject jsonObject = parseLenient(content).isObject();
 
-        final RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, location);
+        final JSONValue replicationFolderValue = jsonObject.get(REPLICATION_FOLDER);
+        final JSONString replicationFolderString = replicationFolderValue.isString();
+        final String replicationFolder = replicationFolderString.stringValue();
 
-        return AsyncPromiseHelper.createFromAsyncRequest(new AsyncPromiseHelper.RequestCall<String>() {
-            @Override
-            public void makeCall(final AsyncCallback<String> callback) {
-                requestBuilder.setCallback(new RequestCallback() {
-                    @Override
-                    public void onResponseReceived(Request request, Response response) {
-                        try {
-                            JSONValue jsonValue = JSONParser.parseStrict(response.getText());
-                            JSONValue replicationFolder = jsonValue.isObject().get("replicationFolder");
-
-                            callback.onSuccess(replicationFolder.isString().stringValue());
-                        } catch (Exception e) {
-                            callback.onFailure(e);
-                        }
-                    }
-
-                    @Override
-                    public void onError(Request request, Throwable exception) {
-                        callback.onFailure(exception);
-                    }
-                });
-
-                try {
-                    requestBuilder.send();
-                } catch (RequestException e) {
-                    callback.onFailure(e);
-                }
-            }
-        });
+        return Promises.resolve(replicationFolder);
     }
 }

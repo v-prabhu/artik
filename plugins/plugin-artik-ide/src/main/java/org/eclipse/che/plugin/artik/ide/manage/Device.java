@@ -37,6 +37,10 @@ public class Device {
 
     private RecipeDescriptor recipe;
 
+    private String script;
+
+    private String id;
+
     /**
      * Indicates this device has unsaved changes.
      */
@@ -97,6 +101,14 @@ public class Device {
         this.host = host;
     }
 
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public String getPort() {
         return port;
     }
@@ -137,4 +149,11 @@ public class Device {
         this.connected = connected;
     }
 
+    public String getScript() {
+        return script;
+    }
+
+    public void setScript(String script) {
+        this.script = script;
+    }
 }

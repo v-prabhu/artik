@@ -11,26 +11,31 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.machine.artik;
 
-import org.eclipse.che.api.machine.server.util.RecipeDownloader;
-import org.eclipse.che.plugin.machine.ssh.SshMachineFactory;
-import org.eclipse.che.plugin.machine.ssh.SshMachineInstanceProvider;
+
+import org.eclipse.che.api.core.model.machine.ServerConf;
+import org.eclipse.che.api.machine.server.model.impl.ServerConfImpl;
 
 import javax.inject.Inject;
-import java.io.IOException;
+import javax.inject.Named;
+import javax.inject.Provider;
+import javax.inject.Singleton;
+import java.net.URI;
 
 /**
- * Implementation of Artik device as SSH machine.
+ * Provides server conf that describes websocket terminal server
  *
- * @author Alexander Garagatyi
+ * @author Valeriy Svydenko
  */
-public class ArtikMachineInstanceProvider extends SshMachineInstanceProvider {
+@Singleton
+public class TerminalServerConfProvider implements Provider<ServerConf> {
+    public static final String TERMINAL_SERVER_REFERENCE = "terminal";
+
     @Inject
-    public ArtikMachineInstanceProvider(SshMachineFactory sshMachineFactory, final RecipeDownloader recipeDownloader) throws IOException {
-        super(sshMachineFactory, recipeDownloader);
-    }
+    @Named("che.api")
+    private URI apiEndpoint;
 
     @Override
-    public String getType() {
-        return "artik";
+    public ServerConf get() {
+        return new ServerConfImpl(TERMINAL_SERVER_REFERENCE, "4411/tcp", apiEndpoint.getScheme(), null);
     }
 }

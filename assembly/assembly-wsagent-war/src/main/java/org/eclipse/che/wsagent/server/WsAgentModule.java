@@ -18,7 +18,6 @@ import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 
 import org.eclipse.che.ApiEndpointAccessibilityChecker;
-import org.eclipse.che.ApiEndpointProvider;
 import org.eclipse.che.EventBusURLProvider;
 import org.eclipse.che.UriApiEndpointProvider;
 import org.eclipse.che.UserTokenProvider;
@@ -58,6 +57,7 @@ import org.eclipse.che.git.impl.jgit.JGitConnectionFactory;
 import org.eclipse.che.inject.DynaModule;
 import org.eclipse.che.plugin.github.server.inject.GitHubModule;
 import org.eclipse.che.plugin.java.server.rest.WsAgentURLProvider;
+import org.eclipse.che.plugin.machine.artik.ArtikTerminalLauncher;
 import org.eclipse.che.plugin.machine.artik.keyworddoc.KeywordDocsService;
 import org.eclipse.che.plugin.machine.artik.replication.RsyncService;
 import org.eclipse.che.plugin.machine.artik.replication.shell.JsonValueHelperFactory;
@@ -103,6 +103,8 @@ public class WsAgentModule extends AbstractModule {
         install(new org.eclipse.che.swagger.deploy.DocsModule());
         install(new org.eclipse.che.api.debugger.server.DebuggerModule());
 
+        bindConstant().annotatedWith(Names.named(ArtikTerminalLauncher.TERMINAL_LOCATION_PROPERTY)).to("~/che/terminal/");
+
         bind(ArchetypeGenerator.class);
 
         bind(GitUserResolver.class).to(LocalGitUserResolver.class);
@@ -111,8 +113,7 @@ public class WsAgentModule extends AbstractModule {
         bind(AsynchronousJobPool.class).to(CheAsynchronousJobPool.class);
         bind(ServiceBindingHelper.bindingKey(AsynchronousJobService.class, "/async/{ws-id}")).to(AsynchronousJobService.class);
 
-        bind(String.class).annotatedWith(Names.named("api.endpoint")).toProvider(ApiEndpointProvider.class);
-        bind(URI.class).annotatedWith(Names.named("api.endpoint")).toProvider(UriApiEndpointProvider.class);
+        bind(URI.class).annotatedWith(Names.named("che.api")).toProvider(UriApiEndpointProvider.class);
         bind(String.class).annotatedWith(Names.named("user.token")).toProvider(UserTokenProvider.class);
         bind(WSocketEventBusClient.class).asEagerSingleton();
 
@@ -122,8 +123,8 @@ public class WsAgentModule extends AbstractModule {
         bind(String.class).annotatedWith(Names.named("wsagent.endpoint"))
                           .toProvider(WsAgentURLProvider.class);
 
-        configureWebSocket();
         configureJsonRpc();
+        configureWebSocket();
     }
 
     //it's need for WSocketEventBusClient and in the future will be replaced with the property

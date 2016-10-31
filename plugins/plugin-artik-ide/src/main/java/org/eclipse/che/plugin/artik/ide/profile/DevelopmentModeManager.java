@@ -23,6 +23,7 @@ import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.core.model.machine.MachineConfig;
 import org.eclipse.che.api.core.model.machine.MachineSource;
+import org.eclipse.che.api.core.model.machine.MachineStatus;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
 import org.eclipse.che.api.promises.client.Operation;
@@ -32,19 +33,15 @@ import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
 import org.eclipse.che.ide.api.action.ActionManager;
 import org.eclipse.che.ide.api.action.DefaultActionGroup;
-import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.dialogs.CancelCallback;
 import org.eclipse.che.ide.api.dialogs.ConfirmCallback;
 import org.eclipse.che.ide.api.dialogs.DialogFactory;
-import org.eclipse.che.ide.api.machine.MachineServiceClient;
+import org.eclipse.che.ide.api.machine.events.MachineStateEvent;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
 import org.eclipse.che.ide.commons.exception.UnmarshallerException;
 import org.eclipse.che.ide.dto.DtoFactory;
-import org.eclipse.che.ide.extension.machine.client.machine.MachineStateEvent;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
-import org.eclipse.che.ide.rest.AsyncRequestFactory;
-import org.eclipse.che.ide.rest.StringUnmarshaller;
 import org.eclipse.che.ide.util.UUID;
 import org.eclipse.che.ide.util.loging.Log;
 import org.eclipse.che.ide.websocket.Message;
@@ -54,22 +51,19 @@ import org.eclipse.che.ide.websocket.WebSocketException;
 import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
 import org.eclipse.che.ide.websocket.rest.Unmarshallable;
 import org.eclipse.che.plugin.artik.ide.ArtikExtension;
-import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 import org.eclipse.che.plugin.artik.ide.ArtikResources;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static com.google.gwt.json.client.JSONParser.parseLenient;
-import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
-import static org.eclipse.che.api.core.model.machine.MachineStatus.RUNNING;
 import static org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper.createFromAsyncRequest;
 import static org.eclipse.che.ide.api.notification.StatusNotification.DisplayMode.FLOAT_MODE;
 import static org.eclipse.che.ide.api.notification.StatusNotification.Status.FAIL;
 import static org.eclipse.che.ide.api.notification.StatusNotification.Status.PROGRESS;
 import static org.eclipse.che.ide.api.notification.StatusNotification.Status.SUCCESS;
-import static org.eclipse.che.ide.rest.HTTPHeader.ACCEPT;
 
 /**
  * Manager for switching profile at Artik devices.
@@ -82,57 +76,48 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
     private static final String REPLICATION_FOLDER      = "replicationFolder";
     private static final String DEFAULT_PROJECTS_FOLDER = "projects";
 
-    private final ActionManager             actionManager;
-    private final MachineServiceClient      machineService;
-    private final AppContext                appContext;
-    private final ArtikModeActionFactory    artikModeActionFactory;
-    private final MessageBus                messageBus;
-    private final DtoFactory                dtoFactory;
-    private final ArtikResources            resources;
-    private final ProcessesPanelPresenter   processesPanelPresenter;
-    private final DialogFactory             dialogFactory;
-    private final NotificationManager       notificationManager;
-    private final AsyncRequestFactory       asyncRequestFactory;
-    private final ArtikLocalizationConstant locale;
+    private final ActionManager           actionManager;
+    private final ArtikModeActionFactory  artikModeActionFactory;
+    private final MessageBusProvider      messageBusProvider;
+    private final DeviceServiceClient     deviceServiceClient;
+    private final DtoFactory              dtoFactory;
+    private final ArtikResources          resources;
+    private final ProcessesPanelPresenter processesPanelPresenter;
+    private final DialogFactory           dialogFactory;
+    private final NotificationManager     notificationManager;
 
     /**
      * A set of ssh machines.
      * Use machine name for a key and machine ID for a value.
      */
-    private final Map<String, Machine>              sshMachines;
+    private final Map<String, Machine> sshMachines;
 
-    private final Map<String, DefaultActionGroup>   menus;
+    private final Map<String, DefaultActionGroup> menus;
 
-    private       AsyncCallback<String>             commandCallback;
+    private AsyncCallback<String> commandCallback;
 
     private StatusNotification progressNotification;
 
     @Inject
     public DevelopmentModeManager(ActionManager actionManager,
-                                  MachineServiceClient machineService,
-                                  AppContext appContext,
                                   ArtikModeActionFactory artikModeActionFactory,
                                   EventBus eventBus,
                                   MessageBusProvider messageBusProvider,
                                   DtoFactory dtoFactory,
+                                  DeviceServiceClient deviceServiceClient,
                                   ArtikResources resources,
                                   ProcessesPanelPresenter processesPanelPresenter,
                                   DialogFactory dialogFactory,
-                                  NotificationManager notificationManager,
-                                  AsyncRequestFactory asyncRequestFactory,
-                                  ArtikLocalizationConstant locale) {
+                                  NotificationManager notificationManager) {
         this.actionManager = actionManager;
-        this.machineService = machineService;
-        this.appContext = appContext;
         this.artikModeActionFactory = artikModeActionFactory;
-        this.messageBus = messageBusProvider.getMessageBus();
+        this.messageBusProvider = messageBusProvider;
         this.dtoFactory = dtoFactory;
+        this.deviceServiceClient = deviceServiceClient;
         this.resources = resources;
         this.processesPanelPresenter = processesPanelPresenter;
         this.dialogFactory = dialogFactory;
         this.notificationManager = notificationManager;
-        this.asyncRequestFactory = asyncRequestFactory;
-        this.locale = locale;
 
         sshMachines = new HashMap<>();
         menus = new HashMap<>();
@@ -193,38 +178,34 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
     }
 
     /**
-     * Fetches all ssh machines from workspace converts them to actions and adds to push to device action group.
+     * Fetches all devices converts them to actions and adds to push to device action group.
      */
-    public void fetchSshMachines() {
-        final DefaultActionGroup artikGroup =  (DefaultActionGroup)actionManager.getAction(ArtikExtension.ARTIK_GROUP_MAIN_MENU_ID);
+    public void fetchDevices() {
+        final DefaultActionGroup artikGroup = (DefaultActionGroup)actionManager.getAction(ArtikExtension.ARTIK_GROUP_MAIN_MENU_ID);
         artikGroup.addSeparator();
 
-        Promise<List<MachineDto>> machines = machineService.getMachines(appContext.getWorkspaceId());
-        machines.then(new Operation<List<MachineDto>>() {
+        deviceServiceClient.getDevices().then(new Operation<List<MachineDto>>() {
             @Override
             public void apply(List<MachineDto> machines) throws OperationException {
                 for (Machine machine : machines) {
-                    String type = machine.getConfig().getType();
-                    if (!"ssh".equals(type) && !"artik".equals(type)) {
+                    if (!MachineStatus.RUNNING.equals(machine.getStatus())) {
                         continue;
                     }
-
-                    if (!RUNNING.equals(machine.getStatus()) ) {
-                        continue;
-                    }
-
                     addArtikProfileMenu(machine);
                 }
             }
         }).catchError(new Operation<PromiseError>() {
             @Override
-            public void apply(PromiseError error) throws OperationException {
-                Log.error(getClass(), error.getMessage());
+            public void apply(PromiseError arg) throws OperationException {
+                Log.error(getClass(), arg.getMessage());
             }
         });
     }
 
     private void addArtikProfileMenu(Machine machine) {
+        if (sshMachines.containsKey(machine.getConfig().getName())) {
+            return;
+        }
         sshMachines.put(machine.getConfig().getName(), machine);
 
         final DefaultActionGroup profileGroup = (DefaultActionGroup)actionManager.getAction("artikProfileGroup");
@@ -275,11 +256,12 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
         final String chanel = "process:output:" + UUID.uuid();
 
         try {
-            messageBus.subscribe(chanel, new SubscriptionHandler<String>(new CommandOutputUnmarshaller()) {
+            final MessageBus machineMessageBus = messageBusProvider.getMachineMessageBus();
+            machineMessageBus.subscribe(chanel, new SubscriptionHandler<String>(new CommandOutputUnmarshaller()) {
                 @Override
                 protected void onMessageReceived(String message) {
                     if ("[STDOUT] >>> end <<<".equals(message)) {
-                        messageBus.unsubscribeSilently(chanel, this);
+                        machineMessageBus.unsubscribeSilently(chanel, this);
                         processesPanelPresenter.printMachineOutput(machineId, "");
                         commandCallback.onSuccess(message);
                     } else {
@@ -295,7 +277,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
 
                 @Override
                 protected void onErrorReceived(Throwable throwable) {
-                    messageBus.unsubscribeSilently(chanel, this);
+                    machineMessageBus.unsubscribeSilently(chanel, this);
                 }
             });
         } catch (WebSocketException e) {
@@ -310,11 +292,11 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
         });
 
         final Command command = dtoFactory.createDto(CommandDto.class)
-                .withName("name")
-                .withType("custom")
-                .withCommandLine(cmd);
+                                          .withName("name")
+                                          .withType("custom")
+                                          .withCommandLine(cmd);
 
-        machineService.executeCommand(appContext.getWorkspaceId(), machineId, command, chanel);
+        deviceServiceClient.executeCommand(machineId, command, chanel);
 
         return promise;
     }
@@ -362,11 +344,23 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
                 final String location = source.getLocation();
                 Log.debug(DevelopmentModeManager.this.getClass(), "location: " + location);
 
-                asyncRequestFactory.createGetRequest(location)
-                                   .header(ACCEPT, TEXT_PLAIN)
-                                   .send(new StringUnmarshaller())
-                                   .then(new RecipeScriptOperation(machine))
-                                   .catchError(new ErrorOperation());
+                final String content = source.getContent();
+                final JSONObject jsonObject = parseLenient(content).isObject();
+
+                final JSONValue replicationFolderValue = jsonObject.get(REPLICATION_FOLDER);
+                final JSONString replicationFolderString = replicationFolderValue.isString();
+
+                final String replicationFolder = replicationFolderString.stringValue();
+                Log.debug(DevelopmentModeManager.this.getClass(), "replicationFolder: " + replicationFolder);
+
+
+                final String commandText = resources.turnOnProductionProfileCommand().getText();
+                final String command = format(commandText, replicationFolder + "/" + DEFAULT_PROJECTS_FOLDER);
+                Log.debug(DevelopmentModeManager.this.getClass(), "command: " + command);
+
+                executeCommand(command, machine.getId()).then(new ExecuteCommandOperation(machineName))
+                                                        .catchError(new ErrorOperation());
+
             }
         };
         final CancelCallback cancelCallback = null;
@@ -385,40 +379,18 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
         }
     }
 
-    private class RecipeScriptOperation implements Operation<String> {
-        private final Machine machine;
+    private class ExecuteCommandOperation implements Operation<String> {
+        String name;
 
-        private RecipeScriptOperation(Machine machine) {
-            this.machine = machine;
+        public ExecuteCommandOperation(String machineName) {
+            name = machineName;
         }
 
         @Override
-        public void apply(String s) throws OperationException {
-            final JSONObject jsonObject = parseLenient(s).isObject();
-
-            final JSONValue replicationFolderValue = jsonObject.get(REPLICATION_FOLDER);
-            final JSONString replicationFolderString = replicationFolderValue.isString();
-
-            final String replicationFolder = replicationFolderString.stringValue();
-            Log.debug(DevelopmentModeManager.this.getClass(), "replicationFolder: " + replicationFolder);
-
-
-            final String commandText = resources.turnOnProductionProfileCommand().getText();
-            final String command = format(commandText, replicationFolder + "/" + DEFAULT_PROJECTS_FOLDER);
-            Log.debug(DevelopmentModeManager.this.getClass(), "command: " + command);
-
-            executeCommand(command, machine.getId()).then(new ExecuteCommandOperation())
-                                                    .catchError(new ErrorOperation());
-
-        }
-
-        private class ExecuteCommandOperation implements Operation<String> {
-            @Override
-            public void apply(String arg) throws OperationException {
-                String message = "Production mode has been turned on for " + machine.getConfig().getName();
-                progressNotification.setTitle(message);
-                progressNotification.setStatus(SUCCESS);
-            }
+        public void apply(String arg) throws OperationException {
+            String message = "Production mode has been turned on for " + name;
+            progressNotification.setTitle(message);
+            progressNotification.setStatus(SUCCESS);
         }
     }
 

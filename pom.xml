@@ -17,7 +17,7 @@
     <parent>
         <artifactId>maven-depmgt-pom</artifactId>
         <groupId>org.eclipse.che.depmgt</groupId>
-        <version>4.7.0</version>
+        <version>5.0.0-M7-SNAPSHOT</version>
     </parent>
     <groupId>org.eclipse.artik</groupId>
     <artifactId>artik-ide-parent</artifactId>
@@ -35,7 +35,7 @@
         <url>https://github.com/codenvy/artik-ide</url>
     </scm>
     <properties>
-        <che.version>4.8.1-artik-SNAPSHOT</che.version>
+        <che.version>5.0.0-M7-SNAPSHOT</che.version>
         <dto-generator-out-directory>${project.build.directory}/generated-sources/dto/</dto-generator-out-directory>
         <license_contributor>Codenvy, S.A. - Initial implementation</license_contributor>
         <license_contributor2>Samsung Electronics Co., Ltd. - Initial implementation</license_contributor2>
@@ -60,7 +60,7 @@
                 <groupId>org.eclipse.artik</groupId>
                 <artifactId>artik-ide-assembly-wsagent-server</artifactId>
                 <version>${project.version}</version>
-                <type>zip</type>
+                <type>tar.gz</type>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.artik</groupId>

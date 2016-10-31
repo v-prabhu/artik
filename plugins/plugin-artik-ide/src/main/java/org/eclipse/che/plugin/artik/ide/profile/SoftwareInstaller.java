@@ -19,8 +19,6 @@ import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
-import org.eclipse.che.ide.api.app.AppContext;
-import org.eclipse.che.ide.api.machine.MachineServiceClient;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
 import org.eclipse.che.ide.util.UUID;
@@ -31,6 +29,7 @@ import org.eclipse.che.ide.websocket.WebSocketException;
 import org.eclipse.che.ide.websocket.rest.StringUnmarshallerWS;
 import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
 import org.eclipse.che.plugin.artik.ide.ArtikResources;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 
 import static org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper.createFromAsyncRequest;
 import static org.eclipse.che.plugin.artik.ide.profile.Software.GDB_SERVER;
@@ -41,21 +40,18 @@ import static org.eclipse.che.plugin.artik.ide.profile.Software.RSYNC;
  */
 @Singleton
 public class SoftwareInstaller {
-    private final MachineServiceClient    machineService;
-    private final AppContext              appContext;
     private final MessageBus              messageBus;
     private final DtoFactory              dtoFactory;
     private final ProcessesPanelPresenter processesPanelPresenter;
+    private final DeviceServiceClient     deviceServiceClient;
 
     @Inject
-    public SoftwareInstaller(MachineServiceClient machineService,
-                             AppContext appContext,
+    public SoftwareInstaller(DeviceServiceClient deviceServiceClient,
                              MessageBusProvider messageBusProvider,
                              DtoFactory dtoFactory,
                              ProcessesPanelPresenter processesPanelPresenter,
                              ArtikResources artikResources) {
-        this.machineService = machineService;
-        this.appContext = appContext;
+        this.deviceServiceClient = deviceServiceClient;
         this.messageBus = messageBusProvider.getMessageBus();
         this.dtoFactory = dtoFactory;
         this.processesPanelPresenter = processesPanelPresenter;
@@ -89,7 +85,7 @@ public class SoftwareInstaller {
 
         Log.debug(getClass(), "Installation command: " + command);
 
-        machineService.executeCommand(appContext.getWorkspaceId(), machineId, command, chanel);
+        deviceServiceClient.executeCommand(machineId, command, chanel);
 
         return promise;
     }

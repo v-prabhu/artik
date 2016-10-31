@@ -46,6 +46,12 @@
             <type>zip</type>
         </dependency>
         <dependency>
+            <groupId>org.eclipse.che.lib</groupId>
+            <artifactId>che-websocket-terminal</artifactId>
+            <type>tar.gz</type>
+            <classifier>linux_arm7</classifier>
+        </dependency>
+        <dependency>
             <groupId>org.eclipse.che.plugin</groupId>
             <artifactId>maven-server-api</artifactId>
         </dependency>

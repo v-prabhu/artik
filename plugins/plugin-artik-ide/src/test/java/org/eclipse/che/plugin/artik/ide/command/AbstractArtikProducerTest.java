@@ -12,10 +12,9 @@
 package org.eclipse.che.plugin.artik.ide.command;
 
 import org.eclipse.che.api.core.model.machine.Machine;
-import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.ide.api.app.AppContext;
+import org.eclipse.che.ide.api.command.CommandImpl;
 import org.eclipse.che.ide.dto.DtoFactory;
-import org.eclipse.che.ide.extension.machine.client.command.custom.CustomCommandConfiguration;
 import org.eclipse.che.ide.extension.machine.client.command.custom.CustomCommandType;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,8 +25,6 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -72,28 +69,15 @@ public class AbstractArtikProducerTest extends BaseArtikProducerTest {
 
     @Test
     public void shouldCreateCommand() throws Exception {
-        // given
-        CommandDto commandDto = mock(CommandDto.class);
-        when(commandDto.withType(anyString())).thenReturn(commandDto);
-        when(commandDto.withName(anyString())).thenReturn(commandDto);
-        when(commandDto.withCommandLine(anyString())).thenReturn(commandDto);
-
-        when(dtoFactory.createDto(any())).thenReturn(commandDto);
-
-        when(customCommandType.getConfigurationFactory()).thenReturn(commandConfigurationFactory);
         when(customCommandType.getId()).thenReturn("custom");
 
-        when(commandConfigurationFactory.createFromDto(any(CommandDto.class))).thenReturn(mock(CustomCommandConfiguration.class));
-
         // when
-        producer.createCommand(mock(Machine.class));
+        final CommandImpl command = producer.createCommand(mock(Machine.class));
 
         // then
-        verify(commandDto).withName(eq(NAME));
-        verify(commandDto).withType(eq("custom"));
-        verify(commandDto).withCommandLine(eq("cmd"));
-        verify(customCommandType).getConfigurationFactory();
-        verify(commandConfigurationFactory).createFromDto(eq(commandDto));
+        verify(customCommandType).getId();
+        assertEquals("cmd", command.getCommandLine());
+        assertEquals("custom", command.getType());
     }
 
     private class DummyArtikProducer extends AbstractArtikProducer {

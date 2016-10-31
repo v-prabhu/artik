@@ -358,7 +358,7 @@ public class ManageDevicesViewImpl extends Window implements ManageDevicesView {
                     element.addClassName(commandResources.getCss().categorySubElementHeader());
                     element.setId("device-" + device.getName());
 
-                    if (device.getRecipe() == null) {
+                    if (device.getRecipe() == null && device.getScript() == null) {
                         element.getStyle().setProperty("color", "gray");
                     } else {
                         if (device.isConnected()) {

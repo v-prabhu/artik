@@ -16,7 +16,7 @@ import com.google.common.base.Optional;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.js.Promises;
 import org.eclipse.che.ide.api.app.AppContext;
-import org.eclipse.che.ide.api.machine.CommandPropertyValueProvider;
+import org.eclipse.che.ide.api.macro.Macro;
 import org.eclipse.che.ide.api.resources.Project;
 import org.eclipse.che.ide.api.resources.Resource;
 
@@ -27,7 +27,7 @@ import static com.google.common.base.Strings.isNullOrEmpty;
  *
  * @author Artem Zatsarynnyi
  */
-public abstract class ProjectAttributeMacro implements CommandPropertyValueProvider {
+public abstract class ProjectAttributeMacro implements Macro {
 
     protected final AppContext appContext;
 
@@ -36,7 +36,7 @@ public abstract class ProjectAttributeMacro implements CommandPropertyValueProvi
     }
 
     @Override
-    public Promise<String> getValue() {
+    public Promise<String> expand() {
         String binaryName = getAttrValue(getAttribute(), getDefaultValue());
 
         return Promises.resolve(binaryName);

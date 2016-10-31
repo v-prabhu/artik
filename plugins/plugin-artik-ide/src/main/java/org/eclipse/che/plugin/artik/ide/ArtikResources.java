@@ -65,6 +65,9 @@ public interface ArtikResources extends ClientBundle {
     @Source("debug/debug.svg")
     SVGResource debug();
 
+    @Source("run/execute.svg")
+    SVGResource run();
+
     /** The CssResource interface for the Artik extension. */
     interface Css extends CssResource {
 

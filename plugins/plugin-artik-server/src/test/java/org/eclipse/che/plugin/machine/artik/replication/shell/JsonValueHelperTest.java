@@ -13,7 +13,10 @@ package org.eclipse.che.plugin.machine.artik.replication.shell;
 
 import org.eclipse.che.api.core.ApiException;
 import org.eclipse.che.api.core.ServerException;
-import org.eclipse.che.plugin.machine.artik.replication.ApiRequestHelper;
+import org.eclipse.che.api.machine.shared.dto.MachineConfigDto;
+import org.eclipse.che.api.machine.shared.dto.MachineDto;
+import org.eclipse.che.api.machine.shared.dto.MachineSourceDto;
+import org.eclipse.che.plugin.machine.artik.ArtikDeviceManager;
 import org.mockito.Mock;
 import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeMethod;
@@ -30,7 +33,7 @@ import static org.eclipse.che.plugin.machine.artik.replication.shell.JsonValueHe
 import static org.eclipse.che.plugin.machine.artik.replication.shell.JsonValueHelper.PORT;
 import static org.eclipse.che.plugin.machine.artik.replication.shell.JsonValueHelper.REPLICATION_FOLDER;
 import static org.eclipse.che.plugin.machine.artik.replication.shell.JsonValueHelper.USERNAME;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -54,15 +57,21 @@ public class JsonValueHelperTest {
                                              "  \"replicationFolder\" : \"replicationFolder\"" + "\n" +
                                              "}";
     @Mock
-    private ApiRequestHelper apiRequestHelper;
+    private ArtikDeviceManager artikDeviceManager;
 
     private JsonValueHelper jsonValueHelper;
 
     @BeforeMethod
     public void beforeMethod() throws ApiException, IOException {
-        when(apiRequestHelper.getScript(anyString())).thenReturn(JSON);
+        MachineDto machine = mock(MachineDto.class);
+        when(artikDeviceManager.getDeviceById(MACHINE_ID)).thenReturn(machine);
+        MachineConfigDto config = mock(MachineConfigDto.class);
+        when(machine.getConfig()).thenReturn(config);
+        MachineSourceDto source = mock(MachineSourceDto.class);
+        when(config.getSource()).thenReturn(source);
+        when(source.getContent()).thenReturn(JSON);
 
-        jsonValueHelper = new JsonValueHelper(MACHINE_ID, apiRequestHelper);
+        jsonValueHelper = new JsonValueHelper(MACHINE_ID, artikDeviceManager);
     }
 
     @Test

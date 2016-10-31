@@ -14,14 +14,13 @@ package org.eclipse.che.plugin.artik.ide.command;
 import com.google.common.base.Optional;
 
 import org.eclipse.che.api.core.model.machine.Machine;
-import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.ide.api.app.AppContext;
+import org.eclipse.che.ide.api.command.CommandImpl;
+import org.eclipse.che.ide.api.command.CommandProducer;
 import org.eclipse.che.ide.api.resources.Project;
 import org.eclipse.che.ide.api.resources.Resource;
 import org.eclipse.che.ide.dto.DtoFactory;
-import org.eclipse.che.ide.extension.machine.client.command.CommandConfiguration;
 import org.eclipse.che.ide.extension.machine.client.command.custom.CustomCommandType;
-import org.eclipse.che.ide.extension.machine.client.command.producer.CommandProducer;
 
 /**
  * Abstract {@link CommandProducer} which is applicable when current project type is C.
@@ -72,13 +71,8 @@ public abstract class AbstractArtikProducer implements CommandProducer {
     }
 
     @Override
-    public CommandConfiguration createCommand(Machine machine) {
-        CommandDto commandDto = dtoFactory.createDto(CommandDto.class)
-                                          .withType(customCommandType.getId())
-                                          .withName(getName())
-                                          .withCommandLine(getCommandLine(machine));
-
-        return customCommandType.getConfigurationFactory().createFromDto(commandDto);
+    public CommandImpl createCommand(Machine machine) {
+        return new CommandImpl(getName(), getCommandLine(machine), customCommandType.getId());
     }
 
     protected abstract String getCommandLine(Machine machine);

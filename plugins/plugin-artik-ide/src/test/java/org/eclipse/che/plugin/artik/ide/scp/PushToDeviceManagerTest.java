@@ -23,11 +23,12 @@ import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.ide.api.action.ActionManager;
 import org.eclipse.che.ide.api.action.DefaultActionGroup;
 import org.eclipse.che.ide.api.app.AppContext;
-import org.eclipse.che.ide.api.machine.MachineServiceClient;
+import org.eclipse.che.ide.api.machine.MachineEntity;
+import org.eclipse.che.ide.api.machine.events.MachineStateEvent;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
-import org.eclipse.che.ide.extension.machine.client.machine.MachineStateEvent;
 import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 import org.eclipse.che.plugin.artik.ide.scp.action.ChooseTargetAction;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceAction;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceActionFactory;
@@ -76,9 +77,9 @@ public class PushToDeviceManagerTest {
     @Mock
     private EventBus                     eventBus;
     @Mock
-    private MachineServiceClient         machineService;
-    @Mock
     private AppContext                   appContext;
+    @Mock
+    private DeviceServiceClient          deviceServiceClient;
     @Mock
     private Provider<ChooseTargetAction> chooseTargetActionProvider;
 
@@ -111,11 +112,11 @@ public class PushToDeviceManagerTest {
         when(chooseTargetActionProvider.get()).thenReturn(mock(ChooseTargetAction.class));
         when(actionManager.getAction("resourceOperation")).thenReturn(new DefaultActionGroup(actionManager));
 
-        when(machineService.getMachines(anyString())).thenReturn(machinesPromise);
+        when(deviceServiceClient.getDevices()).thenReturn(machinesPromise);
         when(machinesPromise.then(Matchers.<Operation<List<MachineDto>>>anyObject())).thenReturn(machinesPromise);
 
         when(machineDto.getConfig()).thenReturn(configDto);
-        when(configDto.getType()).thenReturn("ssh");
+        when(configDto.getType()).thenReturn("artik");
         when(machineDto.getStatus()).thenReturn(RUNNING);
         when(machineDto.getId()).thenReturn("id");
         when(configDto.getName()).thenReturn("name");
@@ -136,8 +137,8 @@ public class PushToDeviceManagerTest {
         verify(pushToDeviceActionFactory).create("name");
         verify(actionManager).registerAction("id", pushToDeviceAction);
 
-        assertThat(pushToDeviceManager.getMachineNames().contains("name"), is(true));
-        assertThat(pushToDeviceManager.getMachineNames().size(), is(equalTo(1)));
+        assertThat(pushToDeviceManager.getDeviceNames().contains("name"), is(true));
+        assertThat(pushToDeviceManager.getDeviceNames().size(), is(equalTo(1)));
     }
 
     @Test
@@ -185,7 +186,10 @@ public class PushToDeviceManagerTest {
 
     @Test
     public void deviceActionShouldBeAddedToDeviceActionGroupWhenUserConnectsToSshMachine() throws OperationException {
-        when(machineStateEvent.getMachine()).thenReturn(machineDto);
+        MachineEntity machineEntity = mock(MachineEntity.class);
+        when(machineEntity.getConfig()).thenReturn(configDto);
+        when(machineEntity.getType()).thenReturn("artik");
+        when(machineStateEvent.getMachine()).thenReturn(machineEntity);
 
         assertThat(pushToDeviceManager.isSshDeviceExist(), is(false));
 
@@ -196,7 +200,10 @@ public class PushToDeviceManagerTest {
 
     @Test
     public void deviceActionShouldBeRemovedToDeviceActionGroupWhenUserConnectsToSshMachine() throws OperationException {
-        when(machineStateEvent.getMachine()).thenReturn(machineDto);
+        MachineEntity machineEntity = mock(MachineEntity.class);
+        when(machineEntity.getConfig()).thenReturn(configDto);
+        when(machineEntity.getType()).thenReturn("artik");
+        when(machineStateEvent.getMachine()).thenReturn(machineEntity);
 
         verify(machinesPromise).then(machinesListCaptor.capture());
         machinesListCaptor.getValue().apply(Arrays.asList(machineDto));

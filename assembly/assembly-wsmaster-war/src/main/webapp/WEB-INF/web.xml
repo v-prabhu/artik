@@ -24,7 +24,7 @@
     </context-param>
     <context-param>
         <param-name>org.eclipse.che.websocket.endpoint</param-name>
-        <param-value>/ws/{ws-id}</param-value>
+        <param-value>/ws</param-value>
     </context-param>
     <context-param>
         <param-name>org.eclipse.che.eventbus.endpoint</param-name>
@@ -68,5 +68,11 @@
         <description>the user role</description>
         <role-name>developer</role-name>
     </security-role>
+
+    <resource-ref>
+        <res-ref-name>jdbc/che</res-ref-name>
+        <res-type>javax.sql.DataSource</res-type>
+        <res-auth>Container</res-auth>
+    </resource-ref>
 
 </web-app>

@@ -17,7 +17,7 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.Singleton;
 
-import org.eclipse.che.api.machine.shared.dto.MachineConfigDto;
+import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
 import org.eclipse.che.api.promises.client.Function;
 import org.eclipse.che.api.promises.client.FunctionException;
@@ -30,13 +30,13 @@ import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.dialogs.ConfirmCallback;
 import org.eclipse.che.ide.api.dialogs.ConfirmDialog;
 import org.eclipse.che.ide.api.dialogs.DialogFactory;
-import org.eclipse.che.ide.api.machine.MachineServiceClient;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
 import org.eclipse.che.ide.api.workspace.WorkspaceServiceClient;
 import org.eclipse.che.ide.ui.loaders.request.LoaderFactory;
 import org.eclipse.che.ide.ui.loaders.request.MessageLoader;
 import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -56,8 +56,8 @@ public class UpdateSDKPresenter implements UpdateSDKView.ActionDelegate {
 
     private final UpdateSDKView              view;
     private final AppContext                 appContext;
+    private final DeviceServiceClient        deviceServiceClient;
     private final NotificationManager        notificationManager;
-    private final MachineServiceClient       machineServiceClient;
     private final Provider<SDKInstaller>     sdkUpdaterProvider;
     private final ArtikLocalizationConstant  localizationConstants;
     private final DialogFactory              dialogFactory;
@@ -68,8 +68,8 @@ public class UpdateSDKPresenter implements UpdateSDKView.ActionDelegate {
     @Inject
     public UpdateSDKPresenter(UpdateSDKView view,
                               AppContext appContext,
+                              DeviceServiceClient deviceServiceClient,
                               NotificationManager notificationManager,
-                              MachineServiceClient machineServiceClient,
                               Provider<SDKInstaller> sdkUpdaterProvider,
                               ArtikLocalizationConstant localizationConstants,
                               DialogFactory dialogFactory,
@@ -77,8 +77,8 @@ public class UpdateSDKPresenter implements UpdateSDKView.ActionDelegate {
                               LoaderFactory loaderFactory) {
         this.view = view;
         this.appContext = appContext;
+        this.deviceServiceClient = deviceServiceClient;
         this.notificationManager = notificationManager;
-        this.machineServiceClient = machineServiceClient;
         this.sdkUpdaterProvider = sdkUpdaterProvider;
         this.localizationConstants = localizationConstants;
         this.dialogFactory = dialogFactory;
@@ -122,17 +122,14 @@ public class UpdateSDKPresenter implements UpdateSDKView.ActionDelegate {
 
     private void fillTargetsForUpdate() {
         loader.show();
-        machineServiceClient.getMachines(appContext.getWorkspaceId()).then(new Function<List<MachineDto>, List<TargetForUpdate>>() {
+        deviceServiceClient.getDevices().then(new Function<List<MachineDto>, List<TargetForUpdate>>() {
             @Override
             public List<TargetForUpdate> apply(List<MachineDto> machines) throws FunctionException {
                 List<TargetForUpdate> list = new ArrayList<>();
-                for (MachineDto machineDto : machines) {
-                    final MachineConfigDto machineConfig = machineDto.getConfig();
-                    if ("artik".equals(machineConfig.getType()) || machineConfig.isDev()) {
-                        final String name = machineConfig.isDev() ? "Workspace" : machineConfig.getName();
-                        list.add(new TargetForUpdate(machineDto.getId(), name));
-                    }
+                for (Machine machine : machines) {
+                    list.add(new TargetForUpdate(machine.getId(), machine.getConfig().getName()));
                 }
+                list.add(new TargetForUpdate(appContext.getDevMachine().getId(), "Workspace"));
                 return list;
             }
         }).then(new Operation<List<TargetForUpdate>>() {
@@ -143,7 +140,7 @@ public class UpdateSDKPresenter implements UpdateSDKView.ActionDelegate {
                 for (int i = 0; i < targets.size(); i++) {
                     final TargetForUpdate target = targets.get(i);
                     promises[i] = sdkUpdaterProvider.get()
-                                                    .getInstalledSDKVersion(target.getId())
+                                                    .getInstalledSDKVersion(target)
                                                     .then(new Operation<String>() {
                                                         @Override
                                                         public void apply(String arg) throws OperationException {
@@ -226,7 +223,7 @@ public class UpdateSDKPresenter implements UpdateSDKView.ActionDelegate {
                                                                            PROGRESS,
                                                                            FLOAT_MODE);
 
-        return sdkUpdaterProvider.get().installSDK(target.getId(), view.getSelectedVersion()).then(new Operation<String>() {
+        return sdkUpdaterProvider.get().installSDK(target, view.getSelectedVersion()).then(new Operation<String>() {
             @Override
             public void apply(String message) throws OperationException {
                 notification.setStatus(StatusNotification.Status.SUCCESS);

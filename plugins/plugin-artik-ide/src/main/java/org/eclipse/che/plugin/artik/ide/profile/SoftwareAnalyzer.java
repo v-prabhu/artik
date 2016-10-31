@@ -19,8 +19,6 @@ import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
-import org.eclipse.che.ide.api.app.AppContext;
-import org.eclipse.che.ide.api.machine.MachineServiceClient;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.util.UUID;
 import org.eclipse.che.ide.util.loging.Log;
@@ -30,6 +28,7 @@ import org.eclipse.che.ide.websocket.WebSocketException;
 import org.eclipse.che.ide.websocket.rest.StringUnmarshallerWS;
 import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
 import org.eclipse.che.plugin.artik.ide.ArtikResources;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -46,19 +45,16 @@ import static org.eclipse.che.plugin.artik.ide.profile.Software.RSYNC;
 public class SoftwareAnalyzer {
     private static Software[] REQUIRED_SOFTWARE = Software.values();
 
-    private final MachineServiceClient machineService;
-    private final AppContext           appContext;
-    private final MessageBus           messageBus;
-    private final DtoFactory           dtoFactory;
+    private final MessageBus          messageBus;
+    private final DtoFactory          dtoFactory;
+    private final DeviceServiceClient deviceServiceClient;
 
     @Inject
-    public SoftwareAnalyzer(MachineServiceClient machineService,
-                            AppContext appContext,
+    public SoftwareAnalyzer(DeviceServiceClient deviceServiceClient,
                             MessageBusProvider messageBusProvider,
                             DtoFactory dtoFactory,
                             ArtikResources artikResources) {
-        this.machineService = machineService;
-        this.appContext = appContext;
+        this.deviceServiceClient = deviceServiceClient;
         this.messageBus = messageBusProvider.getMessageBus();
         this.dtoFactory = dtoFactory;
 
@@ -99,7 +95,7 @@ public class SoftwareAnalyzer {
 
         Log.debug(getClass(), "Verification command: " + command);
 
-        machineService.executeCommand(appContext.getWorkspaceId(), machineId, command, chanel);
+        deviceServiceClient.executeCommand(machineId, command, chanel);
 
         return promise;
     }

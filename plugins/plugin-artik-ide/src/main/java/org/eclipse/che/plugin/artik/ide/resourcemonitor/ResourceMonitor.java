@@ -23,58 +23,54 @@ import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
 import org.eclipse.che.api.promises.client.Operation;
 import org.eclipse.che.api.promises.client.OperationException;
 import org.eclipse.che.api.promises.client.PromiseError;
-import org.eclipse.che.ide.api.app.AppContext;
-import org.eclipse.che.ide.api.machine.MachineServiceClient;
+import org.eclipse.che.ide.api.machine.events.MachineStateEvent;
 import org.eclipse.che.ide.api.workspace.event.WorkspaceStartedEvent;
 import org.eclipse.che.ide.api.workspace.event.WorkspaceStoppedEvent;
 import org.eclipse.che.ide.commons.exception.UnmarshallerException;
 import org.eclipse.che.ide.dto.DtoFactory;
-import org.eclipse.che.ide.extension.machine.client.machine.MachineStateEvent;
 import org.eclipse.che.ide.extension.machine.client.processes.monitoring.MachineMonitors;
 import org.eclipse.che.ide.util.UUID;
 import org.eclipse.che.ide.websocket.Message;
-import org.eclipse.che.ide.websocket.MessageBus;
 import org.eclipse.che.ide.websocket.MessageBusProvider;
 import org.eclipse.che.ide.websocket.WebSocketException;
 import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
 import org.eclipse.che.ide.websocket.rest.Unmarshallable;
 import org.eclipse.che.plugin.artik.ide.ArtikResources;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 
 import java.util.HashMap;
 import java.util.List;
 
 /**
  * Resources monitor asks Artik machines for CPU, memory and disk usages
- *  and displays them in the consoles tree.
+ * and displays them in the consoles tree.
  *
  * @author Vitaliy Guliy
  */
 @Singleton
 public class ResourceMonitor implements MachineStateEvent.Handler,
-        WorkspaceStartedEvent.Handler, WorkspaceStoppedEvent.Handler {
+                                        WorkspaceStartedEvent.Handler,
+                                        WorkspaceStoppedEvent.Handler {
 
-    private final MachineServiceClient              machineServiceClient;
-    private final AppContext                        appContext;
-    private final MachineMonitors                   machineMonitors;
-    private final ArtikResources                    resources;
-    private final MessageBus                        messageBus;
-    private final DtoFactory                        dtoFactory;
+    private final DeviceServiceClient  deviceServiceClient;
+    private final MachineMonitors      machineMonitors;
+    private final ArtikResources       resources;
+    private final MessageBusProvider   messageBusProvider;
+    private final DtoFactory           dtoFactory;
 
-    private final HashMap<String, MonitorAgent>     monitorAgents;
+    private final HashMap<String, MonitorAgent> monitorAgents;
 
     @Inject
-    public ResourceMonitor(MachineServiceClient machineServiceClient,
+    public ResourceMonitor(DeviceServiceClient deviceServiceClient,
                            EventBus eventBus,
-                           AppContext appContext,
                            MachineMonitors machineMonitors,
                            ArtikResources resources,
                            MessageBusProvider messageBusProvider,
                            DtoFactory dtoFactory) {
-        this.machineServiceClient = machineServiceClient;
-        this.appContext = appContext;
+        this.deviceServiceClient = deviceServiceClient;
         this.machineMonitors = machineMonitors;
         this.resources = resources;
-        this.messageBus = messageBusProvider.getMessageBus();
+        this.messageBusProvider = messageBusProvider;
         this.dtoFactory = dtoFactory;
 
         monitorAgents = new HashMap<>();
@@ -105,13 +101,11 @@ public class ResourceMonitor implements MachineStateEvent.Handler,
 
     @Override
     public void onWorkspaceStarted(WorkspaceStartedEvent event) {
-        machineServiceClient.getMachines(appContext.getWorkspaceId()).then(new Operation<List<MachineDto>>() {
+        deviceServiceClient.getDevices().then(new Operation<List<MachineDto>>() {
             @Override
-            public void apply(List<MachineDto> machines) throws OperationException {
-                for (MachineDto machine : machines) {
-                    if ("artik".equals(machine.getConfig().getType())) {
-                        monitorAgents.put(machine.getId(), new MonitorAgent(machine));
-                    }
+            public void apply(List<MachineDto> devices) throws OperationException {
+                for (MachineDto device : devices) {
+                    monitorAgents.put(device.getId(), new MonitorAgent(device));
                 }
             }
         });
@@ -131,26 +125,25 @@ public class ResourceMonitor implements MachineStateEvent.Handler,
      * listening the command output and updating the monitor widgets.
      */
     private class MonitorAgent extends SubscriptionHandler<String> {
+        private final Machine device;
 
-        private final Machine           machine;
-
-        private MachineProcessDto       machineProcessDto;
-        private String                  channel;
+        private MachineProcessDto machineProcessDto;
+        private String            channel;
 
         public MonitorAgent(Machine machine) {
             super(new CommandOutputUnmarshaller());
-            this.machine = machine;
+            this.device = machine;
 
             checkMonitorProcess();
         }
 
         private void checkMonitorProcess() {
-            machineServiceClient.getProcesses(appContext.getWorkspaceId(), machine.getId()).then(new Operation<List<MachineProcessDto>>() {
+            deviceServiceClient.getProcesses(device.getId()).then(new Operation<List<MachineProcessDto>>() {
                 @Override
                 public void apply(List<MachineProcessDto> arg) throws OperationException {
                     for (MachineProcessDto processDto : arg) {
                         if (processDto.getCommandLine() != null && !processDto.getCommandLine().isEmpty()
-                                && processDto.getCommandLine().startsWith("#hidden monitor process")) {
+                            && processDto.getCommandLine().startsWith("#hidden monitor process")) {
                             connectToProcess(processDto);
                             return;
                         }
@@ -170,14 +163,14 @@ public class ResourceMonitor implements MachineStateEvent.Handler,
             channel = "process:output:" + UUID.uuid();
 
             try {
-                messageBus.subscribe(channel, this);
+                messageBusProvider.getMachineMessageBus().subscribe(channel, this);
 
                 Command command = dtoFactory.createDto(CommandDto.class)
-                        .withName("name")
-                        .withType("custom")
-                        .withCommandLine(resources.getMonitorAllCommand().getText());
+                                            .withName("name")
+                                            .withType("custom")
+                                            .withCommandLine(resources.getMonitorAllCommand().getText());
 
-                machineServiceClient.executeCommand(appContext.getWorkspaceId(), machine.getId(), command, channel).then(new Operation<MachineProcessDto>() {
+                deviceServiceClient.executeCommand(device.getId(), command, channel).then(new Operation<MachineProcessDto>() {
                     @Override
                     public void apply(MachineProcessDto processDto) throws OperationException {
                         machineProcessDto = processDto;
@@ -193,7 +186,7 @@ public class ResourceMonitor implements MachineStateEvent.Handler,
             channel = processDto.getOutputChannel();
 
             try {
-                messageBus.subscribe(channel, this);
+                messageBusProvider.getMachineMessageBus().subscribe(channel, this);
             } catch (WebSocketException e) {
                 // Ignore and do nothing
             }
@@ -201,11 +194,11 @@ public class ResourceMonitor implements MachineStateEvent.Handler,
 
         public void stop() {
             if (channel != null) {
-                messageBus.unsubscribeSilently(channel, this);
+                messageBusProvider.getMachineMessageBus().unsubscribeSilently(channel, this);
             }
 
             if (machineProcessDto != null) {
-                machineServiceClient.stopProcess(appContext.getWorkspaceId(), machine.getId(), machineProcessDto.getPid());
+                deviceServiceClient.stopProcess(device.getId(), machineProcessDto.getPid());
             }
         }
 
@@ -216,24 +209,23 @@ public class ResourceMonitor implements MachineStateEvent.Handler,
             }
 
             // CPU_USED MEM_USED MEM_TOTAL DISK_USED DISK_TOTAL
-            String []parts = message.split(" ");
+            String[] parts = message.split(" ");
 
             // CPU usage
-            int cpu = (int) Math.rint(Double.valueOf(parts[0]) * 100);
-            machineMonitors.setCpuUsage(machine.getId(), cpu);
+            int cpu = (int)Math.rint(Double.valueOf(parts[0]) * 100);
+            machineMonitors.setCpuUsage(device.getId(), cpu);
 
             // Memory usage
-            machineMonitors.setMemoryUsage(machine.getId(), Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
+            machineMonitors.setMemoryUsage(device.getId(), Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
 
             // Disk usage
-            machineMonitors.setDiskUsage(machine.getId(), Integer.parseInt(parts[3]), Integer.parseInt(parts[4]));
+            machineMonitors.setDiskUsage(device.getId(), Integer.parseInt(parts[3]), Integer.parseInt(parts[4]));
         }
 
         @Override
         protected void onErrorReceived(Throwable throwable) {
-            messageBus.unsubscribeSilently(channel, this);
+            messageBusProvider.getMachineMessageBus().unsubscribeSilently(channel, this);
         }
-
     }
 
     private class CommandOutputUnmarshaller implements Unmarshallable<String> {

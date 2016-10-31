@@ -12,13 +12,20 @@
 package org.eclipse.che.plugin.machine.artik;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.multibindings.Multibinder;
+import com.google.inject.name.Names;
+
+import org.eclipse.che.api.machine.server.event.MachineProcessMessenger;
+import org.eclipse.che.inject.DynaModule;
+import org.eclipse.che.plugin.machine.ssh.SshMachineFactory;
 
 /**
  * Provides bindings needed for artik machine implementation usage.
  *
  * @author Alexander Garagatyi
  */
+@DynaModule
 public class ArtikMachineModule extends AbstractModule {
     @Override
     protected void configure() {
@@ -26,11 +33,29 @@ public class ArtikMachineModule extends AbstractModule {
                 Multibinder.newSetBinder(binder(),
                                          org.eclipse.che.api.machine.server.spi.InstanceProvider.class);
         machineProviderMultibinder.addBinding()
-                                  .to(org.eclipse.che.plugin.machine.artik.ArtikMachineInstanceProvider.class);
+                                  .to(org.eclipse.che.plugin.machine.artik.ArtikDeviceInstanceProvider.class);
 
-        Multibinder<org.eclipse.che.api.agent.server.terminal.MachineImplSpecificTerminalLauncher> terminalLaunchers =
+        install(new FactoryModuleBuilder()
+                        .implement(org.eclipse.che.api.machine.server.spi.Instance.class,
+                                   org.eclipse.che.plugin.machine.ssh.SshMachineInstance.class)
+                        .implement(org.eclipse.che.api.machine.server.spi.InstanceProcess.class,
+                                   org.eclipse.che.plugin.machine.ssh.SshMachineProcess.class)
+                        .implement(org.eclipse.che.plugin.machine.ssh.SshClient.class,
+                                   org.eclipse.che.plugin.machine.ssh.jsch.JschSshClient.class)
+                        .build(SshMachineFactory.class));
+
+        bindConstant().annotatedWith(Names.named(ArtikTerminalLauncher.TERMINAL_LAUNCH_COMMAND_PROPERTY))
+                      .to("~/che/terminal/che-websocket-terminal -addr :4411 -cmd /bin/bash -static ~/che/terminal/");
+
+        Multibinder<org.eclipse.che.api.core.model.machine.ServerConf> machineServers =
                 Multibinder.newSetBinder(binder(),
-                                         org.eclipse.che.api.agent.server.terminal.MachineImplSpecificTerminalLauncher.class);
-        terminalLaunchers.addBinding().to(org.eclipse.che.plugin.machine.artik.ArtikMachineTerminalLauncher.class);
+                                         org.eclipse.che.api.core.model.machine.ServerConf.class,
+                                         Names.named("machine.ssh.machine_servers"));
+        machineServers.addBinding().toProvider(TerminalServerConfProvider.class);
+
+        bind(MachineProcessMessenger.class).asEagerSingleton();
+        bind(ArtikDeviceStateMessenger.class).asEagerSingleton();
+
+        bind(ArtikDeviceService.class);
     }
 }

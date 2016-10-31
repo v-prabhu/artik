@@ -209,4 +209,7 @@ public interface ArtikLocalizationConstant extends Messages {
 
     @Key("debug.action.description")
     String debugActionDescription();
+
+    @Key("run.action.description")
+    String runActionDescription();
 }
