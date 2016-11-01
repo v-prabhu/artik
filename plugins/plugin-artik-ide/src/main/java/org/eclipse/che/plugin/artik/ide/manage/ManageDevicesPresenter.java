@@ -666,9 +666,11 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
             public void apply(MachineDto arg) throws OperationException {
                 eventBus.fireEvent(new MachineStateEvent(entityFactory.createMachine(arg),
                                                          MachineStateEvent.MachineAction.RUNNING));
-                connectNotification.setTitle(locale.deviceConnectSuccess(arg.getConfig().getName()));
+                final String deviceName = arg.getConfig().getName();
+                connectNotification.setTitle(locale.deviceConnectSuccess(deviceName));
                 connectNotification.setStatus(StatusNotification.Status.SUCCESS);
-                updateDevices(arg.getConfig().getName());
+                softwareManager.checkAndInstall(deviceName);
+                updateDevices(deviceName);
             }
         });
     }

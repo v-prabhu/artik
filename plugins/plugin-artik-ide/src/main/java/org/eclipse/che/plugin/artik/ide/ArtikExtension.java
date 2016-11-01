@@ -44,6 +44,7 @@ import static org.eclipse.che.ide.api.action.IdeActions.GROUP_CONSOLES_TREE_CONT
 import static org.eclipse.che.ide.api.action.IdeActions.GROUP_MAIN_MENU;
 import static org.eclipse.che.ide.api.action.IdeActions.GROUP_MAIN_TOOLBAR;
 import static org.eclipse.che.ide.api.action.IdeActions.GROUP_PROJECT;
+import static org.eclipse.che.ide.api.constraints.Anchor.AFTER;
 
 /**
  * Artik extension entry point.
@@ -135,7 +136,7 @@ public class ArtikExtension {
         DefaultActionGroup actionsToolbarGroup = new ManageDeviceActionGroup(actionManager);
         actionsToolbarGroup.add(manageDevicesAction);
         DefaultActionGroup mainToolbarGroup = (DefaultActionGroup)actionManager.getAction(GROUP_MAIN_TOOLBAR);
-        mainToolbarGroup.add(actionsToolbarGroup, Constraints.LAST);
+        mainToolbarGroup.add(actionsToolbarGroup, new Constraints(AFTER, "resourceOperation"));
 
         keyBindingAgent.getGlobal().addKey(new KeyBuilder().action().charCode('q').build(), SHOW_KEYWORD_DOCS_ACTION_ID);
     }

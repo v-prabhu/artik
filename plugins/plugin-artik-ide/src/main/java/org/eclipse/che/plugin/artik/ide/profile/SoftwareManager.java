@@ -69,7 +69,7 @@ public class SoftwareManager implements MachineStateEvent.Handler {
         final String machineId = machine.getId();
 
         softwareAnalyzer.getMissingSoft(machineId)
-                        .then(new InstallationDialogue(machineName, machineId))
+                        .then(new InstallationDialogue(machine))
                         .catchError(new ErrorHandling());
     }
 
@@ -103,16 +103,16 @@ public class SoftwareManager implements MachineStateEvent.Handler {
 
     private class InstallationDialogue implements Operation<Set<Software>> {
         private final String         machineName;
-        private final String         machineId;
         private final String         title;
         private final String         content;
         private final String         ok;
         private final String         cancel;
         private final CancelCallback cancelCallback;
+        private final Machine        machine;
 
-        private InstallationDialogue(String machineName, String machineId) {
-            this.machineName = machineName;
-            this.machineId = machineId;
+        private InstallationDialogue(Machine machine) {
+            this.machine = machine;
+            this.machineName = machine.getConfig().getName();
 
             this.title = "Development Mode";
             this.content = "Rsync and/or gdbserver not found in %PATH on <b>" + machineName + "</b>. This will <br>" +
@@ -148,7 +148,7 @@ public class SoftwareManager implements MachineStateEvent.Handler {
                     final String message = "Installing " + software.name + " for development mode to " + machineName;
                     final StatusNotification notification = notificationManager.notify(message, PROGRESS, FLOAT_MODE);
 
-                    softwareInstaller.install(software, machineId).then(new Operation<Void>() {
+                    softwareInstaller.install(software, machine).then(new Operation<Void>() {
                         @Override
                         public void apply(Void arg) throws OperationException {
                             final String message = "Software installed";

@@ -86,11 +86,19 @@ public class ArtikTerminalLauncher {
                                                                             null),
                                                             null);
 
-        startTerminal.start(new AbstractLineConsumer() {
-            @Override
-            public void writeLine(String line) throws IOException {
-                artik.getLogger().writeLine("[Terminal] " + line);
-            }
-        });
+        startTerminal.start(new DeviceLineConsumer(artik));
+    }
+
+    private static class DeviceLineConsumer extends AbstractLineConsumer {
+        private final Instance instance;
+
+        DeviceLineConsumer(Instance instance) {
+            this.instance = instance;
+        }
+
+        @Override
+        public void writeLine(String line) throws IOException {
+            instance.getLogger().writeLine("[Terminal] " + line);
+        }
     }
 }

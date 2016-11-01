@@ -45,7 +45,7 @@ import static org.eclipse.che.plugin.artik.ide.profile.Software.RSYNC;
 public class SoftwareAnalyzer {
     private static Software[] REQUIRED_SOFTWARE = Software.values();
 
-    private final MessageBus          messageBus;
+    private final MessageBusProvider  messageBusProvider;
     private final DtoFactory          dtoFactory;
     private final DeviceServiceClient deviceServiceClient;
 
@@ -55,7 +55,7 @@ public class SoftwareAnalyzer {
                             DtoFactory dtoFactory,
                             ArtikResources artikResources) {
         this.deviceServiceClient = deviceServiceClient;
-        this.messageBus = messageBusProvider.getMessageBus();
+        this.messageBusProvider = messageBusProvider;
         this.dtoFactory = dtoFactory;
 
 
@@ -104,6 +104,7 @@ public class SoftwareAnalyzer {
                              final String chanel,
                              final Set<Software> requiredSoftware,
                              final AsyncCallback<Set<Software>> commandCallback) {
+        final MessageBus messageBus = messageBusProvider.getMachineMessageBus();
         try {
             messageBus.subscribe(chanel, new SubscriptionHandler<String>(new StringUnmarshallerWS()) {
                 @Override

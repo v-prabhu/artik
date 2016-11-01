@@ -16,6 +16,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
 import org.eclipse.che.api.core.model.machine.Command;
+import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
@@ -40,7 +41,7 @@ import static org.eclipse.che.plugin.artik.ide.profile.Software.RSYNC;
  */
 @Singleton
 public class SoftwareInstaller {
-    private final MessageBus              messageBus;
+    private final MessageBusProvider      messageBusProvider;
     private final DtoFactory              dtoFactory;
     private final ProcessesPanelPresenter processesPanelPresenter;
     private final DeviceServiceClient     deviceServiceClient;
@@ -52,7 +53,7 @@ public class SoftwareInstaller {
                              ProcessesPanelPresenter processesPanelPresenter,
                              ArtikResources artikResources) {
         this.deviceServiceClient = deviceServiceClient;
-        this.messageBus = messageBusProvider.getMessageBus();
+        this.messageBusProvider = messageBusProvider;
         this.dtoFactory = dtoFactory;
         this.processesPanelPresenter = processesPanelPresenter;
 
@@ -61,7 +62,7 @@ public class SoftwareInstaller {
         RSYNC.setInstallationCommand(artikResources.rsyncInstallationCommand().getText());
     }
 
-    public Promise<Void> install(final Software softwareType, final String machineId) {
+    public Promise<Void> install(final Software softwareType, final Machine device) {
         Log.debug(getClass(), "Installing missing software: " + softwareType);
 
         final String chanel = "process:output:" + UUID.uuid();
@@ -69,7 +70,7 @@ public class SoftwareInstaller {
         final Promise<Void> promise = createFromAsyncRequest(new AsyncPromiseHelper.RequestCall<Void>() {
             @Override
             public void makeCall(AsyncCallback<Void> callback) {
-                readChannel(machineId, chanel, callback);
+                readChannel(device.getConfig().getName(), chanel, callback);
             }
         });
 
@@ -85,33 +86,34 @@ public class SoftwareInstaller {
 
         Log.debug(getClass(), "Installation command: " + command);
 
-        deviceServiceClient.executeCommand(machineId, command, chanel);
+        deviceServiceClient.executeCommand(device.getId(), command, chanel);
 
         return promise;
     }
 
-    private void readChannel(final String machineId, final String chanel, final AsyncCallback<Void> commandCallback) {
+    private void readChannel(final String deviceName, final String chanel, final AsyncCallback<Void> commandCallback) {
+        final MessageBus messageBus = messageBusProvider.getMachineMessageBus();
         try {
             messageBus.subscribe(chanel, new SubscriptionHandler<String>(new StringUnmarshallerWS()) {
                 @Override
                 protected void onMessageReceived(String message) {
                     if ("[STDOUT] >>> end <<<".equals(message)) {
                         messageBus.unsubscribeSilently(chanel, this);
-                        processesPanelPresenter.printMachineOutput(machineId, "\n");
+                        processesPanelPresenter.printMachineOutput(deviceName, "\n");
                         commandCallback.onSuccess(null);
 
                         Log.debug(getClass(), message);
                     } else {
                         if (message.startsWith("[STDOUT] ")) {
-                            processesPanelPresenter.printMachineOutput(machineId, message.substring(9));
+                            processesPanelPresenter.printMachineOutput(deviceName, message.substring(9));
 
                             Log.debug(getClass(), message);
                         } else if (message.startsWith("[STDERR] ")) {
-                            processesPanelPresenter.printMachineOutput(machineId, message.substring(9), "red");
+                            processesPanelPresenter.printMachineOutput(deviceName, message.substring(9), "red");
 
                             Log.error(getClass(), message);
                         } else {
-                            processesPanelPresenter.printMachineOutput(machineId, message);
+                            processesPanelPresenter.printMachineOutput(deviceName, message);
 
                             Log.debug(getClass(), message);
                         }

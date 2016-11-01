@@ -307,7 +307,7 @@ public class ArtikDeviceManager {
                                          .build();
         try {
             InstanceProvider provider = machineInstanceProviders.getProvider(machineConfig.getType());
-            final LineConsumer machineLogger = getMachineLogger(getMessageConsumer(), machineConfig.getName());
+            final LineConsumer machineLogger = getDeviceLogger(getMessageConsumer(), machineConfig.getName());
 
             Instance instance = provider.createInstance(machine, machineLogger);
 
@@ -377,8 +377,8 @@ public class ArtikDeviceManager {
 
     private File getProcessLogsFile(String machineId, int pid) {
         final File file = new File(machineLogsDir, machineId);
-        if (!file.exists()) {
-            file.mkdirs();
+        if (!(file.exists() || file.mkdirs())) {
+            throw new IllegalStateException("Unable create directory " + machineLogsDir);
         }
         return new File(file, Integer.toString(pid));
     }
@@ -394,29 +394,47 @@ public class ArtikDeviceManager {
         return NameGenerator.generate("artik-device", 16);
     }
 
-    private LineConsumer getMachineLogger(MessageConsumer<MachineLogMessage> deviceStatusLogger,
-                                          String machineName) throws ServerException {
-        return new AbstractLineConsumer() {
-            @Override
-            public void writeLine(String line) throws IOException {
-                deviceStatusLogger.consume(new MachineLogMessageImpl(machineName, line));
-            }
-        };
+    private LineConsumer getDeviceLogger(MessageConsumer<MachineLogMessage> deviceStatusLogger,
+                                         String machineName) throws ServerException {
+        return new ArtikDeviceConsumer(deviceStatusLogger, machineName);
     }
 
     private MessageConsumer<MachineLogMessage> getMessageConsumer() throws ServerException {
         WebsocketMessageConsumer<MachineLogMessage> deviceMessageConsumer = new WebsocketMessageConsumer<>(ARTIK_DEVICE_STATUS_CHANNEL);
-        return new AbstractMessageConsumer<MachineLogMessage>() {
-            @Override
-            public void consume(MachineLogMessage message) throws IOException {
-                deviceMessageConsumer.consume(message);
-            }
-        };
+        return new ArtikMessageConsumer(deviceMessageConsumer);
     }
 
     private void requiredNotNull(Object object, String message) throws BadRequestException {
         if (object == null) {
             throw new BadRequestException(message + " required");
+        }
+    }
+
+    private static class ArtikMessageConsumer extends AbstractMessageConsumer<MachineLogMessage> {
+        private final WebsocketMessageConsumer<MachineLogMessage> deviceMessageConsumer;
+
+        ArtikMessageConsumer(WebsocketMessageConsumer<MachineLogMessage> deviceMessageConsumer) {
+            this.deviceMessageConsumer = deviceMessageConsumer;
+        }
+
+        @Override
+        public void consume(MachineLogMessage message) throws IOException {
+            deviceMessageConsumer.consume(message);
+        }
+    }
+
+    private static class ArtikDeviceConsumer extends AbstractLineConsumer {
+        private final MessageConsumer<MachineLogMessage> deviceStatusLogger;
+        private final String machineName;
+
+        ArtikDeviceConsumer(MessageConsumer<MachineLogMessage> deviceStatusLogger, String machineName) {
+            this.deviceStatusLogger = deviceStatusLogger;
+            this.machineName = machineName;
+        }
+
+        @Override
+        public void writeLine(String line) throws IOException {
+            deviceStatusLogger.consume(new MachineLogMessageImpl(machineName, line));
         }
     }
 

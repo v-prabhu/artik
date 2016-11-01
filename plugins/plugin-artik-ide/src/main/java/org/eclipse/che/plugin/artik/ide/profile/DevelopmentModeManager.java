@@ -161,7 +161,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
 
                 Machine machine = sshMachines.get(machineName);
                 String cmd = resources.turnOnDevelopmentProfileCommand().getText();
-                executeCommand(cmd, machine.getId()).then(new Operation<String>() {
+                executeCommand(cmd, machine).then(new Operation<String>() {
                     @Override
                     public void apply(String arg) throws OperationException {
                         String message = "Development mode has been turned on for " + machineName;
@@ -252,7 +252,8 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
     /**
      * Executes a command and returns first message from output as a result.
      */
-    private Promise<String> executeCommand(final String cmd, final String machineId) {
+    private Promise<String> executeCommand(final String cmd, final Machine device) {
+        final String deviceName = device.getConfig().getName();
         final String chanel = "process:output:" + UUID.uuid();
 
         try {
@@ -262,15 +263,15 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
                 protected void onMessageReceived(String message) {
                     if ("[STDOUT] >>> end <<<".equals(message)) {
                         machineMessageBus.unsubscribeSilently(chanel, this);
-                        processesPanelPresenter.printMachineOutput(machineId, "");
+                        processesPanelPresenter.printMachineOutput(deviceName, "");
                         commandCallback.onSuccess(message);
                     } else {
                         if (message.startsWith("[STDOUT] ")) {
-                            processesPanelPresenter.printMachineOutput(machineId, message.substring(9));
+                            processesPanelPresenter.printMachineOutput(deviceName, message.substring(9));
                         } else if (message.startsWith("[STDERR] ")) {
-                            processesPanelPresenter.printMachineOutput(machineId, message.substring(9), "red");
+                            processesPanelPresenter.printMachineOutput(deviceName, message.substring(9), "red");
                         } else {
-                            processesPanelPresenter.printMachineOutput(machineId, message);
+                            processesPanelPresenter.printMachineOutput(deviceName, message);
                         }
                     }
                 }
@@ -296,7 +297,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
                                           .withType("custom")
                                           .withCommandLine(cmd);
 
-        deviceServiceClient.executeCommand(machineId, command, chanel);
+        deviceServiceClient.executeCommand(device.getId(), command, chanel);
 
         return promise;
     }
@@ -324,10 +325,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
                                "Are you sure you want to turn on production mode for <b>" + machineName + "</b>?";
         final String yesMessage = "Yes";
         final String noMessage = "Cancel";
-        final String machineName1 = machineName;
         final ConfirmCallback confirmCallback = new ConfirmCallback() {
-            private final String machineName = machineName1;
-
             @Override
             public void accepted() {
                 final String message = "Turning on production mode for " + machineName;
@@ -358,7 +356,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
                 final String command = format(commandText, replicationFolder + "/" + DEFAULT_PROJECTS_FOLDER);
                 Log.debug(DevelopmentModeManager.this.getClass(), "command: " + command);
 
-                executeCommand(command, machine.getId()).then(new ExecuteCommandOperation(machineName))
+                executeCommand(command, machine).then(new ExecuteCommandOperation(machineName))
                                                         .catchError(new ErrorOperation());
 
             }
