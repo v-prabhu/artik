@@ -36,7 +36,7 @@ public class CompileCommandProducer extends AbstractArtikProducer {
 
     public static final String COMMAND_NAME     = "Compile";
     public static final String COMMAND_TEMPLATE =
-            "cd ${explorer.current.file.parent.path} && ${compilation.options} -o ${binary.name} ${explorer.current.file.name}";
+            "cd ${explorer.current.file.parent.path} && ${compilation.options} -o ${binary.name} ${explorer.current.file.name} && echo 'Compilation completed'";
 
     @Inject
     public CompileCommandProducer(CustomCommandType customCommandType, DtoFactory dtoFactory, AppContext appContext) {
