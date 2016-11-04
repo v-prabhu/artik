@@ -14,6 +14,7 @@ package org.eclipse.che.plugin.artik.ide.manage;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONParser;
+import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.Timer;
 import com.google.inject.Inject;
 import com.google.web.bindery.event.shared.EventBus;
@@ -35,7 +36,9 @@ import org.eclipse.che.ide.api.machine.events.WsAgentStateEvent;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
+import org.eclipse.che.ide.api.preferences.PreferencesManager;
 import org.eclipse.che.ide.api.workspace.event.MachineStatusChangedEvent;
+import org.eclipse.che.ide.api.workspace.event.WorkspaceStoppedEvent;
 import org.eclipse.che.ide.collections.Jso;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.extension.machine.client.inject.factories.EntityFactory;
@@ -47,14 +50,17 @@ import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClient;
 import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 import org.eclipse.che.plugin.artik.ide.profile.SoftwareManager;
+import org.eclipse.che.plugin.artik.ide.resourcemonitor.ResourceMonitor;
 import org.eclipse.che.plugin.artik.shared.dto.ArtikDeviceDto;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static java.util.Collections.emptyList;
 import static org.eclipse.che.api.core.model.machine.MachineStatus.RUNNING;
 import static org.eclipse.che.ide.api.machine.events.MachineStateEvent.MachineAction.DESTROYED;
 import static org.eclipse.che.plugin.artik.shared.Constants.ARTIK_DEVICE_STATUS_CHANNEL;
@@ -68,16 +74,20 @@ import static org.eclipse.che.plugin.artik.shared.Constants.ARTIK_DEVICE_STATUS_
  */
 public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                                                WsAgentStateHandler,
+                                               WorkspaceStoppedEvent.Handler,
                                                MachineStatusChangedEvent.Handler {
-    public final static String ARTIK_CATEGORY = "artik";
-    public final static String SSH_CATEGORY   = "ssh-config";
-    public final static String DEFAULT_NAME   = "artik_device";
-    public final static String VALID_NAME     = "[\\w-]*";
+    public final static String ARTIK_DEVICE_CONFIGURATION = "deviceConfiguration";
+    public final static String ARTIK_CATEGORY             = "artik";
+    public final static String SSH_CATEGORY               = "ssh-config";
+    public final static String DEFAULT_NAME               = "artik_device";
+    public final static String VALID_NAME                 = "[\\w-]*";
 
     private final ManageDevicesView               view;
     private final DeviceStatusSubscriptionHandler deviceStatusSubscriptionHandler;
     private final DtoFactory                      dtoFactory;
+    private final ResourceMonitor                 resourceMonitor;
     private final EntityFactory                   entityFactory;
+    private final PreferencesManager              preferencesManager;
     private final DeviceServiceClient             deviceServiceClient;
     private final DialogFactory                   dialogFactory;
     private final NotificationManager             notificationManager;
@@ -98,9 +108,11 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
 
     @Inject
     public ManageDevicesPresenter(final ManageDevicesView view,
+                                  final ResourceMonitor resourceMonitor,
                                   final EntityFactory entityFactory,
                                   final DeviceStatusSubscriptionHandler deviceStatusSubscriptionHandler,
                                   final DtoFactory dtoFactory,
+                                  final PreferencesManager preferencesManager,
                                   final DeviceServiceClient deviceServiceClient,
                                   final DialogFactory dialogFactory,
                                   final NotificationManager notificationManager,
@@ -110,9 +122,11 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                                   final MessageBusProvider messageBusProvider,
                                   final SoftwareManager softwareManager) {
         this.view = view;
+        this.resourceMonitor = resourceMonitor;
         this.entityFactory = entityFactory;
         this.deviceStatusSubscriptionHandler = deviceStatusSubscriptionHandler;
         this.dtoFactory = dtoFactory;
+        this.preferencesManager = preferencesManager;
         this.deviceServiceClient = deviceServiceClient;
         this.dialogFactory = dialogFactory;
         this.notificationManager = notificationManager;
@@ -125,27 +139,103 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         view.setDelegate(this);
 
         eventBus.addHandler(WsAgentStateEvent.TYPE, this);
+        eventBus.addHandler(WorkspaceStoppedEvent.TYPE, this);
         eventBus.addHandler(MachineStatusChangedEvent.TYPE, this);
     }
 
     @Override
     public void onWsAgentStarted(WsAgentStateEvent event) {
-        checkArtikMachineExists();
+        checkArtikDeviceExists();
         subscribeOnDeviceStatusChanel();
     }
 
-    private void checkArtikMachineExists() {
+    @Override
+    public void onWsAgentStopped(WsAgentStateEvent event) {
+    }
+
+    @Override
+    public void onWorkspaceStopped(WorkspaceStoppedEvent event) {
+        for (MachineDto device : machines.values()) {
+            if (RUNNING.equals(device.getStatus())) {
+                eventBus.fireEvent(new MachineStateEvent(entityFactory.createMachine(device), DESTROYED));
+            }
+        }
+    }
+
+    private void storeDevices() {
+        JSONObject jsonConfigurations = new JSONObject();
+        for (MachineDto machine : machines.values()) {
+            final MachineConfigDto config = machine.getConfig();
+            jsonConfigurations.put(config.getName(), JSONParser.parseStrict(config.getSource().getContent()));
+        }
+        preferencesManager.setValue(ARTIK_DEVICE_CONFIGURATION, jsonConfigurations.toString());
+    }
+
+    private void checkArtikDeviceExists() {
         deviceServiceClient.getDevices().then(new Operation<List<MachineDto>>() {
             @Override
             public void apply(List<MachineDto> arg) throws OperationException {
-                for (MachineDto machine : arg) {
-                    if (RUNNING.equals(machine.getStatus())) {
-                        eventBus.fireEvent(new MachineStateEvent(entityFactory.createMachine(machine),
-                                                                 MachineStateEvent.MachineAction.RUNNING));
-                    }
+                if (arg.isEmpty()) {
+                    restoreFromPreferences();
+                } else {
+                    restoreFromExistingDevices(arg);
                 }
             }
         });
+    }
+
+    private void restoreFromExistingDevices(List<MachineDto> arg) {
+        for (MachineDto machine : arg) {
+            machines.put(machine.getConfig().getName(), machine);
+            if (RUNNING.equals(machine.getStatus())) {
+                eventBus.fireEvent(new MachineStateEvent(entityFactory.createMachine(machine),
+                                                         MachineStateEvent.MachineAction.RUNNING));
+            }
+        }
+    }
+
+    private void restoreFromPreferences() {
+        deviceServiceClient.restore(getDevicesFromPreferences()).then(new Operation<List<MachineDto>>() {
+            @Override
+            public void apply(List<MachineDto> arg) throws OperationException {
+                updateDevices(null);
+            }
+        });
+    }
+
+    private List<MachineConfigDto> getDevicesFromPreferences() {
+        List<MachineConfigDto> devices = new LinkedList<>();
+        final String value = preferencesManager.getValue(ARTIK_DEVICE_CONFIGURATION);
+        if (value == null) {
+            return emptyList();
+        }
+
+        JSONValue parsed = JSONParser.parseStrict(value);
+        JSONObject jsonObj = parsed.isObject();
+
+        if (jsonObj == null) {
+            return devices;
+        }
+
+        for (String key : jsonObj.keySet()) {
+            JSONValue jsonValue = jsonObj.get(key);
+
+            MachineLimitsDto limitsDto = dtoFactory.createDto(MachineLimitsDto.class).withRam(1024);
+            MachineSourceDto sourceDto = dtoFactory.createDto(MachineSourceDto.class)
+                                                   .withType("ssh-config")
+                                                   .withContent(jsonValue.toString());
+
+            MachineConfigDto configDto = dtoFactory.createDto(MachineConfigDto.class)
+                                                   .withDev(false)
+                                                   .withName(key)
+                                                   .withSource(sourceDto)
+                                                   .withLimits(limitsDto)
+                                                   .withType(ARTIK_CATEGORY);
+
+            devices.add(configDto);
+        }
+
+        return devices;
     }
 
     private void subscribeOnDeviceStatusChanel() {
@@ -154,10 +244,6 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         } catch (WebSocketException e) {
             Log.error(getClass(), e);
         }
-    }
-
-    @Override
-    public void onWsAgentStopped(WsAgentStateEvent event) {
     }
 
     /**
@@ -218,7 +304,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
      * @param device
      *         device to restore
      */
-    private void restoreDevice(Device device) {
+    private void restoreDeviceConfiguration(Device device) {
         if (device.getScript() == null) {
             return;
         }
@@ -285,7 +371,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
             return;
         }
 
-        restoreDevice(device);
+        restoreDeviceConfiguration(device);
 
         view.showPropertiesPanel();
         view.setDeviceName(device.getName());
@@ -380,7 +466,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         }
 
         selectedDevice.setName(selectedDevice.getRecipe().getName());
-        restoreDevice(selectedDevice);
+        restoreDeviceConfiguration(selectedDevice);
         selectedDevice.setDirty(false);
         view.selectDevice(selectedDevice);
     }
@@ -472,7 +558,18 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                                                .withLimits(limitsDto)
                                                .withType(ARTIK_CATEGORY);
 
-        deviceServiceClient.connect(configDto);
+        deviceServiceClient.connect(configDto).then(new Operation<MachineDto>() {
+            @Override
+            public void apply(MachineDto device) throws OperationException {
+                machines.put(device.getConfig().getName(), device);
+                storeDevices();
+            }
+        }).catchError(new Operation<PromiseError>() {
+            @Override
+            public void apply(PromiseError arg) throws OperationException {
+                onConnectingFailed(arg.getMessage());
+            }
+        });
     }
 
     @Override
@@ -541,7 +638,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                     final Device device = new Device(machine.getConfig().getName(), ARTIK_CATEGORY);
                     device.setScript(script);
                     device.setId(machine.getId());
-                    restoreDevice(device);
+                    restoreDeviceConfiguration(device);
 
                     devices.add(device);
                     device.setConnected(isMachineRunning(machine));
@@ -720,7 +817,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
     }
 
     private void disconnectAndDelete(final Device device) {
-        final MachineDto machine = machines.get(device.getName());
+        final MachineDto machine = machines.remove(device.getName());
         if (machine == null) {
             return;
         }
@@ -743,6 +840,8 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                 notificationManager.notify(locale.deviceDeleteSuccess(device.getName()),
                                            StatusNotification.Status.SUCCESS,
                                            StatusNotification.DisplayMode.FLOAT_MODE);
+
+                storeDevices();
             }
         }).catchError(new Operation<PromiseError>() {
             @Override
@@ -772,5 +871,4 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
 
         view.selectDevice(selectedDevice);
     }
-
 }

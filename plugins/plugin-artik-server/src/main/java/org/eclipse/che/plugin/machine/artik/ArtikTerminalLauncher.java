@@ -11,94 +11,64 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.machine.artik;
 
-import org.eclipse.che.api.core.ConflictException;
-import org.eclipse.che.api.core.util.AbstractLineConsumer;
-import org.eclipse.che.api.core.util.ListLineConsumer;
-import org.eclipse.che.api.machine.server.exception.MachineException;
-import org.eclipse.che.api.machine.server.model.impl.CommandImpl;
+import org.eclipse.che.api.agent.server.model.impl.AgentImpl;
+import org.eclipse.che.api.core.ServerException;
+import org.eclipse.che.api.core.model.workspace.ServerConf2;
 import org.eclipse.che.api.machine.server.spi.Instance;
-import org.eclipse.che.api.machine.server.spi.InstanceProcess;
-import org.slf4j.Logger;
+import org.eclipse.che.plugin.machine.ssh.SshMachineImplTerminalLauncher;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
-import static org.slf4j.LoggerFactory.getLogger;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 
 /**
  * Launch websocket terminal in Artik device.
  *
  * @author Valeriy Svydenko
  */
-public class ArtikTerminalLauncher {
-    private static final Logger LOG = getLogger(ArtikTerminalLauncher.class);
+public class ArtikTerminalLauncher extends SshMachineImplTerminalLauncher {
+    public static final  String TERMINAL_LOCATION_PROPERTY       = "artik.terminal.location";
+    public static final  String TERMINAL_LAUNCH_COMMAND_PROPERTY = "artik.terminal.run_command";
+    private static final String ARTIK_MACHINE_TYPE               = "artik";
+    private static final long   TERMINAL_AGENT_MAX_START_TIME_MS = 120_000;
+    private static final long   TERMINAL_AGENT_PING_DELAY_MS     = 2000;
 
-    public static final String TERMINAL_LAUNCH_COMMAND_PROPERTY = "artik.terminal.run_command";
-    public static final String TERMINAL_LOCATION_PROPERTY       = "artik.terminal.location";
-
-    private final String                               runTerminalCommand;
-    private final String                               terminalLocation;
-    private final ArtikDeviceTerminalFilesPathProvider archivePathProvider;
+    private final String runTerminalCommand;
 
     @Inject
     public ArtikTerminalLauncher(@Named(TERMINAL_LAUNCH_COMMAND_PROPERTY) String runTerminalCommand,
                                  @Named(TERMINAL_LOCATION_PROPERTY) String terminalLocation,
                                  ArtikDeviceTerminalFilesPathProvider terminalPathProvider) {
+        super(TERMINAL_AGENT_MAX_START_TIME_MS, TERMINAL_AGENT_PING_DELAY_MS, terminalLocation, terminalPathProvider);
         this.runTerminalCommand = runTerminalCommand;
-        this.terminalLocation = terminalLocation;
-        this.archivePathProvider = terminalPathProvider;
     }
 
-    public void launchTerminal(Instance artik) throws MachineException {
-        try {
-            if (!isWebsocketTerminalRunning(artik)) {
-                artik.copy(archivePathProvider.getPath("linux_arm7"), terminalLocation);
-                startTerminal(artik);
-            }
-        } catch (ConflictException e) {
-            throw new MachineException("Internal server error occurs on terminal launching.");
-        }
+    public void launch(Instance machine) throws ServerException {
+        final String agentId = "org.eclipse.che.terminal";
+        final String agentName = "artik.terminal.agent";
+        final String version = "";
+        final String description = "";
+        final List<String> dependencies = emptyList();
+        final Map<String, String> properties = emptyMap();
+        final Map<String, ? extends ServerConf2> servers = emptyMap();
+        AgentImpl agent = new AgentImpl(agentId,
+                                        agentName,
+                                        version,
+                                        description,
+                                        dependencies,
+                                        properties,
+                                        runTerminalCommand,
+                                        servers);
+
+        super.launch(machine, agent);
     }
 
-    private boolean isWebsocketTerminalRunning(Instance artik) throws MachineException, ConflictException {
-        InstanceProcess checkTerminalAlive = artik.createProcess(
-                new CommandImpl("check if che websocket terminal is running",
-                                "ps ax | grep 'che-websocket-terminal' | grep -q -v 'grep che-websocket-terminal' && echo 'found' || echo" +
-                                " 'not found'",
-                                null),
-                null);
-        ListLineConsumer lineConsumer = new ListLineConsumer();
-        checkTerminalAlive.start(lineConsumer);
-        String checkAliveText = lineConsumer.getText();
-        if ("[STDOUT] not found".equals(checkAliveText)) {
-            return false;
-        } else if (!"[STDOUT] found".equals(checkAliveText)) {
-            LOG.error("Unexpected output of websocket terminal check. Output:" + checkAliveText);
-            return false;
-        }
-        return true;
-    }
-
-    private void startTerminal(Instance artik) throws MachineException, ConflictException {
-        InstanceProcess startTerminal = artik.createProcess(new CommandImpl("websocket terminal",
-                                                                            runTerminalCommand,
-                                                                            null),
-                                                            null);
-
-        startTerminal.start(new DeviceLineConsumer(artik));
-    }
-
-    private static class DeviceLineConsumer extends AbstractLineConsumer {
-        private final Instance instance;
-
-        DeviceLineConsumer(Instance instance) {
-            this.instance = instance;
-        }
-
-        @Override
-        public void writeLine(String line) throws IOException {
-            instance.getLogger().writeLine("[Terminal] " + line);
-        }
+    @Override
+    public String getMachineType() {
+        return ARTIK_MACHINE_TYPE;
     }
 }

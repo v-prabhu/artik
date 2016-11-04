@@ -59,6 +59,16 @@ public class DeviceServiceClientImpl implements DeviceServiceClient {
     }
 
     @Override
+    public Promise<List<MachineDto>> restore(List<MachineConfigDto> configs) {
+        final DevMachine devMachine = appContext.getDevMachine();
+        final String url = devMachine.getWsAgentBaseUrl() + "/artik/restore";
+
+        return asyncRequestFactory.createPostRequest(url, configs)
+                                  .loader(loaderFactory.newLoader())
+                                  .send(dtoUnmarshallerFactory.newListUnmarshaller(MachineDto.class));
+    }
+
+    @Override
     public Promise<MachineDto> connectById(String deviceId) {
         final DevMachine devMachine = appContext.getDevMachine();
         final String url = devMachine.getWsAgentBaseUrl() + "/artik/connect/" + deviceId;

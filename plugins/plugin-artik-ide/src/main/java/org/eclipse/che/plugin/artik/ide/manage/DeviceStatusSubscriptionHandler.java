@@ -11,6 +11,7 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.artik.ide.manage;
 
+import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.web.bindery.event.shared.EventBus;
@@ -23,6 +24,9 @@ import org.eclipse.che.ide.util.loging.Log;
 import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
 import org.eclipse.che.ide.workspace.WorkspaceEventsHandler;
 import org.eclipse.che.plugin.artik.shared.dto.ArtikDeviceStatusEventDto;
+
+import static org.eclipse.che.plugin.artik.shared.dto.ArtikDeviceStatusEventDto.EventType.CONNECTED;
+import static org.eclipse.che.plugin.artik.shared.dto.ArtikDeviceStatusEventDto.EventType.DISCONNECTED;
 
 /**
  * Handler to receive messages by subscription of Artik device.
@@ -46,16 +50,22 @@ public class DeviceStatusSubscriptionHandler extends SubscriptionHandler<ArtikDe
 
     @Override
     protected void onMessageReceived(ArtikDeviceStatusEventDto result) {
+        final ArtikDeviceStatusEventDto.EventType eventType = result.getEventType();
+
+        if (eventType == null) {
+            return;
+        }
+
         MachineStatusEvent.EventType machineStatusType;
-        switch (result.getEventType()) {
-            case CONNECTED:
-                machineStatusType = MachineStatusEvent.EventType.RUNNING;
-                break;
-            case DISCONNECTED:
-                machineStatusType = MachineStatusEvent.EventType.DESTROYED;
-                break;
-            default:
-                machineStatusType = MachineStatusEvent.EventType.ERROR;
+        if (CONNECTED == eventType) {
+            machineStatusType = MachineStatusEvent.EventType.RUNNING;
+        } else if (DISCONNECTED == eventType) {
+            machineStatusType = MachineStatusEvent.EventType.DESTROYED;
+        } else {
+            if (Strings.isNullOrEmpty(result.getError())) {
+                return;
+            }
+            machineStatusType = MachineStatusEvent.EventType.ERROR;
         }
 
         MachineStatusChangedEvent machineStatusChangedEvent = new MachineStatusChangedEvent(appContext.getWorkspaceId(),

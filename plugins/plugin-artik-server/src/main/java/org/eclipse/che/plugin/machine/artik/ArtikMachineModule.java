@@ -56,6 +56,9 @@ public class ArtikMachineModule extends AbstractModule {
         bind(MachineProcessMessenger.class).asEagerSingleton();
         bind(ArtikDeviceStateMessenger.class).asEagerSingleton();
 
+        Multibinder.newSetBinder(binder(), org.eclipse.che.api.agent.server.launcher.AgentLauncher.class)
+                   .addBinding().to(ArtikTerminalLauncher.class);
+
         bind(ArtikDeviceService.class);
     }
 }

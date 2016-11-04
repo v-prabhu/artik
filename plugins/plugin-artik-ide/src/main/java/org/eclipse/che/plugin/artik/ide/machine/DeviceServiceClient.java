@@ -31,9 +31,18 @@ public interface DeviceServiceClient {
      *
      * @param config
      *         the new device configuration
-     * @return a promise that resolves to device id, or rejects with an error
+     * @return a promise that resolves to connected device, or rejects with an error
      */
     Promise<MachineDto> connect(MachineConfigDto config);
+
+    /**
+     * Restore devices.
+     *
+     * @param configs
+     *         list of configurations
+     * @return a promise that resolves to restored devices, or rejects with an error
+     */
+    Promise<List<MachineDto>> restore(List<MachineConfigDto> configs);
 
     /**
      * Connect to existing device.

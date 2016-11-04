@@ -11,6 +11,7 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.machine.artik;
 
+import org.eclipse.che.api.agent.server.terminal.WebsocketTerminalFilesPathProvider;
 import org.eclipse.che.commons.annotation.Nullable;
 import org.eclipse.che.inject.ConfigurationProperties;
 
@@ -26,7 +27,7 @@ import static java.util.stream.Collectors.toMap;
  * @author Valeriy Svydenko
  */
 @Singleton
-public class ArtikDeviceTerminalFilesPathProvider {
+public class ArtikDeviceTerminalFilesPathProvider extends WebsocketTerminalFilesPathProvider {
     private static final String CONFIGURATION_PREFIX         = "artik.device.terminal.path_to_archive.";
     private static final String CONFIGURATION_PREFIX_PATTERN = "artik\\.device\\.terminal\\.path_to_archive\\..+";
 
@@ -34,6 +35,7 @@ public class ArtikDeviceTerminalFilesPathProvider {
 
     @Inject
     public ArtikDeviceTerminalFilesPathProvider(ConfigurationProperties configurationProperties) {
+        super(configurationProperties);
         archivesPaths = configurationProperties.getProperties(CONFIGURATION_PREFIX_PATTERN)
                                                .entrySet()
                                                .stream()
@@ -42,6 +44,7 @@ public class ArtikDeviceTerminalFilesPathProvider {
     }
 
     @Nullable
+    @Override
     public String getPath(String architecture) {
         return archivesPaths.get(architecture);
     }

@@ -281,37 +281,37 @@ public class ArtikDeviceManager {
             throw new NotFoundException(format("Device with ID '%s' is not found", deviceId));
         }
         device.connect();
-
+        artikTerminalLauncher.launch(device.getInstance());
         return ArtikDtoConverter.asDto(device.getInstance());
     }
 
     /**
      * Creates new device.
      *
-     * @param machineConfig
+     * @param deviceConfig
      *         configuration of device to connect
      * @return connected device
      * @throws ServerException
      *         if some exception occurs during connecting
      */
-    MachineDto connect(MachineConfigDto machineConfig, String workspaceId) throws ServerException {
+    MachineDto connect(MachineConfigDto deviceConfig, String workspaceId) throws ServerException {
         final String creator = EnvironmentContext.getCurrent().getSubject().getUserId();
         String deviceId = generateDeviceId();
 
         MachineImpl machine = MachineImpl.builder()
-                                         .setConfig(machineConfig)
+                                         .setConfig(deviceConfig)
                                          .setWorkspaceId(workspaceId)
                                          .setStatus(MachineStatus.CREATING)
                                          .setOwner(creator)
                                          .setId(deviceId)
                                          .build();
         try {
-            InstanceProvider provider = machineInstanceProviders.getProvider(machineConfig.getType());
-            final LineConsumer machineLogger = getDeviceLogger(getMessageConsumer(), machineConfig.getName());
+            InstanceProvider provider = machineInstanceProviders.getProvider(deviceConfig.getType());
+            final LineConsumer machineLogger = getDeviceLogger(getMessageConsumer(), deviceConfig.getName());
 
             Instance instance = provider.createInstance(machine, machineLogger);
 
-            artikTerminalLauncher.launchTerminal(instance);
+            artikTerminalLauncher.launch(instance);
 
             machine.setStatus(RUNNING);
             final ArtikDevice artikDevice = new ArtikDevice(instance);
@@ -320,18 +320,62 @@ public class ArtikDeviceManager {
 
             eventService.publish(newDto(ArtikDeviceStatusEventDto.class)
                                          .withEventType(ArtikDeviceStatusEventDto.EventType.CONNECTED)
-                                         .withDeviceName(machineConfig.getName())
+                                         .withDeviceName(deviceConfig.getName())
                                          .withDeviceId(deviceId));
 
             return ArtikDtoConverter.asDto(instance);
         } catch (ApiException e) {
             eventService.publish(newDto(ArtikDeviceStatusEventDto.class)
                                          .withEventType(ArtikDeviceStatusEventDto.EventType.ERROR)
-                                         .withDeviceName(machineConfig.getName())
+                                         .withDeviceName(deviceConfig.getName())
                                          .withDeviceId(deviceId));
 
             throw new ServerException(e);
         }
+    }
+
+    /**
+     * Restores created devices.
+     *
+     * @param devicesConfigs
+     *         list of configurations
+     * @param workspaceId
+     *         workspace id
+     * @return list of restored devices
+     * @throws ServerException
+     *         if some exception occurs during creating
+     */
+    List<MachineDto> restoreDevices(List<MachineConfigDto> devicesConfigs, String workspaceId) throws ServerException {
+        List<MachineDto> devices = new LinkedList<>();
+        for (MachineConfigDto deviceConfig : devicesConfigs) {
+            final String creator = EnvironmentContext.getCurrent().getSubject().getUserId();
+            String deviceId = generateDeviceId();
+
+            MachineImpl machine = MachineImpl.builder()
+                                             .setConfig(deviceConfig)
+                                             .setWorkspaceId(workspaceId)
+                                             .setStatus(MachineStatus.CREATING)
+                                             .setOwner(creator)
+                                             .setId(deviceId)
+                                             .build();
+            try {
+                InstanceProvider provider = machineInstanceProviders.getProvider(deviceConfig.getType());
+                final LineConsumer machineLogger = getDeviceLogger(getMessageConsumer(), deviceConfig.getName());
+
+                Instance instance = provider.createInstance(machine, machineLogger);
+                artikTerminalLauncher.launch(instance);
+
+                final ArtikDevice artikDevice = new ArtikDevice(instance);
+                artikDevice.disconnect();
+                instances.put(deviceId, artikDevice);
+
+                devices.add(ArtikDtoConverter.asDto(instance));
+            } catch (ApiException e) {
+                throw new ServerException(e);
+            }
+        }
+
+        return devices;
     }
 
     /**
@@ -425,7 +469,7 @@ public class ArtikDeviceManager {
 
     private static class ArtikDeviceConsumer extends AbstractLineConsumer {
         private final MessageConsumer<MachineLogMessage> deviceStatusLogger;
-        private final String machineName;
+        private final String                             machineName;
 
         ArtikDeviceConsumer(MessageConsumer<MachineLogMessage> deviceStatusLogger, String machineName) {
             this.deviceStatusLogger = deviceStatusLogger;

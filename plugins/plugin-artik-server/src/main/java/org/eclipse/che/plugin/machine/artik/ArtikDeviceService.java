@@ -80,6 +80,19 @@ public class ArtikDeviceService extends Service {
         return artikDeviceManager.connect(machineConfig, WorkspaceIdProvider.getWorkspaceId());
     }
 
+    @POST
+    @Path("/restore")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "Restore devices based on the configuration")
+    @ApiResponses({@ApiResponse(code = 500, message = "Internal server error occurred"),
+                   @ApiResponse(code = 400, message = "Missed required parameters, parameters are not valid")})
+    public List<MachineDto> restore(@ApiParam(value = "Devices' configuration", required = true)
+                                      List<MachineConfigDto> devicesConfigs) throws ServerException, BadRequestException {
+        requiredNotNull(devicesConfigs, "Device configuration");
+        return artikDeviceManager.restoreDevices(devicesConfigs, WorkspaceIdProvider.getWorkspaceId());
+    }
+
     @GET
     @Path("/connect/{deviceId}")
     @Produces(MediaType.APPLICATION_JSON)
