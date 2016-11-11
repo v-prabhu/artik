@@ -11,6 +11,7 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.artik.ide.debug;
 
+import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 
@@ -18,6 +19,7 @@ import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.ide.api.action.AbstractPerspectiveAction;
 import org.eclipse.che.ide.api.action.ActionEvent;
 import org.eclipse.che.ide.api.app.AppContext;
+import org.eclipse.che.ide.api.resources.Project;
 import org.eclipse.che.ide.api.resources.Resource;
 import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 
@@ -49,16 +51,23 @@ public class DebugBinaryAction extends AbstractPerspectiveAction {
 
     @Override
     public void updateInPerspective(ActionEvent event) {
-        final Resource resource = appContext.getResource();
-        if (resource == null ||
-            !resource.isFile() ||
-            resource.getLocation().toString().endsWith(".c")) {
-            event.getPresentation().setEnabled(false);
+        if (getCurrentProject().isPresent()) {
+            event.getPresentation().setEnabled(true);
         }
     }
 
     @Override
     public void actionPerformed(ActionEvent event) {
         debuggerConnector.debug(machine);
+    }
+
+    private Optional<Project> getCurrentProject() {
+        final Resource[] resources = appContext.getResources();
+        if (resources == null || resources.length != 1) {
+            return Optional.absent();
+        }
+
+        Resource resource = appContext.getResource();
+        return resource.getRelatedProject();
     }
 }

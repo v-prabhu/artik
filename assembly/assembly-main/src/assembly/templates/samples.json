@@ -26,157 +26,277 @@
     "name": "artik-samples",
     "displayName": "artik-samples",
     "path": "/artik-samples",
-    "description": "A set of Artik SDK samples",
+    "description": "A set of ARTIK SDK samples",
     "projectType": "c",
     "mixins": [],
-    "attributes": {
-    },
-    "modules": [],
+    "attributes": {},
+    "projects": [
+      {
+        "name": "adc",
+        "displayName": "adc",
+        "path": "/artik-samples/adc",
+        "description": "ADC test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "bluetooth",
+        "displayName": "bluetooth",
+        "path": "/artik-samples/bluetooth",
+        "description": "Bluetooth test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "cloud",
+        "displayName": "cloud",
+        "path": "/artik-samples/cloud",
+        "description": "Cloud test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "gpio",
+        "displayName": "gpio",
+        "path": "/artik-samples/gpio",
+        "description": "Gpio test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "http",
+        "displayName": "http",
+        "path": "/artik-samples/http",
+        "description": "Http test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "i2c",
+        "displayName": "i2c",
+        "path": "/artik-samples/i2c",
+        "description": "i2c test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "lwm2m",
+        "displayName": "lwm2m",
+        "path": "/artik-samples/lwm2m",
+        "description": "lwm2m test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "media",
+        "displayName": "media",
+        "path": "/artik-samples/media",
+        "description": "Media test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "network",
+        "displayName": "network",
+        "path": "/artik-samples/network",
+        "description": "Network test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "pwm",
+        "displayName": "pwm",
+        "path": "/artik-samples/pwm",
+        "description": "pwm test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "serial",
+        "displayName": "serial",
+        "path": "/artik-samples/serial",
+        "description": "Serial test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "spi",
+        "displayName": "spi",
+        "path": "/artik-samples/spi",
+        "description": "Spi test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "time",
+        "displayName": "time",
+        "path": "/artik-samples/time",
+        "description": "Time test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "websocket",
+        "displayName": "websocket",
+        "path": "/artik-samples/websocket",
+        "description": "Websocket test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "wifi",
+        "displayName": "wifi",
+        "path": "/artik-samples/wifi",
+        "description": "WiFi test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
+        "name": "zigbee",
+        "displayName": "zigbee",
+        "path": "/artik-samples/zigbee",
+        "description": "Zigbee test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      }
+    ],
     "problems": [],
     "source": {
       "type": "git",
-      "location": "https://github.com/artik-iot/artik-sdk-examples",
+      "location": "https://github.com/SamsungARTIK/artik-sdk-examples",
       "parameters": {
-        "branch": "ARTIK_SDK_V0.13"
+        "branch": "master"
       }
     },
-    "commands": [
-      {
-        "name": "http-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/http && $CC -lartik-sdk-base -I$CPATH/connectivity -I$CPATH/base -lpthread -g artik_http_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "adc-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/adc && $CC -lartik-sdk-base -I$CPATH/systemio -I$CPATH/base -lpthread -g artik_adc_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "bluetooth-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/bluetooth && $CC -lartik-sdk-base -I$CPATH/bluetooth -I$CPATH/base -lpthread -g artik_bluetooth_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "cloud-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/cloud && $CC -lartik-sdk-base -I$CPATH/connectivity -I$CPATH/base -lpthread -g artik_cloud_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "gpio-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/gpio && $CC -lartik-sdk-base -I$CPATH/systemio -I$CPATH/base -lpthread -g artik_gpio_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "i2c-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/i2c && $CC -lartik-sdk-base -I$CPATH/systemio -I$CPATH/base -lpthread -g artik_i2c_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "media-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/media && $CC -lartik-sdk-base -I$CPATH/media -I$CPATH/base -lpthread -g artik_media_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "network-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/network && $CC -lartik-sdk-base -I$CPATH/connectivity -I$CPATH/base -lpthread -g artik_network_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "pwm-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/pwm && $CC -lartik-sdk-base -I$CPATH/systemio -I$CPATH/base -lpthread -g artik_pwm_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "serial-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/serial && $CC -lartik-sdk-base -I$CPATH/systemio -I$CPATH/base -lpthread -g artik_serial_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "spi-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/spi && $CC -lartik-sdk-base -I$CPATH/systemio -I$CPATH/base -lpthread -g artik_spi_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "time-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/time && $CC -lartik-sdk-base -I$CPATH/systemio -I$CPATH/base -lpthread -g artik_time_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "wifi-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/wifi && $CC -lartik-sdk-base -I$CPATH/wifi -I$CPATH/base -lpthread -g artik_wifi_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "zigbee-build",
-        "type": "custom",
-        "commandLine": "echo 'Compiling...' && cd ${current.project.path}/zigbee && $CC -lartik-sdk-base -I$CPATH/zigbee -I$CPATH/base -lpthread -g artik_zigbee_test.c && echo 'Compilation succeeded. You may need to refresh project tree to find compiled binary.'",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "startgdb",
-        "type": "custom",
-        "commandLine": "gdbserver :1234 /root/a.out",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "stoptgdb",
-        "type": "custom",
-        "commandLine": "process=$(ps ax | grep \"[g]dbserver\" | awk {'print $1;}')
-        if [[ $process ]]; then
-      echo 'Stopping GDB server...'
-      kill $process
-      echo 'GDB server stopped'
-      else
-      echo 'GDB server is not running'
-      fi",
-      "attributes": {
-        "previewUrl": ""
-      }
-      }
-    ],
+    "commands": [],
     "links": [],
     "category": "Samples",
     "tags": [

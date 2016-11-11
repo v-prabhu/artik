@@ -11,12 +11,14 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.artik.ide.debug;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
+import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.core.model.machine.MachineSource;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
@@ -28,12 +30,15 @@ import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
 import org.eclipse.che.api.promises.client.js.JsPromiseError;
 import org.eclipse.che.api.promises.client.js.Promises;
+import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.command.CommandImpl;
 import org.eclipse.che.ide.api.debug.DebugConfiguration;
 import org.eclipse.che.ide.api.debug.DebugConfigurationType;
 import org.eclipse.che.ide.api.debug.DebugConfigurationsManager;
 import org.eclipse.che.ide.api.macro.MacroProcessor;
 import org.eclipse.che.ide.api.notification.NotificationManager;
+import org.eclipse.che.ide.api.resources.Project;
+import org.eclipse.che.ide.api.resources.Resource;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandConsoleFactory;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.DefaultOutputConsole;
@@ -53,8 +58,11 @@ import org.eclipse.che.plugin.debugger.ide.configuration.DebugConfigurationTypeR
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.gwt.json.client.JSONParser.parseLenient;
 import static org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper.createFromAsyncRequest;
+import static org.eclipse.che.plugin.artik.ide.command.macro.BinaryNameMacro.DEFAULT_BINARY_NAME;
+import static org.eclipse.che.plugin.cpp.shared.Constants.BINARY_NAME_ATTRIBUTE;
 
 /**
  * Connects to the debugger for debugging project's binary file.
@@ -66,6 +74,7 @@ public class DebuggerConnector {
 
     private final DtoFactory                     dtoFactory;
     private final ProcessListener                processListener;
+    private final AppContext                     appContext;
     private final DeviceServiceClient            deviceServiceClient;
     private final MacroProcessor                 macroProcessor;
     private final DebugConfigurationTypeRegistry debugConfigurationTypeRegistry;
@@ -81,6 +90,7 @@ public class DebuggerConnector {
     @Inject
     public DebuggerConnector(DtoFactory dtoFactory,
                              ProcessListener processListener,
+                             AppContext appContext,
                              MacroProcessor macroProcessor,
                              DebugConfigurationTypeRegistry debugConfigurationTypeRegistry,
                              DebugConfigurationsManager debugConfigurationsManager,
@@ -91,6 +101,7 @@ public class DebuggerConnector {
                              CommandConsoleFactory commandConsoleFactory) {
         this.dtoFactory = dtoFactory;
         this.processListener = processListener;
+        this.appContext = appContext;
         this.deviceServiceClient = deviceServiceClient;
         this.macroProcessor = macroProcessor;
         this.debugConfigurationTypeRegistry = debugConfigurationTypeRegistry;
@@ -114,7 +125,9 @@ public class DebuggerConnector {
         runGdbServer(machine).then(new Operation<Integer>() {
             @Override
             public void apply(Integer port) throws OperationException {
-                connect(machine, port);
+                if (port != null) {
+                    connect(machine, port);
+                }
             }
         }).catchError(new Operation<PromiseError>() {
             @Override
@@ -126,6 +139,12 @@ public class DebuggerConnector {
 
     /** Runs GDB server and returns the listened port. */
     private Promise<Integer> runGdbServer(final Machine machine) {
+        Optional<Project> projectOptional = getCurrentProject();
+        if (!projectOptional.isPresent()) {
+            return Promises.resolve(null);
+        }
+
+        Project project = projectOptional.get();
         final String chanel = "process:output:" + UUID.uuid();
         final int debugPort = 1234;
 
@@ -160,14 +179,7 @@ public class DebuggerConnector {
             }
         });
 
-
-        final String launchGdbServerCommand = "cd " + ReplicationFolderMacro.KEY.replace("%machineId%", machine.getId()) +
-                                              "${explorer.current.file.parent.path} && gdbserver :" + debugPort + " ${binary.name}";
-
-        final String commandName = "run gdbserver";
-        final String commandType = "custom";
-
-        CommandImpl command = new CommandImpl(commandName, launchGdbServerCommand, commandType);
+        final Command command = buildCommand(project, machine, debugPort);
         final DefaultOutputConsole console = (DefaultOutputConsole)commandConsoleFactory.create(command.getName());
         final MessageHandler handler = new MessageHandler() {
             @Override
@@ -181,15 +193,15 @@ public class DebuggerConnector {
             //do nothing
         }
 
-        macroProcessor.expandMacros(launchGdbServerCommand).then(new Operation<String>() {
+        macroProcessor.expandMacros(command.getCommandLine()).then(new Operation<String>() {
             @Override
             public void apply(String arg) throws OperationException {
-                final CommandDto command = dtoFactory.createDto(CommandDto.class)
-                                                     .withName(commandName)
-                                                     .withCommandLine(arg)
-                                                     .withType(commandType);
+                final CommandDto commandDto = dtoFactory.createDto(CommandDto.class)
+                                                        .withName(command.getName())
+                                                        .withCommandLine(arg)
+                                                        .withType(command.getType());
 
-                final Promise<MachineProcessDto> processPromise = deviceServiceClient.executeCommand(machine.getId(), command, chanel);
+                final Promise<MachineProcessDto> processPromise = deviceServiceClient.executeCommand(machine.getId(), commandDto, chanel);
                 processPromise.then(new Operation<MachineProcessDto>() {
                     @Override
                     public void apply(MachineProcessDto process) throws OperationException {
@@ -212,7 +224,7 @@ public class DebuggerConnector {
 
         final Map<String, String> connectionProperties = new HashMap<>();
 
-        macroProcessor.expandMacros("${explorer.current.file.parent.path}/${binary.name}").then(new Operation<String>() {
+        macroProcessor.expandMacros("${current.project.path}/${binary.name}").then(new Operation<String>() {
             @Override
             public void apply(String cmd) throws OperationException {
                 connectionProperties.put("BINARY", cmd);
@@ -253,5 +265,29 @@ public class DebuggerConnector {
         final JSONObject jsonObject = parseLenient(content).isObject();
         final String host = jsonObject.get("host").isString().stringValue();
         return Promises.resolve(host);
+    }
+
+    private Command buildCommand(Project project, Machine machine, int debugPort) {
+        final String commandName = "run gdbserver";
+        final String commandType = "custom";
+
+        StringBuilder commandLine = new StringBuilder("cd ").append(ReplicationFolderMacro.KEY.replace("%machineId%", machine.getId()))
+                                                            .append("/${current.project.path} && gdbserver :")
+                                                            .append(debugPort);
+
+        String binaryName = project.getAttribute(BINARY_NAME_ATTRIBUTE);
+        commandLine.append(' ').append(!isNullOrEmpty(binaryName) ? binaryName : DEFAULT_BINARY_NAME);
+
+        return new CommandImpl(commandName, commandLine.toString(), commandType);
+    }
+
+    private Optional<Project> getCurrentProject() {
+        final Resource[] resources = appContext.getResources();
+        if (resources == null || resources.length != 1) {
+            return Optional.absent();
+        }
+
+        Resource resource = appContext.getResource();
+        return resource.getRelatedProject();
     }
 }
