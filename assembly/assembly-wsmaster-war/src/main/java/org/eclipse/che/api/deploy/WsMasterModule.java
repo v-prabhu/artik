@@ -44,7 +44,7 @@ public class WsMasterModule extends AbstractModule {
 
         install(new JpaPersistModule("main"));
         bind(CheUserCreator.class);
-        bind(JpaInitializer.class).asEagerSingleton();
+        bind(JpaInitializer.class).to(org.eclipse.che.api.core.h2.jdbc.jpa.guice.CheJpaInitializer.class).asEagerSingleton();
         bind(EntityListenerInjectionManagerInitializer.class).asEagerSingleton();
         install(new UserJpaModule());
         install(new SshJpaModule());
