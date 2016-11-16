@@ -203,13 +203,15 @@ public interface ArtikLocalizationConstant extends Messages {
     @Key("editCompilationOptions.view.options.title")
     String editCompilationOptionsViewOptionsTitle();
 
-
-    @Key("debug.action.title")
-    String debugActionTitle();
-
     @Key("debug.action.description")
     String debugActionDescription();
 
     @Key("run.action.description")
     String runActionDescription();
+
+    @Key("reconnection.dialog.title")
+    String reconnectionDialogTitle();
+
+    @Key("reconnection.dialog.content")
+    String reconnectionDialogContent(String deviceName);
 }

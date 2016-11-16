@@ -573,7 +573,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
     }
 
     @Override
-    public void onMachineStatusChanged(MachineStatusChangedEvent event) {
+    public void onMachineStatusChanged(final MachineStatusChangedEvent event) {
         if (connectNotification == null || connectTargetName == null || !connectTargetName.equals(event.getMachineName())) {
             return;
         }
@@ -584,7 +584,34 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
             case ERROR:
                 onConnectingFailed(event.getErrorMessage());
                 break;
+            case DESTROYED:
+                onConnectionDestroyed(event);
+                break;
         }
+    }
+
+    private void onConnectionDestroyed(final MachineStatusChangedEvent event) {
+        deviceServiceClient.disconnect(event.getMachineId(), false).then(new Operation<MachineDto>() {
+            @Override
+            public void apply(MachineDto device) throws OperationException {
+                eventBus.fireEvent(new MachineStateEvent(entityFactory.createMachine(device), DESTROYED));
+                updateDevices(null);
+                notifyUserAboutDeviceDisconnection(event);
+            }
+        });
+    }
+
+    private void notifyUserAboutDeviceDisconnection(MachineStatusChangedEvent event) {
+        final String title = locale.reconnectionDialogTitle();
+        final String content = locale.reconnectionDialogContent(event.getMachineName());
+        final ConfirmCallback confirmCallback = new ConfirmCallback() {
+            @Override
+            public void accepted() {
+                view.show();
+            }
+        };
+        final CancelCallback cancelCallback = null;
+        dialogFactory.createConfirmDialog(title, content, confirmCallback, cancelCallback).show();
     }
 
     /**

@@ -12,9 +12,11 @@
 package org.eclipse.che.plugin.machine.artik;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.gson.Gson;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
+import org.eclipse.che.WorkspaceIdProvider;
 import org.eclipse.che.api.core.ApiException;
 import org.eclipse.che.api.core.BadRequestException;
 import org.eclipse.che.api.core.ConflictException;
@@ -46,12 +48,16 @@ import org.eclipse.che.commons.annotation.Nullable;
 import org.eclipse.che.commons.env.EnvironmentContext;
 import org.eclipse.che.commons.lang.NameGenerator;
 import org.eclipse.che.commons.lang.concurrent.ThreadLocalPropagateContext;
+import org.eclipse.che.commons.schedule.executor.ThreadPullLauncher;
 import org.eclipse.che.plugin.artik.shared.dto.ArtikDeviceStatusEventDto;
+import org.eclipse.che.plugin.machine.ssh.SshMachineRecipe;
+import org.slf4j.Logger;
 
 import javax.inject.Named;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
+import java.net.InetAddress;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.LinkedList;
@@ -63,9 +69,13 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.eclipse.che.api.core.model.machine.MachineStatus.RUNNING;
 import static org.eclipse.che.dto.server.DtoFactory.newDto;
 import static org.eclipse.che.plugin.artik.shared.Constants.ARTIK_DEVICE_STATUS_CHANNEL;
+import static org.eclipse.che.plugin.machine.artik.ArtikDevice.Status.CONNECTED;
+import static org.eclipse.che.plugin.machine.artik.ArtikDevice.Status.ERROR;
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Facade for Artik device operations
@@ -74,25 +84,33 @@ import static org.eclipse.che.plugin.artik.shared.Constants.ARTIK_DEVICE_STATUS_
  */
 @Singleton
 public class ArtikDeviceManager {
+    private static final Logger LOG  = getLogger(ArtikDeviceManager.class);
+    private static final Gson   GSON = new Gson();
+
     private final EventService             eventService;
+    private final ThreadPullLauncher       launcher;
     private final ArtikTerminalLauncher    artikTerminalLauncher;
     private final String                   machineLogsDir;
     private final MachineInstanceProviders machineInstanceProviders;
     private final ExecutorService          executor;
 
-    private Map<String, ArtikDevice> instances;
+    private Map<String, ArtikDevice>         instances;
+    private Map<String, DeviceHealthChecker> checkers;
 
     @Inject
     public ArtikDeviceManager(EventService eventService,
+                              ThreadPullLauncher launcher,
                               ArtikTerminalLauncher artikTerminalLauncher,
                               MachineInstanceProviders machineInstanceProviders,
                               @Named("artik.device.logs.location") String artikDeviceLogsDir) {
         this.eventService = eventService;
+        this.launcher = launcher;
         this.artikTerminalLauncher = artikTerminalLauncher;
         this.machineLogsDir = artikDeviceLogsDir;
         this.machineInstanceProviders = machineInstanceProviders;
 
         instances = new ConcurrentHashMap<>();
+        checkers = new ConcurrentHashMap<>();
         executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("ArtikDeviceManager-%d")
                                                                            .setDaemon(false)
                                                                            .build());
@@ -251,14 +269,23 @@ public class ArtikDeviceManager {
      *         if other error occurs
      */
     MachineDto disconnect(String deviceId, boolean remove) throws MachineException, NotFoundException {
-        final Instance instance = instances.get(deviceId).getInstance();
+        final ArtikDevice device = instances.get(deviceId);
+        final Instance instance = device.getInstance();
+
+        final DeviceHealthChecker deviceHealthChecker = checkers.get(deviceId);
+        deviceHealthChecker.stop();
+
         if (remove) {
             for (InstanceProcess process : instance.getProcesses()) {
                 process.kill();
             }
             instances.remove(deviceId);
+            checkers.remove(deviceId);
         } else {
-            instances.get(deviceId).disconnect();
+            device.disconnect();
+            if (ArtikDevice.Status.CONNECTED.equals(device.getStatus())) {
+                device.setStatus(ArtikDevice.Status.DISCONNECTED);
+            }
         }
 
         return ArtikDtoConverter.asDto(instance);
@@ -281,8 +308,41 @@ public class ArtikDeviceManager {
             throw new NotFoundException(format("Device with ID '%s' is not found", deviceId));
         }
         device.connect();
-        artikTerminalLauncher.launch(device.getInstance());
-        return ArtikDtoConverter.asDto(device.getInstance());
+        Instance instance = device.getInstance();
+        if (ArtikDevice.Status.DISCONNECTED.equals(device.getStatus())) {
+            artikTerminalLauncher.launch(instance);
+        } else if (ArtikDevice.Status.ERROR.equals(device.getStatus())) {
+            instance = createNewInstance(deviceId, instance);
+        }
+
+        final DeviceHealthChecker deviceHealthChecker = checkers.get(deviceId);
+        if (deviceHealthChecker != null) {
+            deviceHealthChecker.start();
+        }
+
+        return ArtikDtoConverter.asDto(instance);
+    }
+
+    private Instance createNewInstance(String deviceId, Instance instance) throws NotFoundException, ServerException {
+        MachineImpl machine = MachineImpl.builder()
+                                         .setConfig(instance.getConfig())
+                                         .setWorkspaceId(WorkspaceIdProvider.getWorkspaceId())
+                                         .setStatus(MachineStatus.CREATING)
+                                         .setOwner(instance.getOwner())
+                                         .setId(deviceId)
+                                         .build();
+
+        final InstanceProvider provider = machineInstanceProviders.getProvider(instance.getConfig().getType());
+        final LineConsumer machineLogger = getDeviceLogger(getMessageConsumer(), instance.getConfig().getName());
+        final Instance newInstance = provider.createInstance(machine, machineLogger);
+
+        artikTerminalLauncher.launch(newInstance);
+        machine.setStatus(RUNNING);
+
+        final ArtikDevice artikDevice = new ArtikDevice(newInstance, CONNECTED);
+        instances.put(deviceId, artikDevice);
+
+        return newInstance;
     }
 
     /**
@@ -294,27 +354,26 @@ public class ArtikDeviceManager {
      * @throws ServerException
      *         if some exception occurs during connecting
      */
-    MachineDto connect(MachineConfigDto deviceConfig, String workspaceId) throws ServerException {
+    MachineDto connect(MachineConfigDto deviceConfig) throws ServerException {
         final String creator = EnvironmentContext.getCurrent().getSubject().getUserId();
-        String deviceId = generateDeviceId();
+        final String deviceId = generateDeviceId();
 
         MachineImpl machine = MachineImpl.builder()
                                          .setConfig(deviceConfig)
-                                         .setWorkspaceId(workspaceId)
+                                         .setWorkspaceId(WorkspaceIdProvider.getWorkspaceId())
                                          .setStatus(MachineStatus.CREATING)
                                          .setOwner(creator)
                                          .setId(deviceId)
                                          .build();
         try {
-            InstanceProvider provider = machineInstanceProviders.getProvider(deviceConfig.getType());
+            final InstanceProvider provider = machineInstanceProviders.getProvider(deviceConfig.getType());
             final LineConsumer machineLogger = getDeviceLogger(getMessageConsumer(), deviceConfig.getName());
-
-            Instance instance = provider.createInstance(machine, machineLogger);
+            final Instance instance = provider.createInstance(machine, machineLogger);
 
             artikTerminalLauncher.launch(instance);
 
             machine.setStatus(RUNNING);
-            final ArtikDevice artikDevice = new ArtikDevice(instance);
+            final ArtikDevice artikDevice = new ArtikDevice(instance, CONNECTED);
 
             instances.put(deviceId, artikDevice);
 
@@ -322,6 +381,10 @@ public class ArtikDeviceManager {
                                          .withEventType(ArtikDeviceStatusEventDto.EventType.CONNECTED)
                                          .withDeviceName(deviceConfig.getName())
                                          .withDeviceId(deviceId));
+
+            final DeviceHealthChecker deviceHealthChecker = new DeviceHealthChecker(artikDevice);
+            checkers.put(deviceId, deviceHealthChecker);
+            launcher.scheduleWithFixedDelay(deviceHealthChecker, 2L, 10L, SECONDS);
 
             return ArtikDtoConverter.asDto(instance);
         } catch (ApiException e) {
@@ -339,13 +402,11 @@ public class ArtikDeviceManager {
      *
      * @param devicesConfigs
      *         list of configurations
-     * @param workspaceId
-     *         workspace id
      * @return list of restored devices
      * @throws ServerException
      *         if some exception occurs during creating
      */
-    List<MachineDto> restoreDevices(List<MachineConfigDto> devicesConfigs, String workspaceId) throws ServerException {
+    List<MachineDto> restoreDevices(List<MachineConfigDto> devicesConfigs) throws ServerException {
         List<MachineDto> devices = new LinkedList<>();
         for (MachineConfigDto deviceConfig : devicesConfigs) {
             final String creator = EnvironmentContext.getCurrent().getSubject().getUserId();
@@ -353,19 +414,19 @@ public class ArtikDeviceManager {
 
             MachineImpl machine = MachineImpl.builder()
                                              .setConfig(deviceConfig)
-                                             .setWorkspaceId(workspaceId)
+                                             .setWorkspaceId(WorkspaceIdProvider.getWorkspaceId())
                                              .setStatus(MachineStatus.CREATING)
                                              .setOwner(creator)
                                              .setId(deviceId)
                                              .build();
             try {
-                InstanceProvider provider = machineInstanceProviders.getProvider(deviceConfig.getType());
+                final InstanceProvider provider = machineInstanceProviders.getProvider(deviceConfig.getType());
                 final LineConsumer machineLogger = getDeviceLogger(getMessageConsumer(), deviceConfig.getName());
+                final Instance instance = provider.createInstance(machine, machineLogger);
 
-                Instance instance = provider.createInstance(machine, machineLogger);
                 artikTerminalLauncher.launch(instance);
 
-                final ArtikDevice artikDevice = new ArtikDevice(instance);
+                final ArtikDevice artikDevice = new ArtikDevice(instance, ArtikDevice.Status.DISCONNECTED);
                 artikDevice.disconnect();
                 instances.put(deviceId, artikDevice);
 
@@ -482,4 +543,59 @@ public class ArtikDeviceManager {
         }
     }
 
+    /**
+     * Mechanism for verifying state of the connection to the device.
+     */
+    private class DeviceHealthChecker implements Runnable {
+        private volatile boolean stop;
+
+        private ArtikDevice device;
+        private String      host;
+
+        public DeviceHealthChecker(ArtikDevice device) {
+            this.device = device;
+            this.stop = false;
+
+            final String content = device.getInstance().getConfig().getSource().getContent();
+            final SshMachineRecipe deviceRecipe = GSON.fromJson(content, SshMachineRecipe.class);
+            this.host = deviceRecipe.getHost();
+        }
+
+        @Override
+        public void run() {
+            if (!stop) {
+                checkConnection(device);
+            }
+        }
+
+        /**
+         * Starts checking of the connection.
+         */
+        public void start() {
+            this.stop = false;
+        }
+
+        /**
+         * Stops checking of the connection
+         */
+        public void stop() {
+            this.stop = true;
+        }
+
+        private void checkConnection(ArtikDevice device) {
+            final Instance instance = device.getInstance();
+            try {
+                InetAddress address = InetAddress.getByName(host);
+                if (!address.isReachable(5_000)) {
+                    eventService.publish(newDto(ArtikDeviceStatusEventDto.class)
+                                                 .withEventType(ArtikDeviceStatusEventDto.EventType.DISCONNECTED)
+                                                 .withDeviceName(instance.getConfig().getName())
+                                                 .withDeviceId(instance.getId()));
+                    device.setStatus(ERROR);
+                }
+            } catch (IOException e) {
+                LOG.error(e.getMessage());
+            }
+        }
+    }
 }

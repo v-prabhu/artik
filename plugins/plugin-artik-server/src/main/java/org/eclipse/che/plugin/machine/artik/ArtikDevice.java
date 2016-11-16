@@ -23,10 +23,12 @@ import static org.eclipse.che.api.core.model.machine.MachineStatus.RUNNING;
  * @author Valeriy Svydenko
  */
 public class ArtikDevice {
-    private Instance    instance;
+    private Instance instance;
+    private Status   status;
 
-    ArtikDevice(Instance instance) {
+    ArtikDevice(Instance instance, Status status) {
         this.instance = instance;
+        this.status = status;
     }
 
     /** Returns instance of {@link Instance} */
@@ -42,5 +44,26 @@ public class ArtikDevice {
     /** Set {@link MachineStatus#RUNNING} status of the device. */
     public void connect() {
         instance.setStatus(RUNNING);
+    }
+
+    /** returns status of the device's connection */
+    public Status getStatus() {
+        return status;
+    }
+
+    /**
+     * Sets status of the device's connection
+     *
+     * @param status
+     *         status of the connection
+     */
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
+    enum Status {
+        CONNECTED,
+        DISCONNECTED,
+        ERROR
     }
 }

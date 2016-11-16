@@ -20,7 +20,6 @@ import io.swagger.annotations.ApiResponses;
 import com.google.common.io.CharStreams;
 import com.google.inject.Inject;
 
-import org.eclipse.che.WorkspaceIdProvider;
 import org.eclipse.che.api.core.BadRequestException;
 import org.eclipse.che.api.core.ForbiddenException;
 import org.eclipse.che.api.core.NotFoundException;
@@ -77,7 +76,7 @@ public class ArtikDeviceService extends Service {
     public MachineDto connect(@ApiParam(value = "The new device configuration", required = true)
                                   MachineConfigDto machineConfig) throws ServerException, BadRequestException {
         requiredNotNull(machineConfig, "Device configuration");
-        return artikDeviceManager.connect(machineConfig, WorkspaceIdProvider.getWorkspaceId());
+        return artikDeviceManager.connect(machineConfig);
     }
 
     @POST
@@ -90,7 +89,7 @@ public class ArtikDeviceService extends Service {
     public List<MachineDto> restore(@ApiParam(value = "Devices' configuration", required = true)
                                       List<MachineConfigDto> devicesConfigs) throws ServerException, BadRequestException {
         requiredNotNull(devicesConfigs, "Device configuration");
-        return artikDeviceManager.restoreDevices(devicesConfigs, WorkspaceIdProvider.getWorkspaceId());
+        return artikDeviceManager.restoreDevices(devicesConfigs);
     }
 
     @GET
