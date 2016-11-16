@@ -19,19 +19,18 @@
 #             -v /home/user/che/workspaces:/home/user/che/workspaces \
 #             -v /home/user/che/storage:/home/user/che/storage \
 #             codenvy/artikide
-#           
-FROM alpine:3.4
+#
+
+FROM openjdk:jre-alpine
 
 ENV LANG=C.UTF-8 \
-    JAVA_HOME=/usr/lib/jvm/default-jvm/jre \
-    PATH=${PATH}:${JAVA_HOME}/bin \
-    CHE_HOME=/home/user/che \
     DOCKER_VERSION=1.6.0 \
-    DOCKER_BUCKET=get.docker.com
+    DOCKER_BUCKET=get.docker.com \
+    CHE_IN_CONTAINER=true
 
 RUN echo "http://dl-4.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
     apk upgrade --update && \
-    apk add --update ca-certificates curl openssl openjdk8 sudo bash && \
+    apk add --update ca-certificates curl openssl sudo bash && \
     curl -sSL "https://${DOCKER_BUCKET}/builds/Linux/x86_64/docker-${DOCKER_VERSION}" -o /usr/bin/docker && \
     chmod +x /usr/bin/docker && \
     addgroup -S user -g 1000 && \
@@ -46,13 +45,6 @@ RUN echo "http://dl-4.alpinelinux.org/alpine/edge/community" >> /etc/apk/reposit
     rm -rf /tmp/* /var/cache/apk/*
 
 EXPOSE 8000 8080
-
 USER user
-
 ADD /assembly/assembly-main/target/artik-ide-*/artik-ide-* /home/user/che
-
-ENV CHE_HOME /home/user/che
-
-ENTRYPOINT [ "/home/user/che/bin/che.sh", "-c" ]
-
-CMD [ "run" ]
+ENTRYPOINT ["/home/user/che/bin/docker.sh"]
