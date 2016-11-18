@@ -17,7 +17,7 @@
     <parent>
         <artifactId>artik-ide-plugin-parent</artifactId>
         <groupId>org.eclipse.artik.plugin</groupId>
-        <version>1.2.2</version>
+        <version>1.2.3-SNAPSHOT</version>
     </parent>
     <artifactId>artik-ide-plugin-product-info</artifactId>
     <packaging>jar</packaging>
