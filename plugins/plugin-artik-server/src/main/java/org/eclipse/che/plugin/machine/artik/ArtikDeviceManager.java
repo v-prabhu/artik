@@ -273,7 +273,9 @@ public class ArtikDeviceManager {
         final Instance instance = device.getInstance();
 
         final DeviceHealthChecker deviceHealthChecker = checkers.get(deviceId);
-        deviceHealthChecker.stop();
+        if (deviceHealthChecker != null) {
+            deviceHealthChecker.stop();
+        }
 
         if (remove) {
             for (InstanceProcess process : instance.getProcesses()) {
@@ -315,9 +317,13 @@ public class ArtikDeviceManager {
             instance = createNewInstance(deviceId, instance);
         }
 
-        final DeviceHealthChecker deviceHealthChecker = checkers.get(deviceId);
+        DeviceHealthChecker deviceHealthChecker = checkers.get(deviceId);
         if (deviceHealthChecker != null) {
             deviceHealthChecker.start();
+        } else {
+            deviceHealthChecker = new DeviceHealthChecker(device);
+            checkers.put(deviceId, deviceHealthChecker);
+            launcher.scheduleWithFixedDelay(deviceHealthChecker, 2L, 10L, SECONDS);
         }
 
         return ArtikDtoConverter.asDto(instance);
