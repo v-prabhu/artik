@@ -142,5 +142,7 @@ public class WsMasterModule extends AbstractModule {
                 .to(org.eclipse.che.plugin.docker.machine.cleaner.LocalWorkspaceFilesCleaner.class);
         bind(org.eclipse.che.api.agent.server.WsAgentHealthChecker.class)
                 .to(org.eclipse.che.api.agent.server.WsAgentHealthCheckerImpl.class);
+        bind(org.eclipse.che.api.environment.server.InfrastructureProvisioner.class)
+                .to(org.eclipse.che.plugin.docker.machine.local.LocalCheInfrastructureProvisioner.class);
     }
 }
