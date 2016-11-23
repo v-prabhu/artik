@@ -48,6 +48,8 @@ public class WsMasterModule extends AbstractModule {
         bind(PlaceholderReplacer.class).toProvider(org.eclipse.che.core.db.schema.impl.flyway.PlaceholderReplacerProvider.class);
         install(new com.google.inject.persist.jpa.JpaPersistModule("main"));
 
+        bind(org.eclipse.che.api.user.server.CheUserCreator.class);
+
         install(new UserJpaModule());
         install(new SshJpaModule());
         install(new WorkspaceJpaModule());
