@@ -22,6 +22,7 @@ import org.eclipse.che.EventBusURLProvider;
 import org.eclipse.che.UriApiEndpointProvider;
 import org.eclipse.che.UserTokenProvider;
 import org.eclipse.che.api.auth.oauth.OAuthTokenProvider;
+import org.eclipse.che.api.core.jsonrpc.RequestHandler;
 import org.eclipse.che.api.core.jsonrpc.RequestTransmitter;
 import org.eclipse.che.api.core.jsonrpc.impl.WebSocketToJsonRpcDispatcher;
 import org.eclipse.che.api.core.jsonrpc.impl.WebSocketTransmitter;
@@ -53,7 +54,6 @@ import org.eclipse.che.plugin.machine.artik.replication.shell.JsonValueHelperFac
 import org.eclipse.che.plugin.maven.generator.archetype.ArchetypeGenerator;
 import org.eclipse.che.plugin.maven.server.inject.MavenModule;
 import org.eclipse.che.security.oauth.RemoteOAuthTokenProvider;
-import org.everrest.core.RequestHandler;
 import org.everrest.core.impl.async.AsynchronousJobPool;
 import org.everrest.core.impl.async.AsynchronousJobService;
 import org.everrest.guice.ServiceBindingHelper;
