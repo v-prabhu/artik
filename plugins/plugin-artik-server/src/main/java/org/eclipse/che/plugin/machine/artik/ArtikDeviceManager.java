@@ -47,6 +47,7 @@ import org.eclipse.che.api.machine.shared.dto.event.MachineProcessEvent;
 import org.eclipse.che.commons.annotation.Nullable;
 import org.eclipse.che.commons.env.EnvironmentContext;
 import org.eclipse.che.commons.lang.NameGenerator;
+import org.eclipse.che.commons.lang.concurrent.LoggingUncaughtExceptionHandler;
 import org.eclipse.che.commons.lang.concurrent.ThreadLocalPropagateContext;
 import org.eclipse.che.commons.schedule.executor.ThreadPullLauncher;
 import org.eclipse.che.plugin.artik.shared.dto.ArtikDeviceStatusEventDto;
@@ -112,6 +113,8 @@ public class ArtikDeviceManager {
         instances = new ConcurrentHashMap<>();
         checkers = new ConcurrentHashMap<>();
         executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("ArtikDeviceManager-%d")
+                                                                           .setUncaughtExceptionHandler(
+                                                                                 LoggingUncaughtExceptionHandler.getInstance())
                                                                            .setDaemon(false)
                                                                            .build());
     }
