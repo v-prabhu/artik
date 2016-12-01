@@ -14,16 +14,15 @@ package org.eclipse.che.plugin.artik.ide.installpkg;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 
-import static java.util.Collections.singletonList;
-
-import com.sun.istack.internal.NotNull;
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.ide.api.action.AbstractPerspectiveAction;
 import org.eclipse.che.ide.api.action.ActionEvent;
-
-import static org.eclipse.che.ide.workspace.perspectives.project.ProjectPerspective.PROJECT_PERSPECTIVE_ID;
-
 import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
+
+import javax.validation.constraints.NotNull;
+
+import static java.util.Collections.singletonList;
+import static org.eclipse.che.ide.workspace.perspectives.project.ProjectPerspective.PROJECT_PERSPECTIVE_ID;
 
 /**
  * Action to install online package on Artik device.
