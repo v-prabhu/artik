@@ -71,6 +71,7 @@ public class WsMasterModule extends AbstractModule {
         bind(org.eclipse.che.api.workspace.server.stack.StackService.class);
         bind(org.eclipse.che.api.workspace.server.WorkspaceService.class);
         bind(org.eclipse.che.api.workspace.server.event.WorkspaceMessenger.class).asEagerSingleton();
+        bind(org.eclipse.che.api.workspace.server.TemporaryWorkspaceRemover.class);
         bind(org.everrest.core.impl.async.AsynchronousJobPool.class).to(org.eclipse.che.everrest.CheAsynchronousJobPool.class);
         bind(ServiceBindingHelper.bindingKey(org.everrest.core.impl.async.AsynchronousJobService.class, "/async/{ws-id}"))
                 .to(org.everrest.core.impl.async.AsynchronousJobService.class);
