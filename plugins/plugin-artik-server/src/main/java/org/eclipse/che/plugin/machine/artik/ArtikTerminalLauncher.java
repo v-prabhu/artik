@@ -11,7 +11,11 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.machine.artik;
 
+import org.eclipse.che.api.agent.server.AgentRegistry;
+import org.eclipse.che.api.agent.server.exception.AgentException;
 import org.eclipse.che.api.agent.server.model.impl.AgentImpl;
+import org.eclipse.che.api.agent.server.model.impl.AgentKeyImpl;
+import org.eclipse.che.api.agent.shared.model.Agent;
 import org.eclipse.che.api.core.ServerException;
 import org.eclipse.che.api.core.model.workspace.ServerConf2;
 import org.eclipse.che.api.machine.server.spi.Instance;
@@ -37,32 +41,23 @@ public class ArtikTerminalLauncher extends SshMachineImplTerminalLauncher {
     private static final long   TERMINAL_AGENT_MAX_START_TIME_MS = 120_000;
     private static final long   TERMINAL_AGENT_PING_DELAY_MS     = 2000;
 
-    private final String runTerminalCommand;
+    private final AgentRegistry agentRegistry;
 
     @Inject
-    public ArtikTerminalLauncher(@Named(TERMINAL_LAUNCH_COMMAND_PROPERTY) String runTerminalCommand,
-                                 @Named(TERMINAL_LOCATION_PROPERTY) String terminalLocation,
-                                 ArtikDeviceTerminalFilesPathProvider terminalPathProvider) {
+    public ArtikTerminalLauncher(@Named(TERMINAL_LOCATION_PROPERTY) String terminalLocation,
+                                 ArtikDeviceTerminalFilesPathProvider terminalPathProvider,
+                                 AgentRegistry agentRegistry) {
         super(TERMINAL_AGENT_MAX_START_TIME_MS, TERMINAL_AGENT_PING_DELAY_MS, terminalLocation, terminalPathProvider);
-        this.runTerminalCommand = runTerminalCommand;
+        this.agentRegistry = agentRegistry;
     }
 
     public void launch(Instance machine) throws ServerException {
-        final String agentId = "org.eclipse.che.terminal";
-        final String agentName = "artik.terminal.agent";
-        final String version = "";
-        final String description = "";
-        final List<String> dependencies = emptyList();
-        final Map<String, String> properties = emptyMap();
-        final Map<String, ? extends ServerConf2> servers = emptyMap();
-        AgentImpl agent = new AgentImpl(agentId,
-                                        agentName,
-                                        version,
-                                        description,
-                                        dependencies,
-                                        properties,
-                                        runTerminalCommand,
-                                        servers);
+        Agent agent;
+        try {
+            agent = agentRegistry.getAgent(AgentKeyImpl.parse("org.eclipse.che.terminal"));
+        } catch (AgentException e) {
+            throw new ServerException("org.eclipse.che.terminal agent not found");
+        }
 
         super.launch(machine, agent);
     }

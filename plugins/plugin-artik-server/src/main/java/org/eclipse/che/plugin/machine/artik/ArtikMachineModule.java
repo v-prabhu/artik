@@ -44,9 +44,6 @@ public class ArtikMachineModule extends AbstractModule {
                                    org.eclipse.che.plugin.machine.ssh.jsch.JschSshClient.class)
                         .build(SshMachineFactory.class));
 
-        bindConstant().annotatedWith(Names.named(ArtikTerminalLauncher.TERMINAL_LAUNCH_COMMAND_PROPERTY))
-                      .to("~/che/terminal/che-websocket-terminal -addr :4411 -cmd /bin/bash -static ~/che/terminal/");
-
         Multibinder<org.eclipse.che.api.core.model.machine.ServerConf> machineServers =
                 Multibinder.newSetBinder(binder(),
                                          org.eclipse.che.api.core.model.machine.ServerConf.class,
