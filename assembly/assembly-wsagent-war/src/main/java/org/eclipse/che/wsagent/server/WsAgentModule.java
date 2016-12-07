@@ -117,6 +117,7 @@ public class WsAgentModule extends AbstractModule {
 
         bind(String.class).annotatedWith(Names.named("event.bus.url")).toProvider(EventBusURLProvider.class);
         bind(ApiEndpointAccessibilityChecker.class);
+        bind(WsAgentAnalyticsAddresser.class);
 
         bind(String.class).annotatedWith(Names.named("wsagent.endpoint"))
                           .toProvider(WsAgentURLProvider.class);
