@@ -41,14 +41,14 @@ public class DebugBinaryActionTest {
     @Mock
     private MachineConfig machineConfig;
 
-    private DebugBinaryAction action;
+    private DebugAction action;
 
     @Before
     public void setUp() {
         when(machineConfig.getName()).thenReturn("machine_name");
         when(machine.getConfig()).thenReturn(machineConfig);
 
-        action = new DebugBinaryAction(localizationConstants, appContext, machine, debuggerConnector);
+        action = new DebugAction(localizationConstants, appContext, machine, debuggerConnector);
     }
 
     @Test

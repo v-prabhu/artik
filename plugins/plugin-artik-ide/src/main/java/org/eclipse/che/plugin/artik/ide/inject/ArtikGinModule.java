@@ -24,6 +24,7 @@ import org.eclipse.che.ide.api.machine.CheWsAgentLinksModifier;
 import org.eclipse.che.ide.api.machine.WsAgentURLModifier;
 import org.eclipse.che.ide.api.macro.Macro;
 import org.eclipse.che.ide.editor.orion.client.inject.OrionPlugin;
+import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandOutputConsole;
 import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartView;
 import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartViewImpl;
 import org.eclipse.che.plugin.artik.ide.command.CCompileCommandProducer;
@@ -32,8 +33,8 @@ import org.eclipse.che.plugin.artik.ide.command.macro.BinaryNameMacro;
 import org.eclipse.che.plugin.artik.ide.command.macro.CCompilationPropertiesMacro;
 import org.eclipse.che.plugin.artik.ide.command.macro.CppCompilationPropertiesMacro;
 import org.eclipse.che.plugin.artik.ide.command.macro.ReplicationFolderMacroFactory;
-import org.eclipse.che.plugin.artik.ide.debug.DebugAndRunBinaryActionsManager;
-import org.eclipse.che.plugin.artik.ide.debug.DebugBinaryActionFactory;
+import org.eclipse.che.plugin.artik.ide.debug.DebugAndRunActionsManager;
+import org.eclipse.che.plugin.artik.ide.debug.DebugActionFactory;
 import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClient;
 import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClientImpl;
 import org.eclipse.che.plugin.artik.ide.installpkg.PackageInstallerView;
@@ -43,8 +44,10 @@ import org.eclipse.che.plugin.artik.ide.keyworddoc.KeywordDocsServiceClientImpl;
 import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClientImpl;
 import org.eclipse.che.plugin.artik.ide.orionplugin.ArtikOrionPlugin;
+import org.eclipse.che.plugin.artik.ide.outputconsole.ArtikCommandConsoleFactory;
+import org.eclipse.che.plugin.artik.ide.outputconsole.ArtikCommandOutputConsole;
 import org.eclipse.che.plugin.artik.ide.profile.ArtikModeActionFactory;
-import org.eclipse.che.plugin.artik.ide.run.RunBinaryActionFactory;
+import org.eclipse.che.plugin.artik.ide.run.RunActionFactory;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceActionFactory;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKView;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKViewImpl;
@@ -80,6 +83,10 @@ public class ArtikGinModule extends AbstractGinModule {
         commandProducerMultibinder.addBinding().to(CCompileCommandProducer.class);
         commandProducerMultibinder.addBinding().to(CppCompileCommandProducer.class);
 
+        install(new GinFactoryModuleBuilder()
+                        .implement(CommandOutputConsole.class, Names.named("artik-command-console"), ArtikCommandOutputConsole.class)
+                        .build(ArtikCommandConsoleFactory.class));
+
         GinMultibinder<Macro> macrosMultibinder = GinMultibinder.newSetBinder(binder(), Macro.class);
         macrosMultibinder.addBinding().to(BinaryNameMacro.class);
         macrosMultibinder.addBinding().to(CCompilationPropertiesMacro.class);
@@ -89,9 +96,9 @@ public class ArtikGinModule extends AbstractGinModule {
         bindConstant().annotatedWith(Names.named("central.toolbar.visibility")).to(false);
 
         final GinMapBinder<String, Component> componentGinMapBinder = GinMapBinder.newMapBinder(binder(), String.class, Component.class);
-        componentGinMapBinder.addBinding("Debug and run binary actions manager").to(DebugAndRunBinaryActionsManager.class);
+        componentGinMapBinder.addBinding("Debug and run binary actions manager").to(DebugAndRunActionsManager.class);
 
-        install(new GinFactoryModuleBuilder().build(DebugBinaryActionFactory.class));
-        install(new GinFactoryModuleBuilder().build(RunBinaryActionFactory.class));
+        install(new GinFactoryModuleBuilder().build(DebugActionFactory.class));
+        install(new GinFactoryModuleBuilder().build(RunActionFactory.class));
     }
 }

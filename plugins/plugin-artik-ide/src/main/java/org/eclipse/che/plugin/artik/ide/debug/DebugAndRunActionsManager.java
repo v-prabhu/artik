@@ -29,10 +29,11 @@ import org.eclipse.che.ide.api.constraints.Constraints;
 import org.eclipse.che.ide.api.machine.events.MachineStateEvent;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateEvent;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
+import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 import org.eclipse.che.plugin.artik.ide.ArtikResources;
 import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
-import org.eclipse.che.plugin.artik.ide.run.RunBinaryAction;
-import org.eclipse.che.plugin.artik.ide.run.RunBinaryActionFactory;
+import org.eclipse.che.plugin.artik.ide.run.RunAction;
+import org.eclipse.che.plugin.artik.ide.run.RunActionFactory;
 
 import java.util.List;
 
@@ -47,34 +48,37 @@ import static org.eclipse.che.ide.api.action.IdeActions.GROUP_MAIN_TOOLBAR;
  * @author Valeriy Svydenko
  */
 @Singleton
-public class DebugAndRunBinaryActionsManager implements MachineStateEvent.Handler, WsAgentStateHandler, Component {
+public class DebugAndRunActionsManager implements MachineStateEvent.Handler, WsAgentStateHandler, Component {
 
-    private final ActionManager            actionManager;
-    private final DebugBinaryActionFactory debugBinaryActionFactory;
-    private final RunBinaryActionFactory   runBinaryActionFactory;
-    private final DeviceServiceClient      deviceServiceClient;
-    private final ArtikResources           resources;
+    private final ArtikLocalizationConstant locale;
+    private final ActionManager             actionManager;
+    private final DebugActionFactory        debugActionFactory;
+    private final RunActionFactory          runActionFactory;
+    private final DeviceServiceClient       deviceServiceClient;
+    private final ArtikResources            resources;
 
     private DefaultActionGroup debugActionsPopUpGroup;
     private DefaultActionGroup runActionsPopUpGroup;
 
     @Inject
-    public DebugAndRunBinaryActionsManager(EventBus eventBus,
-                                           ActionManager actionManager,
-                                           DebugBinaryActionFactory debugBinaryActionFactory,
-                                           RunBinaryActionFactory runBinaryActionFactory,
-                                           DeviceServiceClient deviceServiceClient,
-                                           ArtikResources resources) {
+    public DebugAndRunActionsManager(EventBus eventBus,
+                                     ArtikLocalizationConstant locale,
+                                     ActionManager actionManager,
+                                     DebugActionFactory debugActionFactory,
+                                     RunActionFactory runActionFactory,
+                                     DeviceServiceClient deviceServiceClient,
+                                     ArtikResources resources) {
+        this.locale = locale;
         this.actionManager = actionManager;
-        this.debugBinaryActionFactory = debugBinaryActionFactory;
-        this.runBinaryActionFactory = runBinaryActionFactory;
+        this.debugActionFactory = debugActionFactory;
+        this.runActionFactory = runActionFactory;
         this.deviceServiceClient = deviceServiceClient;
         this.resources = resources;
 
-        runActionsPopUpGroup = new DefaultActionGroup("Run Binary", true, actionManager);
+        runActionsPopUpGroup = new DefaultActionGroup(locale.runActionDescription(), true, actionManager);
         actionManager.registerAction("runActionsPopUpGroup", runActionsPopUpGroup);
 
-        debugActionsPopUpGroup = new DefaultActionGroup("Debug Binary", true, actionManager);
+        debugActionsPopUpGroup = new DefaultActionGroup(locale.debugActionDescription(), true, actionManager);
         actionManager.registerAction("debugActionsPopUpGroup", debugActionsPopUpGroup);
 
         eventBus.addHandler(MachineStateEvent.TYPE, this);
@@ -82,12 +86,12 @@ public class DebugAndRunBinaryActionsManager implements MachineStateEvent.Handle
 
     @Override
     public void start(Callback<Component, Exception> callback) {
-        callback.onSuccess(DebugAndRunBinaryActionsManager.this);
+        callback.onSuccess(DebugAndRunActionsManager.this);
 
-        debugActionsPopUpGroup.getTemplatePresentation().setDescription("Debug Binary");
+        debugActionsPopUpGroup.getTemplatePresentation().setDescription(locale.debugActionDescription());
         debugActionsPopUpGroup.getTemplatePresentation().setSVGResource(resources.debug());
 
-        runActionsPopUpGroup.getTemplatePresentation().setDescription("Run Binary");
+        runActionsPopUpGroup.getTemplatePresentation().setDescription(locale.runActionDescription());
         runActionsPopUpGroup.getTemplatePresentation().setSVGResource(resources.run());
 
         // add debug group to the context menu
@@ -120,15 +124,15 @@ public class DebugAndRunBinaryActionsManager implements MachineStateEvent.Handle
             return;
         }
 
-        DebugBinaryAction debugBinaryAction = debugBinaryActionFactory.create(machine);
-        actionManager.registerAction("debug" + machine.getId(), debugBinaryAction);
+        DebugAction debugAction = debugActionFactory.create(machine);
+        actionManager.registerAction("debug" + machine.getId(), debugAction);
 
-        debugActionsPopUpGroup.add(debugBinaryAction, Constraints.FIRST);
+        debugActionsPopUpGroup.add(debugAction, Constraints.FIRST);
 
-        RunBinaryAction runBinaryAction = runBinaryActionFactory.create(machine);
-        actionManager.registerAction("run" + machine.getId(), runBinaryAction);
+        RunAction runAction = runActionFactory.create(machine);
+        actionManager.registerAction("run" + machine.getId(), runAction);
 
-        runActionsPopUpGroup.add(runBinaryAction, Constraints.FIRST);
+        runActionsPopUpGroup.add(runAction, Constraints.FIRST);
     }
 
     @Override
@@ -176,8 +180,8 @@ public class DebugAndRunBinaryActionsManager implements MachineStateEvent.Handle
     }
 
     /**
-     * Action group for placing {@link DebugBinaryAction} and {@link RunBinaryAction} on the toolbar.
-     * It's visible when at least one {@link DebugBinaryAction} or {@link RunBinaryAction} exists.
+     * Action group for placing {@link DebugAction} and {@link RunAction} on the toolbar.
+     * It's visible when at least one {@link DebugAction} or {@link RunAction} exists.
      */
     private class DebugAndRunActionsToolbarGroup extends DefaultActionGroup {
 
@@ -187,7 +191,8 @@ public class DebugAndRunBinaryActionsManager implements MachineStateEvent.Handle
 
         @Override
         public void update(ActionEvent e) {
-            e.getPresentation().setEnabledAndVisible(debugActionsPopUpGroup.getChildrenCount() != 0);
+            e.getPresentation().setEnabledAndVisible(debugActionsPopUpGroup.getChildrenCount() != 0 ||
+                                                     runActionsPopUpGroup.getChildrenCount() != 0);
         }
     }
 }

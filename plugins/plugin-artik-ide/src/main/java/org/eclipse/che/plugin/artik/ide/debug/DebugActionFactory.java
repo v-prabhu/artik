@@ -9,15 +9,16 @@
  *   Codenvy, S.A. - Initial implementation
  *   Samsung Electronics Co., Ltd. - Initial implementation
  *******************************************************************************/
-package org.eclipse.che.plugin.artik.ide.run;
+package org.eclipse.che.plugin.artik.ide.debug;
 
 import org.eclipse.che.api.core.model.machine.Machine;
 
 /**
- * Factory for {@link RunBinaryAction} instances.
+ * Factory for {@link DebugAction} instances.
  *
- * @author Valeriy Svydenko
+ * @author Artem Zatsarynnyi
  */
-public interface RunBinaryActionFactory {
-    RunBinaryAction create(Machine machine);
+public interface DebugActionFactory {
+
+    DebugAction create(Machine machine);
 }

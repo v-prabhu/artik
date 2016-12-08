@@ -28,17 +28,12 @@ import org.eclipse.che.ide.api.macro.MacroProcessor;
 import org.eclipse.che.ide.api.resources.Project;
 import org.eclipse.che.ide.api.resources.Resource;
 import org.eclipse.che.ide.dto.DtoFactory;
-import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandConsoleFactory;
-import org.eclipse.che.ide.extension.machine.client.outputspanel.console.DefaultOutputConsole;
+import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandOutputConsole;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
 import org.eclipse.che.ide.util.UUID;
-import org.eclipse.che.ide.websocket.MessageBus;
-import org.eclipse.che.ide.websocket.MessageBusProvider;
-import org.eclipse.che.ide.websocket.WebSocketException;
-import org.eclipse.che.ide.websocket.events.MessageHandler;
 import org.eclipse.che.plugin.artik.ide.command.macro.ReplicationFolderMacro;
-import org.eclipse.che.plugin.artik.ide.debug.ProcessListener;
 import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
+import org.eclipse.che.plugin.artik.ide.outputconsole.ArtikCommandConsoleFactory;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.eclipse.che.plugin.artik.ide.command.macro.BinaryNameMacro.DEFAULT_BINARY_NAME;
@@ -50,64 +45,45 @@ import static org.eclipse.che.plugin.cpp.shared.Constants.BINARY_NAME_ATTRIBUTE;
  * @author Valeriy Svydenko
  */
 @Singleton
-public class BinaryFileRunner {
-    private final DtoFactory              dtoFactory;
-    private final AppContext              appContext;
-    private final DeviceServiceClient     deviceServiceClient;
-    private final MacroProcessor          macroProcessor;
-    private final ProcessListener         processListener;
-    private final MessageBus              messageBus;
-    private final ProcessesPanelPresenter processesPanelPresenter;
-    private final CommandConsoleFactory   commandConsoleFactory;
+public class BinaryRunner {
+    private final DtoFactory                 dtoFactory;
+    private final AppContext                 appContext;
+    private final ArtikCommandConsoleFactory consoleFactory;
+    private final DeviceServiceClient        deviceServiceClient;
+    private final MacroProcessor             macroProcessor;
+    private final ProcessesPanelPresenter    processesPanelPresenter;
 
     @Inject
-    public BinaryFileRunner(DtoFactory dtoFactory,
-                            AppContext appContext,
-                            MacroProcessor macroProcessor,
-                            DeviceServiceClient deviceServiceClient,
-                            ProcessListener processListener,
-                            MessageBusProvider messageBusProvider,
-                            ProcessesPanelPresenter processesPanelPresenter,
-                            CommandConsoleFactory commandConsoleFactory) {
+    public BinaryRunner(DtoFactory dtoFactory,
+                        AppContext appContext,
+                        ArtikCommandConsoleFactory consoleFactory,
+                        MacroProcessor macroProcessor,
+                        DeviceServiceClient deviceServiceClient,
+                        ProcessesPanelPresenter processesPanelPresenter) {
         this.dtoFactory = dtoFactory;
         this.appContext = appContext;
+        this.consoleFactory = consoleFactory;
         this.deviceServiceClient = deviceServiceClient;
         this.macroProcessor = macroProcessor;
-        this.processListener = processListener;
-        this.messageBus = messageBusProvider.getMachineMessageBus();
         this.processesPanelPresenter = processesPanelPresenter;
-        this.commandConsoleFactory = commandConsoleFactory;
     }
 
 
     /**
      * Run binary file.
      *
-     * @param machine
+     * @param device
      *         current device.
      */
-    public void run(final Machine machine) {
+    public void run(final Machine device) {
         Optional<Project> projectOptional = getCurrentProject();
         if (!projectOptional.isPresent()) {
             return;
         }
 
         Project project = projectOptional.get();
-        final Command command = buildCommand(project, machine);
+        final Command command = buildCommand(project, device);
         final String outputChannel = "process:output:" + UUID.uuid();
-        final DefaultOutputConsole outputConsole = (DefaultOutputConsole)commandConsoleFactory.create(command.getName());
-
-        final MessageHandler messageHandler = new MessageHandler() {
-            @Override
-            public void onMessage(String message) {
-                outputConsole.printText(message);
-            }
-        };
-        try {
-            messageBus.subscribe(outputChannel, messageHandler);
-        } catch (WebSocketException e) {
-            //do nothing
-        }
 
         macroProcessor.expandMacros(command.getCommandLine()).then(new Operation<String>() {
             @Override
@@ -117,14 +93,17 @@ public class BinaryFileRunner {
                                                        .withCommandLine(arg)
                                                        .withType(command.getType());
 
-                final Promise<MachineProcessDto> processPromise = deviceServiceClient.executeCommand(machine.getId(),
+                final Promise<MachineProcessDto> processPromise = deviceServiceClient.executeCommand(device.getId(),
                                                                                                      toExecute,
                                                                                                      outputChannel);
                 processPromise.then(new Operation<MachineProcessDto>() {
                     @Override
                     public void apply(MachineProcessDto process) throws OperationException {
-                        processesPanelPresenter.addCommandOutput(machine.getId(), outputConsole);
-                        processListener.attachToProcess(process, machine, outputChannel, messageHandler);
+                        final CommandOutputConsole commandOutputConsole = consoleFactory.create(new CommandImpl(toExecute), device);
+                        commandOutputConsole.listenToOutput(outputChannel);
+                        processesPanelPresenter.addCommandOutput(device.getId(), commandOutputConsole);
+
+                        commandOutputConsole.attachToProcess(process);
                     }
                 });
             }

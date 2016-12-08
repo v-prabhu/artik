@@ -9,7 +9,7 @@
  *   Codenvy, S.A. - Initial implementation
  *   Samsung Electronics Co., Ltd. - Initial implementation
  *******************************************************************************/
-package org.eclipse.che.plugin.artik.ide.debug;
+package org.eclipse.che.plugin.artik.ide.run;
 
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
@@ -25,40 +25,49 @@ import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 
 import static java.util.Collections.singletonList;
 import static org.eclipse.che.ide.workspace.perspectives.project.ProjectPerspective.PROJECT_PERSPECTIVE_ID;
+import static org.eclipse.che.plugin.cpp.shared.Constants.C_PROJECT_TYPE_ID;
+import static org.eclipse.che.plugin.nodejs.shared.Constants.NODE_JS_PROJECT_TYPE_ID;
 
 /**
- * Action for connecting to the debugger for debugging project's binary file.
- *
- * @author Artem Zatsarynnyi
+ * Action for running binary file.
  */
-public class DebugBinaryAction extends AbstractPerspectiveAction {
+public class RunAction extends AbstractPerspectiveAction {
 
-    private final AppContext        appContext;
-    private final Machine           machine;
-    private final DebuggerConnector debuggerConnector;
+    private final AppContext   appContext;
+    private final Machine      device;
+    private final NodeJsRunner nodeJsRunner;
+    private final BinaryRunner binaryFileRunner;
 
     @Inject
-    public DebugBinaryAction(ArtikLocalizationConstant locale,
-                             AppContext appContext,
-                             @Assisted Machine machine,
-                             DebuggerConnector debuggerConnector) {
-        super(singletonList(PROJECT_PERSPECTIVE_ID), machine.getConfig().getName(), locale.debugActionDescription(), null, null);
+    public RunAction(ArtikLocalizationConstant locale,
+                     AppContext appContext,
+                     @Assisted Machine machine,
+                     NodeJsRunner nodeJsRunner,
+                     BinaryRunner binaryFileRunner) {
+        super(singletonList(PROJECT_PERSPECTIVE_ID), machine.getConfig().getName(), locale.runActionDescription(), null, null);
 
         this.appContext = appContext;
-        this.machine = machine;
-        this.debuggerConnector = debuggerConnector;
+        this.device = machine;
+        this.nodeJsRunner = nodeJsRunner;
+        this.binaryFileRunner = binaryFileRunner;
     }
 
     @Override
     public void updateInPerspective(ActionEvent event) {
-        if (getCurrentProject().isPresent()) {
-            event.getPresentation().setEnabled(true);
-        }
+        final Optional<Project> currentProject = getCurrentProject();
+        event.getPresentation().setEnabled(currentProject.isPresent() && (currentProject.get().isTypeOf(NODE_JS_PROJECT_TYPE_ID) ||
+                                                                          currentProject.get().isTypeOf(C_PROJECT_TYPE_ID)));
     }
 
     @Override
     public void actionPerformed(ActionEvent event) {
-        debuggerConnector.debug(machine);
+        final Project project = getCurrentProject().get();
+
+        if (project.isTypeOf(NODE_JS_PROJECT_TYPE_ID)) {
+            nodeJsRunner.run(device);
+        } else if (project.isTypeOf(C_PROJECT_TYPE_ID)) {
+            binaryFileRunner.run(device);
+        }
     }
 
     private Optional<Project> getCurrentProject() {
