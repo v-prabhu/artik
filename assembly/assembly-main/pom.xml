@@ -39,6 +39,18 @@
             <type>war</type>
         </dependency>
         <dependency>
+            <groupId>org.eclipse.che</groupId>
+            <artifactId>exec-agent</artifactId>
+            <type>tar.gz</type>
+            <classifier>linux_amd64</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.che</groupId>
+            <artifactId>exec-agent</artifactId>
+            <type>tar.gz</type>
+            <classifier>linux_arm7</classifier>
+        </dependency>
+        <dependency>
             <groupId>org.eclipse.che.dashboard</groupId>
             <artifactId>che-dashboard-war</artifactId>
             <type>war</type>
@@ -52,18 +64,6 @@
             <groupId>org.eclipse.che.lib</groupId>
             <artifactId>che-tomcat8-slf4j-logback</artifactId>
             <type>zip</type>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.che.lib</groupId>
-            <artifactId>che-websocket-terminal</artifactId>
-            <type>tar.gz</type>
-            <classifier>linux_amd64</classifier>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.che.lib</groupId>
-            <artifactId>che-websocket-terminal</artifactId>
-            <type>tar.gz</type>
-            <classifier>linux_arm7</classifier>
         </dependency>
     </dependencies>
     <build>

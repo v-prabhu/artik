@@ -86,13 +86,6 @@ public class DocsPartPresenterTest {
     }
 
     @Test
-    public void shouldChangeVisibility() throws Exception {
-        presenter.setVisible(true);
-
-        verify(view).setVisible(true);
-    }
-
-    @Test
     public void shouldShowView() throws Exception {
         AcceptsOneWidget container = mock(AcceptsOneWidget.class);
         presenter.go(container);
