@@ -121,6 +121,9 @@ public class WsAgentModule extends AbstractModule {
         bind(String.class).annotatedWith(Names.named("wsagent.endpoint"))
                           .toProvider(WsAgentURLProvider.class);
 
+        bindConstant().annotatedWith(Names.named("artik.terminal_agent.run_command"))
+                      .to("$HOME/che/terminal/che-websocket-terminal -addr :4411 -cmd ${SHELL_INTERPRETER} -static $HOME/che/terminal/");
+
         configureJsonRpc();
         configureWebSocket();
     }
