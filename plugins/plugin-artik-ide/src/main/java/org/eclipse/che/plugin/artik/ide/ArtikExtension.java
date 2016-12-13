@@ -38,6 +38,7 @@ import org.eclipse.che.plugin.artik.ide.profile.DevelopmentModeManager;
 import org.eclipse.che.plugin.artik.ide.profile.TurnDevelopmentModeContextMenuAction;
 import org.eclipse.che.plugin.artik.ide.profile.TurnProductionModeContextMenuAction;
 import org.eclipse.che.plugin.artik.ide.resourcemonitor.ResourceMonitor;
+import org.eclipse.che.plugin.artik.ide.run.params.EditRunParamsAction;
 import org.eclipse.che.plugin.artik.ide.scp.PushToDeviceManager;
 import org.eclipse.che.plugin.artik.ide.updatesdk.UpdateSDKAction;
 
@@ -100,6 +101,7 @@ public class ArtikExtension {
                                 TurnProductionModeContextMenuAction turnProductionModeContextMenuAction,
                                 PackageInstallerContextMenuAction packageInstallerContextMenuAction,
                                 EditCompilationOptionsAction editCompilationOptionsAction,
+                                EditRunParamsAction editRunParamsAction,
                                 ReplicationFolderMacroRegistrar replicationFolderMacroRegistrar) {
         final DefaultActionGroup artikGroup = new DefaultActionGroup(ARTIK_GROUP_MAIN_MENU, true, actionManager);
         actionManager.registerAction(ARTIK_GROUP_MAIN_MENU_ID, artikGroup);
@@ -135,6 +137,7 @@ public class ArtikExtension {
         DefaultActionGroup projectMainMenu = (DefaultActionGroup)actionManager.getAction(GROUP_PROJECT);
         projectMainMenu.addSeparator();
         projectMainMenu.add(editCompilationOptionsAction);
+        projectMainMenu.add(editRunParamsAction);
 
         DefaultActionGroup actionsToolbarGroup = new ManageDeviceActionGroup(actionManager);
         actionsToolbarGroup.add(manageDevicesAction);

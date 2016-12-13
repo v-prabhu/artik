@@ -25,6 +25,7 @@ import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 
 import static java.util.Collections.singletonList;
 import static org.eclipse.che.ide.workspace.perspectives.project.ProjectPerspective.PROJECT_PERSPECTIVE_ID;
+import static org.eclipse.che.plugin.cpp.shared.Constants.CPP_PROJECT_TYPE_ID;
 import static org.eclipse.che.plugin.cpp.shared.Constants.C_PROJECT_TYPE_ID;
 import static org.eclipse.che.plugin.nodejs.shared.Constants.NODE_JS_PROJECT_TYPE_ID;
 
@@ -55,19 +56,41 @@ public class RunAction extends AbstractPerspectiveAction {
     @Override
     public void updateInPerspective(ActionEvent event) {
         final Optional<Project> currentProject = getCurrentProject();
-        event.getPresentation().setEnabled(currentProject.isPresent() && (currentProject.get().isTypeOf(NODE_JS_PROJECT_TYPE_ID) ||
-                                                                          currentProject.get().isTypeOf(C_PROJECT_TYPE_ID)));
+        event.getPresentation().setEnabled(currentProject.isPresent() && (isEnableForC(currentProject.get()) ||
+                                                                          isEnableForCpp(currentProject.get()) ||
+                                                                          isEnableForNode(currentProject.get())));
     }
 
     @Override
     public void actionPerformed(ActionEvent event) {
-        final Project project = getCurrentProject().get();
+        final Optional<Project> currentProject = getCurrentProject();
+        if (!currentProject.isPresent()) {
+            return;
+        }
+
+        final Project project = currentProject.get();
 
         if (project.isTypeOf(NODE_JS_PROJECT_TYPE_ID)) {
             nodeJsRunner.run(device);
-        } else if (project.isTypeOf(C_PROJECT_TYPE_ID)) {
+        } else if (project.isTypeOf(C_PROJECT_TYPE_ID) || project.isTypeOf(CPP_PROJECT_TYPE_ID)) {
             binaryFileRunner.run(device);
         }
+    }
+
+    private boolean isEnableForC(Project project) {
+        return project.isTypeOf(C_PROJECT_TYPE_ID);
+    }
+
+    private boolean isEnableForCpp(Project project) {
+        return project.isTypeOf(CPP_PROJECT_TYPE_ID);
+    }
+
+    private boolean isEnableForNode(Project project) {
+        if (!project.isTypeOf(NODE_JS_PROJECT_TYPE_ID)) {
+            return false;
+        }
+        final Resource resource = appContext.getResource();
+        return !(resource == null || !resource.getName().endsWith(".js"));
     }
 
     private Optional<Project> getCurrentProject() {

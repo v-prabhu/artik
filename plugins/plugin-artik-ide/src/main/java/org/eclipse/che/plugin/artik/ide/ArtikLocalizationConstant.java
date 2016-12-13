@@ -240,4 +240,16 @@ public interface ArtikLocalizationConstant extends Messages {
 
     @Key("reconnection.dialog.content")
     String reconnectionDialogContent(String deviceName);
+
+    @Key("editRunOptions.action.title")
+    String editRunParamsActionTitle();
+
+    @Key("editRunOptions.action.description")
+    String editRunParamsActionDescription();
+
+    @Key("editRunOptions.view.title")
+    String editRunParamsViewTitle();
+
+    @Key("editRunOptions.view.options.title")
+    String editRunParamsViewOptionsTitle();
 }

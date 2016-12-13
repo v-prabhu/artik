@@ -24,6 +24,7 @@ import org.eclipse.che.ide.extension.machine.client.outputspanel.console.Command
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
 import org.eclipse.che.ide.part.explorer.project.macro.ExplorerCurrentFileNameMacro;
 import org.eclipse.che.ide.part.explorer.project.macro.ExplorerCurrentFileParentPathMacro;
+import org.eclipse.che.plugin.artik.ide.command.macro.NodeJsRunParametersMacro;
 import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 import org.eclipse.che.plugin.artik.ide.outputconsole.ArtikCommandConsoleFactory;
 import org.junit.Before;
@@ -43,7 +44,7 @@ import static org.mockito.Mockito.when;
 public class NodeJsRunnerTest {
     private static final String DEVICE_ID        = "artik1";
     private static final String COMMAND_TEMPLATE = "cd ${artik.replication.folder.artik1}${explorer.current.file.parent.path} " +
-                                                   "&& node ${explorer.current.file.name}";
+                                                   "&& node ${explorer.current.file.name} ${node.run.options}";
     private static final String COMMAND_LINE     = "cd /projects/replication-folder/app && node app.js";
 
     @Mock
@@ -60,6 +61,8 @@ public class NodeJsRunnerTest {
     private ExplorerCurrentFileNameMacro       currentFileNameMacro;
     @Mock
     private ProcessesPanelPresenter            processesPanelPresenter;
+    @Mock
+    private NodeJsRunParametersMacro           nodeJsRunOptionsMacro;
 
     private NodeJsRunner jsRunner;
 
@@ -85,6 +88,7 @@ public class NodeJsRunnerTest {
         when(device.getId()).thenReturn(DEVICE_ID);
         when(currentFileParentPathMacro.getName()).thenReturn(ExplorerCurrentFileParentPathMacro.KEY);
         when(currentFileNameMacro.getName()).thenReturn(ExplorerCurrentFileNameMacro.KEY);
+        when(nodeJsRunOptionsMacro.getName()).thenReturn("${node.run.options}");
         when(macroProcessor.expandMacros(anyString())).thenReturn(macroProcessorPromise);
         when(macroProcessorPromise.then(Matchers.<Operation<String>>any())).thenReturn(macroProcessorPromise);
 
@@ -102,6 +106,7 @@ public class NodeJsRunnerTest {
                                     macroProcessor,
                                     consoleFactory,
                                     deviceServiceClient,
+                                    nodeJsRunOptionsMacro,
                                     currentFileParentPathMacro,
                                     currentFileNameMacro,
                                     processesPanelPresenter);

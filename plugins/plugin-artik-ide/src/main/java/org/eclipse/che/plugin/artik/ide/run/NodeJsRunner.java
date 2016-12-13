@@ -29,6 +29,7 @@ import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPan
 import org.eclipse.che.ide.part.explorer.project.macro.ExplorerCurrentFileNameMacro;
 import org.eclipse.che.ide.part.explorer.project.macro.ExplorerCurrentFileParentPathMacro;
 import org.eclipse.che.ide.util.UUID;
+import org.eclipse.che.plugin.artik.ide.command.macro.NodeJsRunParametersMacro;
 import org.eclipse.che.plugin.artik.ide.command.macro.ReplicationFolderMacro;
 import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 import org.eclipse.che.plugin.artik.ide.outputconsole.ArtikCommandConsoleFactory;
@@ -41,9 +42,10 @@ import org.eclipse.che.plugin.artik.ide.outputconsole.ArtikCommandConsoleFactory
 @Singleton
 public class NodeJsRunner {
     private final DtoFactory                         dtoFactory;
-    private final ArtikCommandConsoleFactory consoleFactory;
+    private final ArtikCommandConsoleFactory         consoleFactory;
     private final DeviceServiceClient                deviceServiceClient;
     private final MacroProcessor                     macroProcessor;
+    private final NodeJsRunParametersMacro           nodeJsRunParametersMacro;
     private final ExplorerCurrentFileParentPathMacro currentFileParentPathMacro;
     private final ExplorerCurrentFileNameMacro       currentFileNameMacro;
     private final ProcessesPanelPresenter            processesPanelPresenter;
@@ -53,6 +55,7 @@ public class NodeJsRunner {
                         MacroProcessor macroProcessor,
                         ArtikCommandConsoleFactory consoleFactory,
                         DeviceServiceClient deviceServiceClient,
+                        NodeJsRunParametersMacro nodeJsRunOptionsMacro,
                         ExplorerCurrentFileParentPathMacro currentFileParentPathMacro,
                         ExplorerCurrentFileNameMacro currentFileNameMacro,
                         ProcessesPanelPresenter processesPanelPresenter) {
@@ -60,6 +63,7 @@ public class NodeJsRunner {
         this.consoleFactory = consoleFactory;
         this.deviceServiceClient = deviceServiceClient;
         this.macroProcessor = macroProcessor;
+        this.nodeJsRunParametersMacro = nodeJsRunOptionsMacro;
         this.currentFileParentPathMacro = currentFileParentPathMacro;
         this.currentFileNameMacro = currentFileNameMacro;
         this.processesPanelPresenter = processesPanelPresenter;
@@ -106,7 +110,8 @@ public class NodeJsRunner {
                              ReplicationFolderMacro.KEY.replace("%machineId%", machine.getId()) +
                              currentFileParentPathMacro.getName() +
                              " && node " +
-                             currentFileNameMacro.getName();
+                             currentFileNameMacro.getName() +
+                             ' ' + nodeJsRunParametersMacro.getName();
 
         return new CommandImpl("run", commandLine, "custom");
     }

@@ -71,6 +71,7 @@ public class RunActionTest {
         Resource[] resources = {resource};
         when(appContext.getResources()).thenReturn(resources);
         when(appContext.getResource()).thenReturn(resource);
+        when(resource.getName()).thenReturn("app.js");
         when(resource.getRelatedProject()).thenReturn(Optional.of(project));
 
         action = new RunAction(localizationConstants, appContext, device, nodeJsRunner, binaryRunner);

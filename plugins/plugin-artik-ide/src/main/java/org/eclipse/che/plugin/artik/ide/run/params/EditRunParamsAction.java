@@ -9,7 +9,7 @@
  *   Codenvy, S.A. - Initial implementation
  *   Samsung Electronics Co., Ltd. - Initial implementation
  *******************************************************************************/
-package org.eclipse.che.plugin.artik.ide.command.options;
+package org.eclipse.che.plugin.artik.ide.run.params;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -19,32 +19,29 @@ import org.eclipse.che.ide.api.action.ActionEvent;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.resources.Project;
 import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
+import org.eclipse.che.plugin.nodejs.shared.Constants;
 
 import javax.validation.constraints.NotNull;
 
 import static java.util.Collections.singletonList;
 import static org.eclipse.che.ide.workspace.perspectives.project.ProjectPerspective.PROJECT_PERSPECTIVE_ID;
-import static org.eclipse.che.plugin.cpp.shared.Constants.CPP_PROJECT_TYPE_ID;
-import static org.eclipse.che.plugin.cpp.shared.Constants.C_PROJECT_TYPE_ID;
 
 /**
- * Action which opens the presenter for editing compilation options.
- *
- * @author Artem Zatsarynnyi
+ * Action which opens the presenter for editing run options.
  */
 @Singleton
-public class EditCompilationOptionsAction extends AbstractPerspectiveAction {
+public class EditRunParamsAction extends AbstractPerspectiveAction {
 
-    private final EditCompilationOptionsPresenter presenter;
-    private final AppContext                      appContext;
+    private final EdiRunParametersPresenter presenter;
+    private final AppContext                appContext;
 
     @Inject
-    public EditCompilationOptionsAction(ArtikLocalizationConstant locale,
-                                        EditCompilationOptionsPresenter presenter,
-                                        AppContext appContext) {
+    public EditRunParamsAction(ArtikLocalizationConstant locale,
+                               EdiRunParametersPresenter presenter,
+                               AppContext appContext) {
         super(singletonList(PROJECT_PERSPECTIVE_ID),
-              locale.editCompilationOptionsActionTitle(),
-              locale.editCompilationOptionsActionDescription(),
+              locale.editRunParamsActionTitle(),
+              locale.editRunParamsActionDescription(),
               null, null);
 
         this.presenter = presenter;
@@ -54,8 +51,7 @@ public class EditCompilationOptionsAction extends AbstractPerspectiveAction {
     @Override
     public void updateInPerspective(@NotNull ActionEvent event) {
         final Project rootProject = appContext.getRootProject();
-        event.getPresentation().setEnabled(rootProject != null &&
-                                           (rootProject.isTypeOf(CPP_PROJECT_TYPE_ID) || rootProject.isTypeOf(C_PROJECT_TYPE_ID)));
+        event.getPresentation().setEnabled(rootProject != null && rootProject.isTypeOf(Constants.NODE_JS_PROJECT_TYPE_ID));
     }
 
     @Override

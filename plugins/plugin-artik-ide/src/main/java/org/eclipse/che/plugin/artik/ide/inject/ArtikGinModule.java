@@ -32,6 +32,7 @@ import org.eclipse.che.plugin.artik.ide.command.CppCompileCommandProducer;
 import org.eclipse.che.plugin.artik.ide.command.macro.BinaryNameMacro;
 import org.eclipse.che.plugin.artik.ide.command.macro.CCompilationPropertiesMacro;
 import org.eclipse.che.plugin.artik.ide.command.macro.CppCompilationPropertiesMacro;
+import org.eclipse.che.plugin.artik.ide.command.macro.NodeJsRunParametersMacro;
 import org.eclipse.che.plugin.artik.ide.command.macro.ReplicationFolderMacroFactory;
 import org.eclipse.che.plugin.artik.ide.debug.DebugAndRunActionsManager;
 import org.eclipse.che.plugin.artik.ide.debug.DebugActionFactory;
@@ -91,6 +92,7 @@ public class ArtikGinModule extends AbstractGinModule {
         macrosMultibinder.addBinding().to(BinaryNameMacro.class);
         macrosMultibinder.addBinding().to(CCompilationPropertiesMacro.class);
         macrosMultibinder.addBinding().to(CppCompilationPropertiesMacro.class);
+        macrosMultibinder.addBinding().to(NodeJsRunParametersMacro.class);
 
         install(new GinFactoryModuleBuilder().build(ReplicationFolderMacroFactory.class));
         bindConstant().annotatedWith(Names.named("central.toolbar.visibility")).to(false);
