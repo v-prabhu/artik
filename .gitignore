@@ -23,7 +23,6 @@ test-output/
 *.exe
 *.o
 *.so
-*.sh
 
 # Packages #
 ############
@@ -60,3 +59,6 @@ Thumbs.db
 # Vagrant temp dir #
 ######################
 .vagrant
+
+# assembly for docker
+dockerfiles/server/assembly
