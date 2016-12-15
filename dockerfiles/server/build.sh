@@ -6,26 +6,25 @@
 # http://www.eclipse.org/legal/epl-v10.html
 
 IMAGE_NAME="codenvy/artik-server"
-source $(cd "$(dirname "$0")"; pwd)/../build.include
+. $(cd "$(dirname "$0")"; pwd)/../build.include
 
 # grab assembly
 DIR=$(cd "$(dirname "$0")"; pwd)
-if [[ ! -d "${DIR}/../../assembly/assembly-main/target" ]]; then
+if [ ! -d "${DIR}/../../assembly/assembly-main/target" ]; then
   echo "${ERRO}Have you built assembly/assemby-main in ${DIR}/../assembly/assembly-main 'mvn clean install'?"
   exit 2
 fi
 
 # Use of folder
-ASSEMBLY_DIR=$(echo ${DIR}/../../assembly/assembly-main/target/artik-ide-*/artik-ide-*)
+BUILD_ASSEMBLY_ZIP=$(echo ${DIR}/../../assembly/assembly-main/target/artik-ide-*.tar.gz)
+LOCAL_ASSEMBLY_ZIP=${DIR}/artik-ide.tar.gz
 
-# Remove current copy of the assembly if present
-if [[ -d "${DIR}/assembly" ]]; then
-  echo "Remove previous assembly folder"
-  rm -rf ${DIR}/assembly
+if [ -f "${LOCAL_ASSEMBLY_ZIP}" ]; then
+  rm ${LOCAL_ASSEMBLY_ZIP}
 fi
 
-# Copy assembly
-cp -r ${ASSEMBLY_DIR} ${DIR}/assembly
+echo "Linking assembly ${BUILD_ASSEMBLY_ZIP} --> ${LOCAL_ASSEMBLY_ZIP}"
+ln ${BUILD_ASSEMBLY_ZIP} ${LOCAL_ASSEMBLY_ZIP}
 
-init
-build
+init "$@"
+build "$@"

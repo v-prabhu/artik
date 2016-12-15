@@ -7,7 +7,7 @@ artik:
   image: <%= ENV["IMAGE_ARTIK"] %>
   env_file:
 <% if @compose_file_for_containers == true -%>
-    - '/artik/instance/config/artik.env'
+    - '/data/instance/config/artik.env'
 <% else -%>
     - '<%= ENV["ARTIK_ENV_FILE"] %>'
 <% end -%>

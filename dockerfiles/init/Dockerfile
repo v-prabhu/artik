@@ -16,8 +16,6 @@
 # use (to run puppet config):
 #   docker run <puppet-mounts> --entrypoint=/usr/bin/puppet codenvy/artik-init:<version> apply <puppet-apply-options>
 
-
-
 FROM puppet/puppet-agent-alpine:4.6.2
 
 # install openssh needed to generate ssh keys

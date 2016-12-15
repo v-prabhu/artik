@@ -22,7 +22,7 @@ CHE_IMAGE_FULLNAME="codenvy/artik-cli"
 init_usage() {
   USAGE="
 USAGE:
-  docker run -it --rm <DOCKER_PARAMETERS> ${CHE_IMAGE_FULLNAME} [COMMAND]
+  docker run --rm <DOCKER_PARAMETERS> ${CHE_IMAGE_FULLNAME} [COMMAND]
 
 MANDATORY DOCKER PARAMETERS:
   -v <LOCAL_PATH>:${CHE_CONTAINER_ROOT}                Where user, instance, and log data saved

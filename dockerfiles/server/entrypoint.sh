@@ -11,81 +11,243 @@
 #   Samsung Electronics Co., Ltd. - Initial implementation
 #
 
-pid=0
+init_global_variables () {
+  # For coloring console output
+  BLUE='\033[1;34m'
+  GREEN='\033[0;32m'
+  NC='\033[0m'
 
-check_docker() {
-  if [ ! -S /var/run/docker.sock ]; then
-    echo "Docker socket (/var/run/docker.sock) hasn't been mounted. Verify your \"docker run\" syntax."
-    return 2;
+  USAGE="
+Usage:
+  che [COMMAND]
+     start                              Starts server with output in the background
+     stop                               Stops ${CHE_MINI_PRODUCT_NAME} server
+     run                                Starts server with output in the foreground
+
+Variables:
+    CHE_SERVER_ACTION                   Another way to set the [COMMAND] to [run | start | stop]
+    CHE_PORT                            The port the Che server will listen on
+    CHE_IP                              The IP address of the host - must be set if remote clients connecting
+    CHE_LOCAL_CONF_DIR                  If set, will load che.properties from folder
+    CHE_BLOCKING_ENTROPY                Starts Tomcat with blocking entropy: -Djava.security.egd=file:/dev/./urandom
+    CHE_LAUNCH_DOCKER_REGISTRY          If true, uses Docker registry to save ws snapshots instead of disk
+    CHE_REGISTRY_HOST                   Hostname of Docker registry to launch, otherwise 'localhost'
+    CHE_LOG_LEVEL                       [INFO | DEBUG] Sets the output level of Tomcat messages
+    CHE_DEBUG_SERVER                    If true, activates Tomcat's JPDA debugging mode
+    CHE_HOME                            Where the Che assembly resides - self-determining if not set
+"
+
+  # Use blocking entropy -- needed for some servers
+  DEFAULT_CHE_BLOCKING_ENTROPY=false
+  CHE_BLOCKING_ENTROPY=${CHE_BLOCKING_ENTROPY:-${DEFAULT_CHE_BLOCKING_ENTROPY}}
+
+  DEFAULT_CHE_SERVER_ACTION=run
+  CHE_SERVER_ACTION=${CHE_SERVER_ACTION:-${DEFAULT_CHE_SERVER_ACTION}}
+
+  DEFAULT_CHE_LAUNCH_DOCKER_REGISTRY=false
+  CHE_LAUNCH_DOCKER_REGISTRY=${CHE_LAUNCH_DOCKER_REGISTRY:-${DEFAULT_CHE_LAUNCH_DOCKER_REGISTRY}}
+
+  # Must be exported as this will be needed by Tomcat's JVM
+  DEFAULT_CHE_REGISTRY_HOST=localhost
+  export CHE_REGISTRY_HOST=${CHE_REGISTRY_HOST:-${DEFAULT_CHE_REGISTRY_HOST}}
+
+  DEFAULT_CHE_PORT=8080
+  CHE_PORT=${CHE_PORT:-${DEFAULT_CHE_PORT}}
+
+  DEFAULT_CHE_IP=
+  CHE_IP=${CHE_IP:-${DEFAULT_CHE_IP}}
+
+  DEFAULT_CHE_LOG_LEVEL=INFO
+  CHE_LOG_LEVEL=${CHE_LOG_LEVEL:-${DEFAULT_CHE_LOG_LEVEL}}
+
+  DEFAULT_CHE_DEBUG_SERVER=false
+  CHE_DEBUG_SERVER=${CHE_DEBUG_SERVER:-${DEFAULT_CHE_DEBUG_SERVER}}
+
+}
+
+error () {
+  echo
+  echo "!!!"
+  echo -e "!!! ${1}"
+  echo "!!!"
+  return 0
+}
+
+usage () {
+  echo "${USAGE}"
+}
+
+set_environment_variables () {
+  ### Set value of derived environment variables.
+
+  # CHE_DOCKER_MACHINE_HOST is used internally by Che to set its IP address
+  if [[ -n "${CHE_IP}" ]]; then
+    export CHE_DOCKER_MACHINE_HOST="${CHE_IP}"
   fi
 
-  if ! docker ps > /dev/null 2>&1; then
-    output=$(docker ps)
-    echo "Error when running \"docker ps\": ${output}"
-    return 2;
+  # Convert Tomcat environment variables to POSIX format.
+  if [[ "${JAVA_HOME}" == *":"* ]]; then
+    JAVA_HOME=$(echo /"${JAVA_HOME}" | sed  's|\\|/|g' | sed 's|:||g')
+  fi
+
+  # Convert Che environment variables to POSIX format.
+  if [[ "${CHE_HOME}" == *":"* ]]; then
+    CHE_HOME=$(echo /"${CHE_HOME}" | sed  's|\\|/|g' | sed 's|:||g')
+  fi
+
+  # Che configuration directory - where che.properties lives
+  if [ -z "${CHE_LOCAL_CONF_DIR}" ]; then
+    export CHE_LOCAL_CONF_DIR="${CHE_HOME}/conf/"
+  fi
+
+  # Sets the location of the application server and its executables
+  # Internal property - should generally not be overridden
+  export CATALINA_HOME="${CHE_HOME}/tomcat"
+
+  # Convert windows path name to POSIX
+  if [[ "${CATALINA_HOME}" == *":"* ]]; then
+    CATALINA_HOME=$(echo /"${CATALINA_HOME}" | sed  's|\\|/|g' | sed 's|:||g')
+  fi
+
+  # Internal properties - should generally not be overridden
+  export CATALINA_BASE="${CHE_HOME}/tomcat"
+  export ASSEMBLY_BIN_DIR="${CATALINA_HOME}/bin"
+  export CHE_LOGS_LEVEL="${CHE_LOG_LEVEL}"
+  export CHE_LOGS_DIR="${CATALINA_HOME}/logs/"
+}
+
+docker_exec() {
+  "$(which docker)" "$@"
+}
+
+start_che_server () {
+ if ${CHE_LAUNCH_DOCKER_REGISTRY} ; then
+    # Export the value of host here
+    launch_docker_registry
+  fi
+
+  #########################################
+  # Launch Che natively as a tomcat server
+  call_catalina
+}
+
+stop_che_server () {
+  CHE_SERVER_ACTION="stop"
+  echo -e "Stopping Che server running on localhost:${CHE_PORT}"
+  call_catalina >/dev/null 2>&1
+}
+
+call_catalina () {
+  # Test to see that Che application server is where we expect it to be
+  if [ ! -d "${ASSEMBLY_BIN_DIR}" ]; then
+    error "Could not find Che's application server."
+    return 1;
+  fi
+
+  ### Initialize default JVM arguments to run che
+  if [[ "${CHE_BLOCKING_ENTROPY}" == true ]]; then
+    [ -z "${JAVA_OPTS}" ] && JAVA_OPTS="-Xms256m -Xmx1024m"
+  else
+    [ -z "${JAVA_OPTS}" ] && JAVA_OPTS="-Xms256m -Xmx1024m -Djava.security.egd=file:/dev/./urandom"
+  fi
+
+  ### Cannot add this in setenv.sh.
+  ### We do the port mapping here, and this gets inserted into server.xml when tomcat boots
+  export JAVA_OPTS="${JAVA_OPTS} -Dport.http=${CHE_PORT} -Dche.home=${CHE_HOME}"
+  export SERVER_PORT=${CHE_PORT}
+
+  # Launch the Che application server, passing in command line parameters
+  if [[ "${CHE_DEBUG_SERVER}" == true ]]; then
+    "${ASSEMBLY_BIN_DIR}"/catalina.sh jpda ${CHE_SERVER_ACTION}
+  else
+    "${ASSEMBLY_BIN_DIR}"/catalina.sh ${CHE_SERVER_ACTION}
   fi
 }
 
+kill_and_launch_docker_registry () {
+  echo -e "Launching Docker container named ${GREEN}registry${NC} from image ${GREEN}registry:2${NC}."
+  docker_exec rm -f registry &> /dev/null || true
+  docker_exec run -d -p 5000:5000 --restart=always --name registry registry:2
+}
+
+launch_docker_registry () {
+    echo "Launching a Docker registry for workspace snapshots."
+    CREATE_NEW_CONTAINER=false
+
+    # Check to see if the registry docker was not properly shut down
+    docker_exec inspect registry &> /dev/null || DOCKER_INSPECT_EXIT=$? || true
+    if [ "${DOCKER_INSPECT_EXIT}" != "1" ]; then
+
+      # Existing container running registry is found.  Let's start it.
+      echo -e "Found a registry container named ${GREEN}registry${NC}. Attempting restart."
+      docker_exec start registry &>/dev/null || DOCKER_EXIT=$? || true
+
+      # Existing container found, but could not start it properly.
+      if [ "${DOCKER_EXIT}" == "1" ]; then
+        echo "Initial start of registry docker container failed... Attempting docker restart and exec."
+        CREATE_NEW_CONTAINER=true
+      fi
+
+    echo "Successful restart of registry container."
+    echo
+
+    # No existing Che container found, we need to create a new one.
+    else
+      CREATE_NEW_CONTAINER=true
+    fi
+
+    if ${CREATE_NEW_CONTAINER} ; then
+      # Container in bad state or not found, kill and launch new container.
+      kill_and_launch_docker_registry
+    fi
+}
+
 init() {
-  # Set variables that use docker as utilities to avoid over container execution
-  ETH0_ADDRESS=$(docker run --rm --net host alpine /bin/sh -c "ifconfig eth0 2> /dev/null" | \
-                                                            grep "inet addr:" | \
-                                                            cut -d: -f2 | \
-                                                            cut -d" " -f1)
-
-  ETH1_ADDRESS=$(docker run --rm --net host alpine /bin/sh -c "ifconfig eth1 2> /dev/null" | \
-                                                            grep "inet addr:" | \
-                                                            cut -d: -f2 | \
-                                                            cut -d" " -f1) 
-
-  DOCKER0_ADDRESS=$(docker run --rm --net host alpine /bin/sh -c "ifconfig docker0 2> /dev/null" | \
-                                                              grep "inet addr:" | \
-                                                              cut -d: -f2 | \
-                                                              cut -d" " -f1)
-
   ### Any variables with export is a value that native Tomcat che.sh startup script requires
+  export CHE_IP=${CHE_IP}
 
-  ### Set these values for any che server running in a container
-  DOCKER_HOST_IP=$(get_docker_host_ip)
-  export CHE_IP=${CHE_IP:-${DOCKER_HOST_IP}}
-  export CHE_IN_CONTAINER="true"
-  export CHE_SKIP_JAVA_VERSION_CHECK="true"
-
-  if [ -f "/assembly/bin/che.sh" ]; then
+  if [ -f "/assembly/conf/che.properties" ]; then
     echo "Found custom assembly..."
     export CHE_HOME="/assembly"
   else
     echo "Using embedded assembly..."
-    export CHE_HOME="/home/user/che"
+    export CHE_HOME=$(echo /home/user/artik-ide-*)
   fi
 
   ### Are we using the included assembly or did user provide their own?
-#  DEFAULT_CHE_HOME="/assembly"
-#  export CHE_HOME=${CHE_ASSEMBLY:-${DEFAULT_CHE_HOME}}
-
-  if [ ! -f $CHE_HOME/bin/che.sh ]; then
+  if [ ! -f $CHE_HOME/conf/che.properties ]; then
     echo "!!!"
-    echo "!!! Error: Could not find $CHE_HOME/bin/che.sh."
+    echo "!!! Error: Could not find $CHE_HOME/conf/che.properties."
     echo "!!! Error: Did you use CHE_ASSEMBLY with a typo?"
     echo "!!!"
     exit 1
   fi
 
   ### We need to discover the host mount provided by the user for `/data`
- # DEFAULT_CHE_DATA="/data"
- # export CHE_DATA=${CHE_DATA:-${DEFAULT_CHE_DATA}}
   export CHE_DATA="/data"
   CHE_DATA_HOST=$(get_che_data_from_host)
 
+  CHE_USER=${CHE_USER:-root}
+  export CHE_USER=$CHE_USER
+  if [ "$CHE_USER" != "root" ]; then
+    if [ ! $(getent group docker) ]; then
+      echo "!!!"
+      echo "!!! Error: The docker group doesn't exist."
+      echo "!!!"
+      exit 1
+    fi
+    export CHE_USER_ID=`id -u ${CHE_USER}`:`getent group docker | cut -d: -f3`
+    sudo chown -R ${CHE_USER}:docker ${CHE_DATA}
+    sudo chown -R ${CHE_USER}:docker ${CHE_HOME}
+  fi
   ### Are we going to use the embedded che.properties or one provided by user?`
   ### CHE_LOCAL_CONF_DIR is internal Che variable that sets where to load
-#  DEFAULT_CHE_CONF_DIR="/conf"
-#  export CHE_LOCAL_CONF_DIR="${CHE_DATA}/conf"
-#  export CHE_LOCAL_CONF_DIR=${CHE_LOCAL_CONF_DIR:-${DEFAULT_CHE_CONF_DIR}}
-
   if [ -f "/conf/che.properties" ]; then
     echo "Found custom che.properties..."
     export CHE_LOCAL_CONF_DIR="/conf"
+    if [ "$CHE_USER" != "root" ]; then
+      sudo chown -R ${CHE_USER}:docker ${CHE_LOCAL_CONF_DIR}
+    fi
   else
     echo "Using embedded che.properties... Copying template to ${CHE_DATA_HOST}/conf."
     mkdir -p /data/conf
@@ -103,26 +265,20 @@ init() {
   sed -i "/che.workspace.terminal_linux_amd64=/c\che.workspace.terminal_linux_amd64=${CHE_DATA_HOST}/lib/linux_amd64/terminal" $CHE_LOCAL_CONF_DIR/che.properties
   sed -i "/che.workspace.terminal_linux_arm7=/c\che.workspace.terminal_linux_arm7=${CHE_DATA_HOST}/lib/linux_arm7/terminal" $CHE_LOCAL_CONF_DIR/che.properties
 
-  ### If this container is inside of a VM like boot2docker, then additional internal mods required
-  DEFAULT_CHE_IN_VM=$(is_in_vm)
-  export CHE_IN_VM=${CHE_IN_VM:-${DEFAULT_CHE_IN_VM}}
-
-  if [ "$CHE_IN_VM" = "true" ]; then
-    # CHE_DOCKER_MACHINE_HOST_EXTERNAL must be set if you are in a VM. 
-    HOSTNAME=$(get_docker_external_hostname)
-    if has_external_hostname; then
-      # Internal property used by Che to set hostname.
-      # See: LocalDockerInstanceRuntimeInfo.java#L9
-      export CHE_DOCKER_MACHINE_HOST_EXTERNAL=${HOSTNAME}
-    fi
-    ### Necessary to allow the container to write projects to the folder
-    export CHE_WORKSPACE_STORAGE="${CHE_DATA_HOST}/workspaces"
-    export CHE_WORKSPACE_STORAGE_CREATE_FOLDERS=false
+  # CHE_DOCKER_MACHINE_HOST_EXTERNAL must be set if you are in a VM.
+  HOSTNAME=${CHE_DOCKER_MACHINE_HOST_EXTERNAL:-$(get_docker_external_hostname)}
+  if has_external_hostname; then
+    # Internal property used by Che to set hostname.
+    # See: LocalDockerInstanceRuntimeInfo.java#L9
+    export CHE_DOCKER_MACHINE_HOST_EXTERNAL=${HOSTNAME}
   fi
+  ### Necessary to allow the container to write projects to the folder
+  export CHE_WORKSPACE_STORAGE="${CHE_DATA_HOST}/workspaces"
+  export CHE_WORKSPACE_STORAGE_CREATE_FOLDERS=false
 
   # Move files from /lib to /lib-copy.  This puts files onto the host.
   rm -rf ${CHE_DATA}/lib/*
-  mkdir -p ${CHE_DATA}/lib  
+  mkdir -p ${CHE_DATA}/lib
   cp -rf ${CHE_HOME}/lib/* "${CHE_DATA}"/lib
 
   if [[ ! -f "${CHE_DATA}"/stacks/stacks.json ]];then
@@ -142,82 +298,29 @@ init() {
 }
 
 get_che_data_from_host() {
+  DEFAULT_DATA_HOST_PATH=/data
   CHE_SERVER_CONTAINER_ID=$(get_che_server_container_id)
-  echo $(docker inspect --format='{{(index .Volumes "/data")}}' $CHE_SERVER_CONTAINER_ID)
+  # If `docker inspect` fails $DEFAULT_DATA_HOST_PATH is returned
+  echo $(docker inspect --format='{{(index .Volumes "/data")}}' $CHE_SERVER_CONTAINER_ID 2>/dev/null || echo $DEFAULT_DATA_HOST_PATH)
 }
 
 get_che_server_container_id() {
+  # Returning `hostname` doesn't work when running Che on OpenShift/Kubernetes.
+  # In these cases `hostname` correspond to the pod ID that is different from
+  # the container ID
   hostname
 }
 
-get_docker_host_ip() {
-  case $(get_docker_install_type) in
-   boot2docker)
-     echo $ETH1_ADDRESS
-   ;;
-   native)
-     echo $DOCKER0_ADDRESS
-   ;;
-   *)
-     echo $ETH0_ADDRESS
-   ;;
-  esac
-}
-
-get_docker_install_type() {
-  if is_boot2docker; then
-    echo "boot2docker"
-  elif is_docker_for_windows; then
-    echo "docker4windows"
-  elif is_docker_for_mac; then
-    echo "docker4mac"
-  else
-    echo "native"
-  fi
-}
-
-is_boot2docker() {
-  if uname -r | grep -q 'boot2docker'; then
+is_docker_for_mac_or_windows() {
+  if uname -r | grep -q 'moby'; then
     return 0
   else
     return 1
-  fi
-}
-
-is_docker_for_windows() {
-  if uname -r | grep -q 'moby' && has_docker_for_windows_ip; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-has_docker_for_windows_ip() {
-  if [ "${ETH0_ADDRESS}" = "10.0.75.2" ]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-is_docker_for_mac() {
-  if uname -r | grep -q 'moby' && ! has_docker_for_windows_ip; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-is_in_vm() {
-  if is_docker_for_mac || is_docker_for_windows || is_boot2docker; then
-    echo "true"
-  else
-    echo "false"
   fi
 }
 
 get_docker_external_hostname() {
-  if is_docker_for_mac || is_docker_for_windows; then
+  if is_docker_for_mac_or_windows; then
     echo "localhost"
   else
     echo ""
@@ -236,20 +339,24 @@ has_external_hostname() {
 responsible_shutdown() {
   echo ""
   echo "Received SIGTERM"
-  "${CHE_HOME}"/bin/che.sh stop
+  stop_che_server &
   wait ${PID}
   exit;
 }
+
+set -e
 
 # setup handlers
 # on callback, kill the last background process, which is `tail -f /dev/null` and execute the specified handler
 trap 'responsible_shutdown' SIGHUP SIGTERM SIGINT
 
-check_docker
 init
+init_global_variables
+set_environment_variables
 
-# run application
-"${CHE_HOME}"/bin/che.sh run &
+# run che
+start_che_server &
+
 PID=$!
 
 # See: http://veithen.github.io/2014/11/16/sigterm-propagation.html
