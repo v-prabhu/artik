@@ -32,6 +32,7 @@ import java.util.List;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
 import static org.eclipse.che.api.core.util.LinksHelper.createLink;
+import static org.eclipse.che.api.machine.shared.Constants.EXEC_AGENT_REFERENCE;
 import static org.eclipse.che.api.machine.shared.Constants.TERMINAL_REFERENCE;
 import static org.eclipse.che.dto.server.DtoFactory.newDto;
 
@@ -98,14 +99,23 @@ public class ArtikDeviceServiceLinksInjector {
             servers.stream()
                    .filter(server -> TERMINAL_REFERENCE.equals(server.getRef()))
                    .findAny()
-                   .ifPresent(terminal -> links.add(createLink("GET",
-                                                               UriBuilder.fromUri(terminal.getUrl())
-                                                                         .scheme("https".equals(scheme) ? "wss"
-                                                                                                        : "ws")
-                                                                         .path("/pty")
-                                                                         .build()
-                                                                         .toString(),
-                                                               TERMINAL_REFERENCE)));
+                   .ifPresent(terminal -> {
+                       links.add(createLink("GET",
+                                            UriBuilder.fromUri(terminal.getUrl())
+                                                      .scheme("https".equals(scheme) ? "wss"
+                                                                                     : "ws")
+                                                      .path("/pty")
+                                                      .build()
+                                                      .toString(),
+                                            TERMINAL_REFERENCE));
+                       links.add(createLink("GET",
+                                            UriBuilder.fromUri(terminal.getUrl())
+                                                      .scheme("https".equals(scheme) ? "wss" : "ws")
+                                                      .path("/connect")
+                                                      .build()
+                                                      .toString(),
+                                            EXEC_AGENT_REFERENCE));
+                   });
         }
     }
 

@@ -22,6 +22,11 @@ import org.eclipse.che.api.machine.shared.Constants;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
 import org.eclipse.che.api.machine.shared.dto.event.MachineProcessEvent;
+import org.eclipse.che.api.machine.shared.dto.execagent.ProcessSubscribeResponseDto;
+import org.eclipse.che.api.machine.shared.dto.execagent.event.ProcessDiedEventDto;
+import org.eclipse.che.api.machine.shared.dto.execagent.event.ProcessStartedEventDto;
+import org.eclipse.che.api.machine.shared.dto.execagent.event.ProcessStdErrEventDto;
+import org.eclipse.che.api.machine.shared.dto.execagent.event.ProcessStdOutEventDto;
 import org.eclipse.che.api.promises.client.Operation;
 import org.eclipse.che.api.promises.client.OperationException;
 import org.eclipse.che.api.promises.client.PromiseError;
@@ -188,6 +193,36 @@ public class ArtikCommandOutputConsole implements CommandOutputConsole, OutputCo
         } else {
             handelProcessEvents();
         }
+    }
+
+    @Override
+    public Operation<ProcessStdErrEventDto> getStdErrOperation() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Operation<ProcessStdOutEventDto> getStdOutOperation() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Operation<ProcessStartedEventDto> getProcessStartedOperation() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Operation<ProcessDiedEventDto> getProcessDiedOperation() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Operation<ProcessSubscribeResponseDto> getProcessSubscribeOperation() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void printOutput(String output) {
+        throw new UnsupportedOperationException();
     }
 
     private void handelProcessEvents() {
