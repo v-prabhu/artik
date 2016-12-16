@@ -398,7 +398,7 @@ public class ArtikDeviceManager {
 
             final DeviceHealthChecker deviceHealthChecker = new DeviceHealthChecker(artikDevice);
             checkers.put(deviceId, deviceHealthChecker);
-            launcher.scheduleWithFixedDelay(deviceHealthChecker, 2L, 2L, SECONDS);
+            launcher.scheduleWithFixedDelay(deviceHealthChecker, 1L, 2L, SECONDS);
 
             return ArtikDtoConverter.asDto(instance);
         } catch (ApiException e) {
@@ -609,7 +609,7 @@ public class ArtikDeviceManager {
         private void checkConnection(ArtikDevice device) {
             final ListLineConsumer listLineConsumer = new ListLineConsumer();
             final Instance instance = device.getInstance();
-            final ProcessBuilder processBuilder = new ProcessBuilder("nc", "-vi", "1", host, port.toString());
+            final ProcessBuilder processBuilder = new ProcessBuilder("nc", "-vi", "0.01", host, port.toString());
 
             try {
                 ProcessUtil.execute(processBuilder, listLineConsumer);
@@ -618,11 +618,11 @@ public class ArtikDeviceManager {
 
                 final String outputText = listLineConsumer.getText();
                 if (outputText.contains("No route to host") || outputText.contains("Connection refused")) {
+                    device.setStatus(ERROR);
                     eventService.publish(newDto(ArtikDeviceStatusEventDto.class)
                                                  .withEventType(ArtikDeviceStatusEventDto.EventType.DISCONNECTED)
                                                  .withDeviceName(instance.getConfig().getName())
                                                  .withDeviceId(instance.getId()));
-                    device.setStatus(ERROR);
                 }
             } catch (IOException | InterruptedException e) {
                 LOG.error(e.getMessage());
