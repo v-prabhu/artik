@@ -23,10 +23,35 @@
     ]
   },
   {
+    "name": "artik-sdk-nodejs-samples",
+    "displayName": "artik-sdk-nodejs-samples",
+    "path": "/artik-sdk-nodejs-samples",
+    "description": "A set of sample node.js programs that show use of ARTIK SDK with JavaScript. Navigate to `/test` directory to run scripts",
+    "projectType": "node-js",
+    "mixins": [],
+    "attributes": {
+    },
+    "modules": [],
+    "problems": [],
+    "source": {
+      "type": "git",
+      "location": "https://github.com/SamsungARTIK/artik-sdk.git",
+      "parameters": {
+        "branch":"1.0-maintenance"
+      }
+    },
+    "commands": [],
+    "links": [],
+    "category": "Samples",
+    "tags": [
+      "Artik"
+    ]
+  },
+  {
     "name": "artik-samples",
     "displayName": "artik-samples",
     "path": "/artik-samples",
-    "description": "A set of ARTIK SDK samples",
+    "description": "A set of ARTIK SDK samples in C",
     "projectType": "c",
     "mixins": [],
     "attributes": {},
@@ -307,7 +332,7 @@
     "name": "artik-blink-led",
     "displayName": "artik-blink-led",
     "path": "/artik-blink-led",
-    "description": "IoT universe's equivalent of the famous \"Hello World\" program - use ARTIK to blink an LED",
+    "description": "IoT universe's equivalent of the famous \"Hello World\" program in C - use ARTIK to blink an LED",
     "projectType": "c",
     "mixins": [],
     "attributes": {
@@ -833,8 +858,8 @@
     "name": "console-cpp-simple",
     "displayName": "console-cpp-simple",
     "path": "/console-cpp-simple",
-    "description": "The app will print Hello World to the console.",
-    "projectType": "blank",
+    "description": "CPP app that prints Hello World to the console.",
+    "projectType": "cpp",
     "mixins": [],
     "attributes": {
       "language": [
@@ -862,7 +887,8 @@
     "category": "Samples",
     "tags": [
       "cpp",
-      "gcc"
+      "gcc",
+      "Artik"
     ]
   },
   {
