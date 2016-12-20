@@ -97,6 +97,7 @@ public class WsAgentModule extends AbstractModule {
         install(new GitHubModule());
         install(new org.eclipse.che.swagger.deploy.DocsModule());
         install(new org.eclipse.che.api.debugger.server.DebuggerModule());
+        install(new org.eclipse.che.commons.schedule.executor.ScheduleModule());
 
         bindConstant().annotatedWith(Names.named(ArtikTerminalLauncher.TERMINAL_LOCATION_PROPERTY)).to("~/che");
 

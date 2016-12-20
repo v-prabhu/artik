@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static org.eclipse.che.api.core.model.machine.MachineStatus.RUNNING;
 import static org.eclipse.che.ide.api.notification.StatusNotification.DisplayMode.FLOAT_MODE;
 import static org.eclipse.che.ide.api.notification.StatusNotification.Status.FAIL;
 import static org.eclipse.che.ide.api.notification.StatusNotification.Status.PROGRESS;
@@ -127,7 +128,9 @@ public class UpdateSDKPresenter implements UpdateSDKView.ActionDelegate {
             public List<TargetForUpdate> apply(List<MachineDto> machines) throws FunctionException {
                 List<TargetForUpdate> list = new ArrayList<>();
                 for (Machine machine : machines) {
-                    list.add(new TargetForUpdate(machine.getId(), machine.getConfig().getName()));
+                    if (RUNNING.equals(machine.getStatus())) {
+                        list.add(new TargetForUpdate(machine.getId(), machine.getConfig().getName()));
+                    }
                 }
                 list.add(new TargetForUpdate(appContext.getDevMachine().getId(), "Workspace"));
                 return list;
