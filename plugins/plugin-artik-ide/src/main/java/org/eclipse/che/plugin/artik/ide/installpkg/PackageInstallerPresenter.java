@@ -98,12 +98,13 @@ public class PackageInstallerPresenter implements PackageInstallerView.ActionDel
     @Override
     public void onInstallButtonClicked() {
         String packageName = view.getPackageName();
-        progressNotification = notificationManager.notify("Installing package: " +
+        if (packageName != null && !packageName.isEmpty()) {
+            progressNotification = notificationManager.notify("Installing package: " +
                                                           packageName +
                                                           " on the target machine: " +
                                                           machine.getConfig().getName() +
                                                           ".", StatusNotification.Status.PROGRESS, FLOAT_MODE);
-        if (packageName != null && !packageName.isEmpty()) {
+
             String command = "dnf install " + packageName + " -y \n"
                              + "# Special marker line. Don't modify it.\n"
                              + "echo \">>> end <<<\"";
