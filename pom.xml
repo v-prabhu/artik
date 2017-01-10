@@ -17,11 +17,11 @@
     <parent>
         <artifactId>maven-depmgt-pom</artifactId>
         <groupId>org.eclipse.che.depmgt</groupId>
-        <version>5.0.0-SNAPSHOT</version>
+        <version>5.0.0</version>
     </parent>
     <groupId>org.eclipse.artik</groupId>
     <artifactId>artik-ide-parent</artifactId>
-    <version>1.2.5-SNAPSHOT</version>
+    <version>1.3.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Artik IDE :: Parent</name>
     <inceptionYear>2016</inceptionYear>
@@ -36,7 +36,7 @@
         <url>https://github.com/codenvy/artik-ide</url>
     </scm>
     <properties>
-        <che.version>5.0.0-SNAPSHOT</che.version>
+        <che.version>5.0.0</che.version>
         <dto-generator-out-directory>${project.build.directory}/generated-sources/dto/</dto-generator-out-directory>
         <license_contributor>Codenvy, S.A. - Initial implementation</license_contributor>
         <license_contributor2>Samsung Electronics Co., Ltd. - Initial implementation</license_contributor2>
