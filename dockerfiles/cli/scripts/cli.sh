@@ -22,40 +22,52 @@ generate_configuration_with_puppet() {
     ARTIK_ENV_FILE="${CHE_HOST_INSTANCE}/config/$CHE_MINI_PRODUCT_NAME.env"
   fi
 
-  if [ "${CHE_DEVELOPMENT_MODE}" = "on" ]; then
-    # Note - bug in docker requires relative path for env, not absolute
-    GENERATE_CONFIG_COMMAND="docker_run \
-                  --env-file=\"${REFERENCE_CONTAINER_ENVIRONMENT_FILE}\" \
-                  --env-file=/version/$CHE_VERSION/images \
-                  -v \"${CHE_HOST_INSTANCE}\":/opt/${CHE_MINI_PRODUCT_NAME}:rw \
-                  -v \"${CHE_HOST_DEVELOPMENT_REPO}/dockerfiles/init/manifests\":/etc/puppet/manifests:ro \
-                  -v \"${CHE_HOST_DEVELOPMENT_REPO}/dockerfiles/init/modules\":/etc/puppet/modules:ro \
-                  -e \"ARTIK_ENV_FILE=${ARTIK_ENV_FILE}\" \
-                  -e \"CHE_ENVIRONMENT=development\" \
-                  -e \"CHE_CONFIG=${CHE_HOST_INSTANCE}\" \
-                  -e \"CHE_INSTANCE=${CHE_HOST_INSTANCE}\" \
-                  -e \"CHE_DEVELOPMENT_REPO=${CHE_HOST_DEVELOPMENT_REPO}\" \
-                  -e \"CHE_ASSEMBLY=${CHE_ASSEMBLY}\" \
-                  --entrypoint=/usr/bin/puppet \
-                      $IMAGE_INIT \
-                          apply --modulepath \
-                                /etc/puppet/modules/ \
-                                /etc/puppet/manifests/${CHE_MINI_PRODUCT_NAME}.pp --show_diff"
+  if debug_server; then
+    CHE_ENVIRONMENT="development"
+    WRITE_LOGS=""
   else
-    GENERATE_CONFIG_COMMAND="docker_run \
+    CHE_ENVIRONMENT="production"
+    WRITE_LOGS=">> \"${LOGS}\""
+  fi
+
+
+  if local_repo; then
+    CHE_REPO="on"
+    WRITE_PARAMETERS=" -e \"CHE_ASSEMBLY=${CHE_ASSEMBLY}\""
+    # add local mounts only if they are present
+    if [ -d "/repo/dockerfiles/init/manifests" ]; then
+      WRITE_PARAMETERS+=" -v \"${CHE_HOST_DEVELOPMENT_REPO}/dockerfiles/init/manifests\":/etc/puppet/manifests:ro"
+    fi
+    if [ -d "/repo/dockerfiles/init/modules" ]; then
+      WRITE_PARAMETERS+=" -v \"${CHE_HOST_DEVELOPMENT_REPO}/dockerfiles/init/modules\":/etc/puppet/modules:ro"
+    fi
+    # Handle override/addon
+    if [ -d "/repo/dockerfiles/init/addon" ]; then
+      WRITE_PARAMETERS+=" -v \"${CHE_HOST_DEVELOPMENT_REPO}/dockerfiles/init/addon/addon.pp\":/etc/puppet/manifests/addon.pp:ro"
+    fi
+
+  else
+    CHE_REPO="off"
+    WRITE_PARAMETERS=""
+  fi
+
+
+  GENERATE_CONFIG_COMMAND="docker_run \
                   --env-file=\"${REFERENCE_CONTAINER_ENVIRONMENT_FILE}\" \
                   --env-file=/version/$CHE_VERSION/images \
                   -v \"${CHE_HOST_INSTANCE}\":/opt/${CHE_MINI_PRODUCT_NAME}:rw \
+                  ${WRITE_PARAMETERS} \
                   -e \"ARTIK_ENV_FILE=${ARTIK_ENV_FILE}\" \
-                  -e \"CHE_ENVIRONMENT=production\" \
+                  -e \"CHE_CONTAINER_ROOT=${CHE_CONTAINER_ROOT}\" \
+                  -e \"CHE_ENVIRONMENT=${CHE_ENVIRONMENT}\" \
                   -e \"CHE_CONFIG=${CHE_HOST_INSTANCE}\" \
                   -e \"CHE_INSTANCE=${CHE_HOST_INSTANCE}\" \
+                  -e \"CHE_REPO=${CHE_REPO}\" \
                   --entrypoint=/usr/bin/puppet \
                       $IMAGE_INIT \
                           apply --modulepath \
                                 /etc/puppet/modules/ \
-                                /etc/puppet/manifests/${CHE_MINI_PRODUCT_NAME}.pp --show_diff >> \"${LOGS}\""
-  fi
+                                /etc/puppet/manifests/ --show_diff ${WRITE_LOGS}"
 
   log ${GENERATE_CONFIG_COMMAND}
   eval ${GENERATE_CONFIG_COMMAND}
