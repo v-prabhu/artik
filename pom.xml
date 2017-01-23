@@ -28,6 +28,7 @@
     <modules>
         <module>plugins</module>
         <module>assembly</module>
+        <module>electron</module>
     </modules>
     <scm>
         <connection>scm:git:git@github.com:codenvy/artik-ide.git</connection>
@@ -73,6 +74,18 @@
                 <artifactId>artik-ide-assembly-wsmaster-war</artifactId>
                 <version>${project.version}</version>
                 <type>war</type>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.artik</groupId>
+                <artifactId>artik-ide-electron-client</artifactId>
+                <version>${project.version}</version>
+                <type>zip</type>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.artik</groupId>
+                <artifactId>artik-ide-electron-client-win</artifactId>
+                <version>${project.version}</version>
+                <type>zip</type>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.artik.plugin</groupId>
