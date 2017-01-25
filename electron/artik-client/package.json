@@ -11,7 +11,8 @@
     "dist": "npm run compile && node_modules/.bin/build -lwm --x64",
     "dist-win" : "npm run compile && node_modules/.bin/build -w --x64",
     "dist-mac" : "npm run compile && node_modules/.bin/build -m --x64",
-    "dist-linux" : "npm run compile && node_modules/.bin/build -l --x64"
+    "dist-linux" : "npm run compile && node_modules/.bin/build -l --x64",
+    "postinstall": "install-app-deps"
   },
   "build": {
     "appId": "org.eclipse.che",
