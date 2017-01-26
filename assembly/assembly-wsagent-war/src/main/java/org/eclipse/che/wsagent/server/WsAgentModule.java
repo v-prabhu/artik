@@ -15,15 +15,12 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.multibindings.MapBinder;
-import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 
 import org.eclipse.che.ApiEndpointAccessibilityChecker;
 import org.eclipse.che.EventBusURLProvider;
 import org.eclipse.che.UriApiEndpointProvider;
 import org.eclipse.che.UserTokenProvider;
-import org.eclipse.che.api.agent.server.AgentRegistryService;
-import org.eclipse.che.api.agent.shared.model.Agent;
 import org.eclipse.che.api.auth.oauth.OAuthTokenProvider;
 import org.eclipse.che.api.core.jsonrpc.RequestHandler;
 import org.eclipse.che.api.core.jsonrpc.RequestTransmitter;
@@ -70,8 +67,6 @@ import java.net.URI;
 public class WsAgentModule extends AbstractModule {
     @Override
     protected void configure() {
-        bind(AgentRegistryService.class);
-        Multibinder<Agent> agentsMultibinder = Multibinder.newSetBinder(binder(), Agent.class);
         bind(ApiInfoService.class);
         bind(org.eclipse.che.plugin.machine.artik.replication.PushToDeviceService.class);
         bind(org.eclipse.che.plugin.machine.artik.discovery.DeviceDiscoveryService.class);
@@ -99,9 +94,6 @@ public class WsAgentModule extends AbstractModule {
         install(new org.eclipse.che.commons.schedule.executor.ScheduleModule());
 
         bindConstant().annotatedWith(Names.named(ArtikTerminalLauncher.TERMINAL_LOCATION_PROPERTY)).to("~/che");
-
-        bind(org.eclipse.che.api.agent.server.AgentRegistry.class)
-                .to(org.eclipse.che.api.agent.server.impl.LocalAgentRegistryImpl.class);
 
         bind(ArchetypeGenerator.class);
 
