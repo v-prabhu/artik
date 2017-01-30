@@ -102,8 +102,6 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
     private Device             selectedDevice;
     /* Notification informing connecting to the target is in progress */
     private StatusNotification connectNotification;
-    /* Name currently connecting target  */
-    private String             connectTargetName;
 
     @Inject
     public ManageDevicesPresenter(final ManageDevicesView view,
@@ -185,8 +183,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         for (MachineDto machine : arg) {
             machines.put(machine.getConfig().getName(), machine);
             if (RUNNING.equals(machine.getStatus())) {
-                eventBus.fireEvent(new MachineStateEvent(entityFactory.createMachine(machine),
-                                                         MachineStateEvent.MachineAction.RUNNING));
+                eventBus.fireEvent(new MachineStateEvent(entityFactory.createMachine(machine), MachineStateEvent.MachineAction.RUNNING));
             }
         }
     }
@@ -477,6 +474,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
         if (selectedDevice.isConnected()) {
             disconnect();
         } else {
+            view.enableConnectButton(false);
             saveDeviceChanges();
         }
     }
@@ -538,7 +536,6 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
     private void connect() {
         view.setConnectButtonText(null);
 
-        connectTargetName = selectedDevice.getName();
         connectNotification = notificationManager.notify(locale.deviceConnectProgress(selectedDevice.getName()),
                                                          StatusNotification.Status.PROGRESS,
                                                          StatusNotification.DisplayMode.FLOAT_MODE);
@@ -559,21 +556,20 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
             @Override
             public void apply(MachineDto device) throws OperationException {
                 machines.put(device.getConfig().getName(), device);
+                view.enableConnectButton(true);
                 storeDevices();
             }
         }).catchError(new Operation<PromiseError>() {
             @Override
             public void apply(PromiseError arg) throws OperationException {
                 onConnectingFailed(arg.getMessage());
+                view.enableConnectButton(true);
             }
         });
     }
 
     @Override
     public void onMachineStatusChanged(final MachineStatusChangedEvent event) {
-        if (connectNotification == null || connectTargetName == null || !connectTargetName.equals(event.getMachineName())) {
-            return;
-        }
         switch (event.getEventType()) {
             case RUNNING:
                 onConnected(event.getMachineId());
@@ -622,6 +618,9 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                     @Override
                     public void apply(MachineDto machineDto) throws OperationException {
                         if (machineDto != null && machineDto.getStatus() == RUNNING) {
+                            if (connectNotification == null) {
+                                return;
+                            }
                             eventBus.fireEvent(new MachineStateEvent(entityFactory.createMachine(machineDto),
                                                                      MachineStateEvent.MachineAction.RUNNING));
                             final String machineName = machineDto.getConfig().getName();
@@ -792,7 +791,15 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
                 connectNotification.setStatus(StatusNotification.Status.SUCCESS);
                 softwareManager.checkAndInstall(deviceName);
                 updateDevices(deviceName);
+                view.enableConnectButton(true);
                 view.hide();
+            }
+        }).catchError(new Operation<PromiseError>() {
+            @Override
+            public void apply(PromiseError promiseError) throws OperationException {
+                connectNotification.setTitle(promiseError.getMessage());
+                connectNotification.setStatus(StatusNotification.Status.FAIL);
+                view.enableConnectButton(true);
             }
         });
     }
@@ -886,7 +893,7 @@ public class ManageDevicesPresenter implements ManageDevicesView.ActionDelegate,
      *         a reason to be attached to the error message
      */
     private void onConnectingFailed(String reason) {
-        if (isNullOrEmpty(reason)) {
+        if (isNullOrEmpty(reason) || connectNotification == null) {
             return;
         }
         connectNotification.setTitle(locale.deviceConnectError(selectedDevice.getName()));

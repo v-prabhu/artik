@@ -316,9 +316,8 @@ public class ArtikDeviceManager {
         }
         device.connect();
         Instance instance = device.getInstance();
-        if (ArtikDevice.Status.ERROR.equals(device.getStatus())) {
-            instance = createNewInstance(deviceId, instance);
-        }
+        instance = createNewInstance(deviceId, instance);
+
         artikTerminalLauncher.launch(instance);
 
         DeviceHealthChecker deviceHealthChecker = checkers.get(deviceId);
