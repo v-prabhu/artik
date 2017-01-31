@@ -5,11 +5,17 @@
 # which accompanies this distribution, and is available at
 # http://www.eclipse.org/legal/epl-v10.html
 #
-cli_pre_init() {
+
+post_init() {
   GLOBAL_HOST_IP=${GLOBAL_HOST_IP:=$(docker_run --net host eclipse/che-ip:nightly)}
   DEFAULT_ARTIK_HOST=$GLOBAL_HOST_IP
   ARTIK_HOST=${ARTIK_HOST:-${DEFAULT_ARTIK_HOST}}
-  ARTIK_PORT=8080
+  DEFAULT_ARTIK_PORT=8080
+  ARTIK_PORT=${ARTIK_PORT:-${DEFAULT_ARTIK_PORT}}
+  CHE_PORT=${ARTIK_PORT}
+  CHE_MIN_RAM=1.5
+  CHE_MIN_DISK=100
+
 }
 
 # Runs puppet image to generate ${CHE_FORMAL_PRODUCT_NAME} configuration
