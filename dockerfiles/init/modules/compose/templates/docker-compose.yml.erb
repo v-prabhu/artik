@@ -16,13 +16,13 @@ artik:
     - '<%= scope.lookupvar('artik::che_instance') -%>/data:/data'
     - '<%= scope.lookupvar('artik::che_instance') -%>/logs:/logs'
     - '<%= scope.lookupvar('artik::che_instance') -%>/config:/conf'
-<% if scope.lookupvar('artik::che_env') != 'production' -%>
+<% if scope.lookupvar('artik::che_dev_env') == 'on' -%>
     - '<%= scope.lookupvar('artik::che_assembly') -%>:/assembly'
 <% end -%>
   ports:
-    - '<%= scope.lookupvar('artik::che_port') -%>:8080'
-<% if scope.lookupvar('artik::che_env') != 'production' -%>
-    - '8000:8000'
+    - '<%= scope.lookupvar('artik::che_port') -%>:<%= scope.lookupvar('artik::che_port') -%>'
+<% if scope.lookupvar('artik::che_env') == 'development' -%>
+    - '<%= scope.lookupvar('artik::che_debug_port') -%>:<%= scope.lookupvar('artik::che_debug_port') -%>'
 <% end -%>
   restart: always
   container_name: artik

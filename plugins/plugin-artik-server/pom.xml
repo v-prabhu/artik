@@ -17,7 +17,7 @@
     <parent>
         <artifactId>artik-ide-plugin-parent</artifactId>
         <groupId>org.eclipse.artik.plugin</groupId>
-        <version>1.3.1-SNAPSHOT</version>
+        <version>1.4.0-SNAPSHOT</version>
     </parent>
     <artifactId>artik-ide-plugin-server</artifactId>
     <packaging>jar</packaging>
@@ -71,12 +71,12 @@
             <artifactId>artik-ide-plugin-shared</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.che.core</groupId>
-            <artifactId>che-core-api-agent</artifactId>
+            <groupId>org.eclipse.che</groupId>
+            <artifactId>exec-agent</artifactId>
         </dependency>
         <dependency>
             <groupId>org.eclipse.che.core</groupId>
-            <artifactId>che-core-api-agent-shared</artifactId>
+            <artifactId>che-core-api-agent</artifactId>
         </dependency>
         <dependency>
             <groupId>org.eclipse.che.core</groupId>

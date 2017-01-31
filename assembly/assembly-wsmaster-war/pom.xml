@@ -17,7 +17,7 @@
     <parent>
         <artifactId>artik-ide-assembly-parent</artifactId>
         <groupId>org.eclipse.artik</groupId>
-        <version>1.3.1-SNAPSHOT</version>
+        <version>1.4.0-SNAPSHOT</version>
     </parent>
     <artifactId>artik-ide-assembly-wsmaster-war</artifactId>
     <packaging>war</packaging>
@@ -58,6 +58,38 @@
         <dependency>
             <groupId>javax.inject</groupId>
             <artifactId>javax.inject</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.che</groupId>
+            <artifactId>exec-agent</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.che</groupId>
+            <artifactId>ls-csharp-agent</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.che</groupId>
+            <artifactId>ls-json-agent</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.che</groupId>
+            <artifactId>ls-php-agent</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.che</groupId>
+            <artifactId>ls-python-agent</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.che</groupId>
+            <artifactId>ls-typescript-agent</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.che</groupId>
+            <artifactId>ssh-agent</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.che</groupId>
+            <artifactId>unison-agent</artifactId>
         </dependency>
         <dependency>
             <groupId>org.eclipse.che.core</groupId>
@@ -114,6 +146,10 @@
         <dependency>
             <groupId>org.eclipse.che.core</groupId>
             <artifactId>che-core-sql-schema</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.che.core</groupId>
+            <artifactId>wsagent</artifactId>
         </dependency>
         <dependency>
             <groupId>org.eclipse.che.core</groupId>
