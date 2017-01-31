@@ -12,12 +12,14 @@
 package org.eclipse.che.plugin.artik.ide.updatesdk;
 
 import com.google.gwt.core.client.JsArrayMixed;
+import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.Singleton;
 
 import org.eclipse.che.api.core.model.machine.Machine;
+import org.eclipse.che.api.core.model.workspace.WorkspaceStatus;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
 import org.eclipse.che.api.promises.client.Function;
 import org.eclipse.che.api.promises.client.FunctionException;
@@ -26,6 +28,7 @@ import org.eclipse.che.api.promises.client.OperationException;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.api.promises.client.js.Promises;
+import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.dialogs.ConfirmCallback;
 import org.eclipse.che.ide.api.dialogs.ConfirmDialog;
@@ -200,10 +203,11 @@ public class UpdateSDKPresenter implements UpdateSDKView.ActionDelegate {
                 ConfirmCallback confirmCallback = new ConfirmCallback() {
                     @Override
                     public void accepted() {
-                        workspaceServiceClient.stop(appContext.getWorkspaceId()).then(new Operation<Void>() {
+                        final String workspaceId = appContext.getWorkspaceId();
+                        workspaceServiceClient.stop(workspaceId).then(new Operation<Void>() {
                             @Override
                             public void apply(Void aVoid) throws OperationException {
-                                Window.Location.reload();
+                                checkWsStatus(workspaceId);
                             }
                         });
                     }
@@ -216,6 +220,24 @@ public class UpdateSDKPresenter implements UpdateSDKView.ActionDelegate {
                                                                          confirmCallback,
                                                                          null);
                 dialog.show();
+            }
+        });
+    }
+
+    private void checkWsStatus(final String workspaceId) {
+        workspaceServiceClient.getWorkspace(workspaceId).then(new Operation<WorkspaceDto>() {
+            @Override
+            public void apply(WorkspaceDto workspaceDto) throws OperationException {
+                if (WorkspaceStatus.STOPPED.equals(workspaceDto.getStatus())) {
+                    Window.Location.reload();
+                } else {
+                    new Timer() {
+                        @Override
+                        public void run() {
+                            checkWsStatus(workspaceId);
+                        }
+                    }.schedule(1000);
+                }
             }
         });
     }
