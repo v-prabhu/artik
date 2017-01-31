@@ -12,7 +12,8 @@
     "dist-win" : "npm run compile && node_modules/.bin/build -w --x64",
     "dist-mac" : "npm run compile && node_modules/.bin/build -m --x64",
     "dist-linux" : "npm run compile && node_modules/.bin/build -l --x64",
-    "postinstall": "install-app-deps"
+    "postinstall": "install-app-deps",
+    "start": "node_modules/.bin/electron ./app"
   },
   "build": {
     "appId": "org.eclipse.che",
@@ -34,8 +35,8 @@
   "dependencies": {
   },
   "devDependencies": {
-    "electron": "^1.4.12",
-    "electron-builder": "^10.7.1",
+    "electron": "1.5.0",
+    "electron-builder": "11.5.1",
     "gulp": "^3.9.1",
     "rimraf": "^2.5.4"
   }

@@ -118,11 +118,11 @@ body {
     display: inline-block;
     width: 204px;
     height: 100%;
+    border-right: solid 1px rgba(69, 154, 215, 0.2);
 }
 
 .rightPanel {
     background-color: #fcfdfe;
-    border-left: solid 1px rgba(69, 154, 215, 0.2);
     width: 511px;
     height: 100%;
     float: right;
@@ -137,6 +137,9 @@ body {
     border-radius: 50%;
     width: 38px;
     height: 38px;
+    display: inline-block;
+    float: left;
+    text-align: center;
 }
 
 .gray {
@@ -144,8 +147,27 @@ body {
 }
 
 .leftContainer {
-    padding-left: 16px;
+    padding-left: 20px;
     padding-top: 40px;
+}
+
+.firstContainer{
+    padding-top: 15px;
+}
+
+.status-checks {
+    height: 17px;
+    font-family: OpenSans;
+    font-size: 12px;
+    font-weight: bold;
+    font-style: normal;
+    font-stretch: normal;
+    line-height: normal;
+    letter-spacing: 1.3px;
+    text-align: left;
+    color: #949aa2;
+    margin-top: 28px;
+    margin-left: 20px;
 }
 
 .stepLabel {
@@ -155,15 +177,64 @@ body {
     font-weight: normal;
     font-style: normal;
     font-stretch: normal;
-    line-height: normal;
     letter-spacing: normal;
     height: 38px;
-    color: #4a9bd5;
-    padding-left: 20px;
+    color: #949aa2;
+    padding-left: 62px;
+    line-height: 38px;
 }
-
+.retryingLabel {
+    width: 89px;
+    height: 22px;
+    font-family: Graphik;
+    font-size: 11px;
+    font-weight: 300;
+    font-style: normal;
+    font-stretch: normal;
+    line-height: normal;
+    letter-spacing: normal;
+    text-align: left;
+    color: #a8a8a8;
+    margin-left: 62px;
+    margin-top: -12px;
+}
 .grayLabel {
     color: #949aa2;
+}
+
+.readyStep {
+    color: #4a9bd5;
+}
+
+.successLabel {
+    color: #71be1c;
+}
+
+.failLabel {
+ color: #da4a4a;
+}
+
+.failStatus{
+    background-color: #da4a4a;
+}
+
+.successStatus{
+    background-color: #71be1c;
+}
+
+.Docker-isnt-availab {
+    width: 427px;
+    height: 72px;
+    font-family: SourceSansPro;
+    font-size: 14px;
+    font-weight: normal;
+    font-style: normal;
+    font-stretch: normal;
+    line-height: normal;
+    letter-spacing: normal;
+    margin-top: 52px;
+    margin-left: 22px;
+    margin-right: 66px;
 }
 
 .editButton {
@@ -198,4 +269,9 @@ body {
     text-align: left;
     margin-left: 13px;
     color: #949aa2;
+}
+
+.mark{
+    font-size: 38px !important;
+    color: #ffffff;
 }
