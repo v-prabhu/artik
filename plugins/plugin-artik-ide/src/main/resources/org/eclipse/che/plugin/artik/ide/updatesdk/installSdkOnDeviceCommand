@@ -1,4 +1,5 @@
 npm install -g artik-sdk 2>&1
+dnf remove -y libartik-sdk-tests 2> /dev/null
 dnf install -y libartik-sdk-tests-${sdk.version}
 # Special marker line. Don't modify it.
 echo "The latest Artik SDK installed"
