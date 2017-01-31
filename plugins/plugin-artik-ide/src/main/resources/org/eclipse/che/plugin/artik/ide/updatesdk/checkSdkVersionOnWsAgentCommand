@@ -1,3 +1,1 @@
-VERSION=$(dnf info --disablerepo=updates --disablerepo=lantw44-arm-linux-gnueabi-toolchain --disablerepo=fedora libartik-sdk-sysroot | grep Version | awk '{print $3}')
-RELEASE=$(dnf info --disablerepo=updates --disablerepo=lantw44-arm-linux-gnueabi-toolchain --disablerepo=fedora libartik-sdk-sysroot | grep Release | awk '{print $3}')
-echo $VERSION-$RELEASE
+dnf list installed --disablerepo=updates --disablerepo=lantw44-arm-linux-gnueabi-toolchain --disablerepo=fedora | grep libartik-sdk-sysroot | awk '{print $2}'
