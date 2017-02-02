@@ -62,3 +62,4 @@ Thumbs.db
 
 # assembly for docker
 dockerfiles/server/assembly
+!assembly/assembly-main/src/assembly/bin/
