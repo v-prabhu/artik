@@ -12,7 +12,7 @@
 package org.eclipse.che.plugin.machine.artik;
 
 import org.eclipse.che.api.core.model.machine.MachineStatus;
-import org.eclipse.che.api.machine.server.spi.Instance;
+import org.eclipse.che.plugin.machine.ssh.SshMachineInstance;
 
 import static org.eclipse.che.api.core.model.machine.MachineStatus.DESTROYING;
 import static org.eclipse.che.api.core.model.machine.MachineStatus.RUNNING;
@@ -23,16 +23,16 @@ import static org.eclipse.che.api.core.model.machine.MachineStatus.RUNNING;
  * @author Valeriy Svydenko
  */
 public class ArtikDevice {
-    private Instance instance;
-    private Status   status;
+    private SshMachineInstance instance;
+    private Status             status;
 
-    ArtikDevice(Instance instance, Status status) {
+    ArtikDevice(SshMachineInstance instance, Status status) {
         this.instance = instance;
         this.status = status;
     }
 
-    /** Returns instance of {@link Instance} */
-    public Instance getInstance() {
+    /** Returns instance of {@link SshMachineInstance} */
+    public SshMachineInstance getInstance() {
         return instance;
     }
 

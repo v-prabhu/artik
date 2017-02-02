@@ -13,13 +13,17 @@ package org.eclipse.che.plugin.machine.artik;
 
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.core.model.machine.MachineConfig;
+import org.eclipse.che.api.core.model.machine.MachineProcess;
 import org.eclipse.che.api.core.model.machine.MachineRuntimeInfo;
 import org.eclipse.che.api.core.model.machine.Server;
 import org.eclipse.che.api.machine.server.DtoConverter;
 import org.eclipse.che.api.machine.shared.dto.MachineConfigDto;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
+import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
 import org.eclipse.che.api.machine.shared.dto.MachineRuntimeInfoDto;
 import org.eclipse.che.api.machine.shared.dto.ServerDto;
+import org.eclipse.che.plugin.machine.ssh.SshMachineInstance;
+import org.eclipse.che.plugin.machine.ssh.SshMachineProcess;
 
 import java.util.Map;
 
@@ -35,8 +39,8 @@ public final class ArtikDtoConverter {
     /**
      * Converts {@link Machine} to {@link MachineDto}.
      */
-    public static MachineDto asDto(Machine machine) {
-        final MachineDto machineDto = newDto(MachineDto.class).withConfig(asDto(machine.getConfig()))
+    public static MachineDto asDto(SshMachineInstance machine) {
+        final MachineDto machineDto = newDto(MachineDto.class).withConfig(asDto(machine.getMachineConfig()))
                                                               .withId(machine.getId())
                                                               .withStatus(machine.getStatus())
                                                               .withOwner(machine.getOwner())
@@ -78,5 +82,20 @@ public final class ArtikDtoConverter {
                                       .withProtocol(server.getProtocol())
                                       .withUrl(server.getUrl())
                                       .withProperties(server.getProperties() != null ? DtoConverter.asDto(server.getProperties()) : null);
+    }
+
+
+    /**
+     * Converts {@link MachineProcess} to {@link MachineProcessDto}.
+     */
+    public static MachineProcessDto asDto(SshMachineProcess machineProcess) {
+        return newDto(MachineProcessDto.class).withPid(machineProcess.getPid())
+                                              .withCommandLine(machineProcess.getCommandLine())
+                                              .withAlive(machineProcess.isAlive())
+                                              .withName(machineProcess.getName())
+                                              .withAttributes(machineProcess.getAttributes())
+                                              .withType(machineProcess.getType())
+                                              .withOutputChannel(machineProcess.getOutputChannel())
+                                              .withLinks(null);
     }
 }

@@ -21,9 +21,7 @@ import org.eclipse.che.api.core.model.machine.MachineStatus;
 import org.eclipse.che.api.core.util.LineConsumer;
 import org.eclipse.che.api.machine.server.exception.InvalidRecipeException;
 import org.eclipse.che.api.machine.server.exception.MachineException;
-import org.eclipse.che.api.machine.server.exception.SnapshotException;
 import org.eclipse.che.api.machine.server.exception.UnsupportedRecipeException;
-import org.eclipse.che.api.machine.server.spi.Instance;
 import org.eclipse.che.api.machine.server.spi.InstanceProvider;
 import org.eclipse.che.plugin.machine.ssh.SshClient;
 import org.eclipse.che.plugin.machine.ssh.SshMachineFactory;
@@ -43,7 +41,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @author Valeriy Svydenko
  */
-public class ArtikDeviceInstanceProvider implements InstanceProvider {
+public class ArtikDeviceInstanceProvider  {
     private static final Gson GSON = new Gson();
 
     private final Set<String>       supportedRecipeTypes;
@@ -55,12 +53,10 @@ public class ArtikDeviceInstanceProvider implements InstanceProvider {
         this.supportedRecipeTypes = Collections.singleton("ssh-config");
     }
 
-    @Override
     public String getType() {
         return "artik";
     }
 
-    @Override
     public Set<String> getRecipeTypes() {
         return supportedRecipeTypes;
     }
@@ -73,7 +69,7 @@ public class ArtikDeviceInstanceProvider implements InstanceProvider {
      *         machine description
      * @param lineConsumer
      *         output for instance creation logs
-     * @return newly created {@link Instance}
+     * @return newly created {@link SshMachineInstance}
      * @throws UnsupportedRecipeException
      *         if specified {@code recipe} is not supported
      * @throws InvalidRecipeException
@@ -83,8 +79,7 @@ public class ArtikDeviceInstanceProvider implements InstanceProvider {
      * @throws MachineException
      *         if other error occurs
      */
-    @Override
-    public Instance createInstance(Machine machine, LineConsumer lineConsumer) throws NotFoundException, MachineException {
+    public SshMachineInstance createInstance(Machine machine, LineConsumer lineConsumer) throws NotFoundException, MachineException {
         requireNonNull(machine, "Non null machine required");
         requireNonNull(lineConsumer, "Non null logs consumer required");
         requireNonNull(machine.getConfig().getSource().getContent(), "Location in machine source is required");
@@ -102,10 +97,4 @@ public class ArtikDeviceInstanceProvider implements InstanceProvider {
         instance.setStatus(MachineStatus.RUNNING);
         return instance;
     }
-
-    @Override
-    public void removeInstanceSnapshot(MachineSource machineSource) throws SnapshotException {
-        throw new SnapshotException("Snapshot feature is unsupported for ssh machine implementation");
-    }
-
 }

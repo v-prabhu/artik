@@ -124,7 +124,6 @@ public class WsMasterModule extends AbstractModule {
         Multibinder<AgentLauncher> launchers = Multibinder.newSetBinder(binder(), AgentLauncher.class);
         launchers.addBinding().to(org.eclipse.che.api.agent.WsAgentLauncher.class);
         launchers.addBinding().to(org.eclipse.che.api.agent.ExecAgentLauncher.class);
-        launchers.addBinding().to(org.eclipse.che.api.agent.SshMachineExecAgentLauncher.class);
         launchers.addBinding().to(org.eclipse.che.api.agent.SshAgentLauncher.class);
 
         bindConstant().annotatedWith(Names.named("machine.ws_agent.run_command"))

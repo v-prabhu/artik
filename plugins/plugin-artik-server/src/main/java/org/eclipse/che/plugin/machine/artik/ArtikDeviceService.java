@@ -25,7 +25,6 @@ import org.eclipse.che.api.core.ForbiddenException;
 import org.eclipse.che.api.core.NotFoundException;
 import org.eclipse.che.api.core.ServerException;
 import org.eclipse.che.api.core.rest.Service;
-import org.eclipse.che.api.machine.server.DtoConverter;
 import org.eclipse.che.api.machine.server.exception.MachineException;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.machine.shared.dto.MachineConfigDto;
@@ -145,7 +144,7 @@ public class ArtikDeviceService extends Service {
                                                 @PathParam("deviceId") String deviceId) throws ServerException, NotFoundException {
         return artikDeviceManager.getProcessesById(deviceId)
                                  .stream()
-                                 .map(DtoConverter::asDto)
+                                 .map(ArtikDtoConverter::asDto)
                                  .map(machineProcess -> linksInjector.injectLinks(machineProcess,
                                                                                   deviceId,
                                                                                   getServiceContext()))
@@ -207,7 +206,7 @@ public class ArtikDeviceService extends Service {
                                                                                                               BadRequestException {
         requiredNotNull(command, "Command description");
         requiredNotNull(command.getCommandLine(), "Commandline");
-        return linksInjector.injectLinks(DtoConverter.asDto(artikDeviceManager.exec(deviceId,
+        return linksInjector.injectLinks(ArtikDtoConverter.asDto(artikDeviceManager.exec(deviceId,
                                                                                     command,
                                                                                     outputChannel)),
                                          deviceId,

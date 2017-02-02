@@ -36,13 +36,9 @@ import org.eclipse.che.api.core.util.MessageConsumer;
 import org.eclipse.che.api.core.util.ProcessUtil;
 import org.eclipse.che.api.core.util.WebsocketLineConsumer;
 import org.eclipse.che.api.core.util.WebsocketMessageConsumer;
-import org.eclipse.che.api.machine.server.MachineInstanceProviders;
 import org.eclipse.che.api.machine.server.exception.MachineException;
 import org.eclipse.che.api.machine.server.model.impl.MachineImpl;
 import org.eclipse.che.api.machine.server.model.impl.MachineLogMessageImpl;
-import org.eclipse.che.api.machine.server.spi.Instance;
-import org.eclipse.che.api.machine.server.spi.InstanceProcess;
-import org.eclipse.che.api.machine.server.spi.InstanceProvider;
 import org.eclipse.che.api.machine.shared.dto.MachineConfigDto;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
 import org.eclipse.che.api.machine.shared.dto.event.MachineProcessEvent;
@@ -53,6 +49,8 @@ import org.eclipse.che.commons.lang.concurrent.LoggingUncaughtExceptionHandler;
 import org.eclipse.che.commons.lang.concurrent.ThreadLocalPropagateContext;
 import org.eclipse.che.commons.schedule.executor.ThreadPullLauncher;
 import org.eclipse.che.plugin.artik.shared.dto.ArtikDeviceStatusEventDto;
+import org.eclipse.che.plugin.machine.ssh.SshMachineInstance;
+import org.eclipse.che.plugin.machine.ssh.SshMachineProcess;
 import org.eclipse.che.plugin.machine.ssh.SshMachineRecipe;
 import org.slf4j.Logger;
 
@@ -90,12 +88,12 @@ public class ArtikDeviceManager {
     private static final Logger LOG  = getLogger(ArtikDeviceManager.class);
     private static final Gson   GSON = new Gson();
 
-    private final EventService             eventService;
-    private final ThreadPullLauncher       launcher;
-    private final ArtikTerminalLauncher    artikTerminalLauncher;
-    private final String                   machineLogsDir;
-    private final MachineInstanceProviders machineInstanceProviders;
-    private final ExecutorService          executor;
+    private final EventService                eventService;
+    private final ThreadPullLauncher          launcher;
+    private final ArtikTerminalLauncher       artikTerminalLauncher;
+    private final String                      machineLogsDir;
+    private final ArtikDeviceInstanceProvider machineInstanceProvider;
+    private final ExecutorService             executor;
 
     private Map<String, ArtikDevice>         instances;
     private Map<String, DeviceHealthChecker> checkers;
@@ -104,19 +102,19 @@ public class ArtikDeviceManager {
     public ArtikDeviceManager(EventService eventService,
                               ThreadPullLauncher launcher,
                               ArtikTerminalLauncher artikTerminalLauncher,
-                              MachineInstanceProviders machineInstanceProviders,
+                              ArtikDeviceInstanceProvider machineInstanceProvider,
                               @Named("artik.device.logs.location") String artikDeviceLogsDir) {
         this.eventService = eventService;
         this.launcher = launcher;
         this.artikTerminalLauncher = artikTerminalLauncher;
         this.machineLogsDir = artikDeviceLogsDir;
-        this.machineInstanceProviders = machineInstanceProviders;
+        this.machineInstanceProvider = machineInstanceProvider;
 
         instances = new ConcurrentHashMap<>();
         checkers = new ConcurrentHashMap<>();
         executor = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("ArtikDeviceManager-%d")
                                                                            .setUncaughtExceptionHandler(
-                                                                                 LoggingUncaughtExceptionHandler.getInstance())
+                                                                                   LoggingUncaughtExceptionHandler.getInstance())
                                                                            .setDaemon(false)
                                                                            .build());
     }
@@ -131,7 +129,7 @@ public class ArtikDeviceManager {
      *         if workspace is not running
      */
     public MachineDto getDeviceById(String deviceId) throws NotFoundException {
-        final Instance machine = instances.get(deviceId).getInstance();
+        final SshMachineInstance machine = instances.get(deviceId).getInstance();
         if (machine == null) {
             throw new NotFoundException(format("Machine with ID '%s' is not found", deviceId));
         }
@@ -147,7 +145,7 @@ public class ArtikDeviceManager {
      *         command that should be executed in device
      * @param outputChannel
      *         channel for command output
-     * @return {@link org.eclipse.che.api.machine.server.spi.InstanceProcess} that represents started process in device
+     * @return {@link SshMachineProcess} that represents started process in device
      * @throws NotFoundException
      *         if device with specified id not found
      * @throws MachineException
@@ -155,7 +153,7 @@ public class ArtikDeviceManager {
      * @throws BadRequestException
      *         if value of required parameter is invalid
      */
-    InstanceProcess exec(String deviceId,
+    SshMachineProcess exec(String deviceId,
                          Command command,
                          @Nullable String outputChannel) throws NotFoundException, MachineException, BadRequestException {
         requiredNotNull(deviceId, "Machine ID is required");
@@ -164,11 +162,11 @@ public class ArtikDeviceManager {
         requiredNotNull(command.getName(), "Command name is required");
         requiredNotNull(command.getType(), "Command type is required");
 
-        Instance instance = instances.get(deviceId).getInstance();
+        SshMachineInstance instance = instances.get(deviceId).getInstance();
         if (instance == null) {
             throw new NotFoundException(format("Machine with ID '%s' is not found", deviceId));
         }
-        InstanceProcess instanceProcess = instance.createProcess(command, outputChannel);
+        SshMachineProcess instanceProcess = instance.createProcess(command, outputChannel);
 
         final int pid = instanceProcess.getPid();
         final LineConsumer processLogger = getProcessLogger(deviceId, pid, outputChannel);
@@ -218,8 +216,8 @@ public class ArtikDeviceManager {
      * @throws MachineException
      *         if other error occur
      */
-    List<InstanceProcess> getProcessesById(String deviceId) throws MachineException, NotFoundException {
-        final Instance machine = instances.get(deviceId).getInstance();
+    List<SshMachineProcess> getProcessesById(String deviceId) throws MachineException, NotFoundException {
+        final SshMachineInstance machine = instances.get(deviceId).getInstance();
         if (machine == null) {
             throw new NotFoundException(format("Machine with ID '%s' is not found", deviceId));
         }
@@ -275,7 +273,7 @@ public class ArtikDeviceManager {
      */
     MachineDto disconnect(String deviceId, boolean remove) throws MachineException, NotFoundException {
         final ArtikDevice device = instances.get(deviceId);
-        final Instance instance = device.getInstance();
+        final SshMachineInstance instance = device.getInstance();
 
         final DeviceHealthChecker deviceHealthChecker = checkers.get(deviceId);
         if (deviceHealthChecker != null) {
@@ -283,7 +281,7 @@ public class ArtikDeviceManager {
         }
 
         if (remove) {
-            for (InstanceProcess process : instance.getProcesses()) {
+            for (SshMachineProcess process : instance.getProcesses()) {
                 process.kill();
             }
             instances.remove(deviceId);
@@ -315,7 +313,7 @@ public class ArtikDeviceManager {
             throw new NotFoundException(format("Device with ID '%s' is not found", deviceId));
         }
         device.connect();
-        Instance instance = device.getInstance();
+        SshMachineInstance instance = device.getInstance();
         if (ArtikDevice.Status.ERROR.equals(device.getStatus())) {
             instance = createNewInstance(deviceId, instance);
         }
@@ -333,18 +331,17 @@ public class ArtikDeviceManager {
         return ArtikDtoConverter.asDto(instance);
     }
 
-    private Instance createNewInstance(String deviceId, Instance instance) throws NotFoundException, ServerException {
+    private SshMachineInstance createNewInstance(String deviceId, SshMachineInstance instance) throws NotFoundException, ServerException {
         MachineImpl machine = MachineImpl.builder()
-                                         .setConfig(instance.getConfig())
+                                         .setConfig(instance.getMachineConfig())
                                          .setWorkspaceId(WorkspaceIdProvider.getWorkspaceId())
                                          .setStatus(MachineStatus.CREATING)
                                          .setOwner(instance.getOwner())
                                          .setId(deviceId)
                                          .build();
 
-        final InstanceProvider provider = machineInstanceProviders.getProvider(instance.getConfig().getType());
-        final LineConsumer machineLogger = getDeviceLogger(getMessageConsumer(), instance.getConfig().getName());
-        final Instance newInstance = provider.createInstance(machine, machineLogger);
+        final LineConsumer machineLogger = getDeviceLogger(getMessageConsumer(), instance.getMachineConfig().getName());
+        final SshMachineInstance newInstance = machineInstanceProvider.createInstance(machine, machineLogger);
 
         artikTerminalLauncher.launch(newInstance);
         machine.setStatus(RUNNING);
@@ -380,9 +377,8 @@ public class ArtikDeviceManager {
                                          .setId(deviceId)
                                          .build();
         try {
-            final InstanceProvider provider = machineInstanceProviders.getProvider(deviceConfig.getType());
             final LineConsumer machineLogger = getDeviceLogger(getMessageConsumer(), deviceConfig.getName());
-            final Instance instance = provider.createInstance(machine, machineLogger);
+            final SshMachineInstance instance = machineInstanceProvider.createInstance(machine, machineLogger);
 
             artikTerminalLauncher.launch(instance);
 
@@ -434,9 +430,8 @@ public class ArtikDeviceManager {
                                              .setId(deviceId)
                                              .build();
             try {
-                final InstanceProvider provider = machineInstanceProviders.getProvider(deviceConfig.getType());
                 final LineConsumer machineLogger = getDeviceLogger(getMessageConsumer(), deviceConfig.getName());
-                final Instance instance = provider.createInstance(machine, machineLogger);
+                final SshMachineInstance instance = machineInstanceProvider.createInstance(machine, machineLogger);
 
                 artikTerminalLauncher.launch(instance);
 
@@ -570,7 +565,7 @@ public class ArtikDeviceManager {
             this.device = device;
             this.stop = false;
 
-            final String content = device.getInstance().getConfig().getSource().getContent();
+            final String content = device.getInstance().getMachineConfig().getSource().getContent();
             final SshMachineRecipe deviceRecipe = GSON.fromJson(content, SshMachineRecipe.class);
             this.host = deviceRecipe.getHost();
             this.port = deviceRecipe.getPort();
@@ -600,7 +595,7 @@ public class ArtikDeviceManager {
         public void setDevice(ArtikDevice device) {
             this.device = device;
 
-            final String content = device.getInstance().getConfig().getSource().getContent();
+            final String content = device.getInstance().getMachineConfig().getSource().getContent();
             final SshMachineRecipe deviceRecipe = GSON.fromJson(content, SshMachineRecipe.class);
             this.host = deviceRecipe.getHost();
             this.port = deviceRecipe.getPort();
@@ -608,7 +603,7 @@ public class ArtikDeviceManager {
 
         private void checkConnection(ArtikDevice device) {
             final ListLineConsumer listLineConsumer = new ListLineConsumer();
-            final Instance instance = device.getInstance();
+            final SshMachineInstance instance = device.getInstance();
             final ProcessBuilder processBuilder = new ProcessBuilder("nc", "-vi", "0.01", host, port.toString());
 
             try {
@@ -621,7 +616,7 @@ public class ArtikDeviceManager {
                     device.setStatus(ERROR);
                     eventService.publish(newDto(ArtikDeviceStatusEventDto.class)
                                                  .withEventType(ArtikDeviceStatusEventDto.EventType.DISCONNECTED)
-                                                 .withDeviceName(instance.getConfig().getName())
+                                                 .withDeviceName(instance.getMachineConfig().getName())
                                                  .withDeviceId(instance.getId()));
                 }
             } catch (IOException | InterruptedException e) {

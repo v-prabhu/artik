@@ -12,13 +12,12 @@
 package org.eclipse.che.plugin.machine.artik;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 
 import org.eclipse.che.api.machine.server.event.MachineProcessMessenger;
 import org.eclipse.che.inject.DynaModule;
-import org.eclipse.che.plugin.machine.ssh.SshMachineFactory;
+import org.eclipse.che.plugin.machine.ssh.SshMachineModule;
 
 /**
  * Provides bindings needed for artik machine implementation usage.
@@ -29,20 +28,16 @@ import org.eclipse.che.plugin.machine.ssh.SshMachineFactory;
 public class ArtikMachineModule extends AbstractModule {
     @Override
     protected void configure() {
-        Multibinder<org.eclipse.che.api.machine.server.spi.InstanceProvider> machineProviderMultibinder =
-                Multibinder.newSetBinder(binder(),
-                                         org.eclipse.che.api.machine.server.spi.InstanceProvider.class);
-        machineProviderMultibinder.addBinding()
-                                  .to(org.eclipse.che.plugin.machine.artik.ArtikDeviceInstanceProvider.class);
 
-        install(new FactoryModuleBuilder()
-                        .implement(org.eclipse.che.api.machine.server.spi.Instance.class,
-                                   org.eclipse.che.plugin.machine.ssh.SshMachineInstance.class)
-                        .implement(org.eclipse.che.api.machine.server.spi.InstanceProcess.class,
-                                   org.eclipse.che.plugin.machine.ssh.SshMachineProcess.class)
-                        .implement(org.eclipse.che.plugin.machine.ssh.SshClient.class,
-                                   org.eclipse.che.plugin.machine.ssh.jsch.JschSshClient.class)
-                        .build(SshMachineFactory.class));
+        bindConstant().annotatedWith(Names.named("machine.terminal_agent.run_command"))
+                      .to("$HOME/che/terminal/che-websocket-terminal " +
+                          "-addr :4411 " +
+                          "-cmd ${SHELL_INTERPRETER} " +
+                          "-static $HOME/che/terminal/ " +
+                          "-logs-dir $HOME/che/exec-agent/logs");
+
+        install(new SshMachineModule());
+        bind(ArtikDeviceInstanceProvider.class);
 
         Multibinder<org.eclipse.che.api.core.model.machine.ServerConf> machineServers =
                 Multibinder.newSetBinder(binder(),
@@ -53,8 +48,7 @@ public class ArtikMachineModule extends AbstractModule {
         bind(MachineProcessMessenger.class).asEagerSingleton();
         bind(ArtikDeviceStateMessenger.class).asEagerSingleton();
 
-        Multibinder.newSetBinder(binder(), org.eclipse.che.api.agent.server.launcher.AgentLauncher.class)
-                   .addBinding().to(ArtikTerminalLauncher.class);
+        bind(ArtikTerminalLauncher.class);
 
         bind(ArtikDeviceService.class);
     }
