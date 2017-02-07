@@ -14,6 +14,7 @@ package org.eclipse.che.plugin.artik.ide.command;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.resources.File;
@@ -32,8 +33,10 @@ import java.util.Set;
 @Singleton
 public class CppCompileCommandProducer extends AbstractArtikProducer {
     public static final String COMMAND_NAME     = "Compile";
-    public static final String COMMAND_TEMPLATE =
-            "cd ${explorer.current.file.parent.path} && ${cpp.compilation.options} -o ${binary.name} ${explorer.current.file.name} && echo 'Compilation completed'";
+    public static final String CC_EXT           = "cc";
+    public static final String COMMAND_TEMPLATE = "cd ${explorer.current.file.parent.path} " +
+                                                  "&& ${cpp.compilation.options} -o ${binary.name} ${explorer.current.file.name} && " +
+                                                  "echo 'Compilation completed'";
 
     @Inject
     public CppCompileCommandProducer(CustomCommandType customCommandType, DtoFactory dtoFactory, AppContext appContext) {
@@ -54,7 +57,7 @@ public class CppCompileCommandProducer extends AbstractArtikProducer {
         final Resource selectedResource = selectedResourceOptional.get();
         if (selectedResource.isFile()) {
             String ext = ((File)selectedResource).getExtension();
-            return Constants.CPP_EXT.equals(ext);
+            return Constants.CPP_EXT.equals(ext) || CC_EXT.equals(ext);
         }
 
         return false;

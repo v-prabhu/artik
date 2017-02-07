@@ -53,6 +53,15 @@ public class CppCompileCommandProducerTest extends BaseArtikProducerTest {
     }
 
     @Test
+    public void shouldBeApplicableWhenCPP_FileIsSelected() throws Exception {
+        when(currentProject.isTypeOf(eq("cpp"))).thenReturn(true);
+        when(currentResource.isFile()).thenReturn(true);
+        when(currentResource.getExtension()).thenReturn("cc");
+
+        assertTrue(producer.isApplicable());
+    }
+
+    @Test
     public void shouldNotBeApplicableWhenNonC_FileIsSelected() throws Exception {
         when(currentProject.isTypeOf(eq("cpp"))).thenReturn(true);
         when(currentResource.isFile()).thenReturn(true);
