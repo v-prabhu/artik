@@ -1,2 +1,3 @@
 IMAGE_INIT=codenvy/artik-init:nightly
 IMAGE_ARTIK=codenvy/artik-server:nightly
+IMAGE_COMPOSE=docker/compose:1.8.1

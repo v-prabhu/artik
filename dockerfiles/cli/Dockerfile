@@ -15,5 +15,5 @@ FROM eclipse/che-base:nightly
 COPY scripts /scripts/
 COPY version /version/
 
-RUN mkdir /che && chmod u+x /scripts/entrypoint.sh
+RUN mkdir /che
 ENTRYPOINT ["/scripts/entrypoint.sh"]
