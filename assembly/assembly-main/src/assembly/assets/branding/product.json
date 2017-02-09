@@ -8,5 +8,5 @@
   "helpPath": "https://www.eclipse.org/che/",
   "helpTitle": "Community",
   "supportEmail": "wish@codenvy.com",
-  "oauthDocs": "https://eclipse-che.readme.io/docs/git#ssh-key-management"
+  "oauthDocs": "https://eclipse.org/che/docs/ide/git-svn/index.html"
 }

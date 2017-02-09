@@ -26,51 +26,25 @@ Workspace runtimes are Docker-powered. Use our all-in-one stacks, pull from any 
 A no-installation browser IDE accessible from any local or remote device. Thin, fast, and beautiful. [Read More](https://www.eclipse.org/che/features/#cloud-ide)
 
 ### Getting Started
-The ARTIK IDE can be installed on any OS that supports Java 1.8 - desktop, server or cloud, and Maven 3.3.1. It has been tested on Ubuntu, Linux, MacOS and Windows. 
+The ARTIK IDE can be installed on any OS that supports docker. It has been tested on Ubuntu, Linux, MacOS and Windows. 
 
-Follow the [step by step guide](https://dash.readme.io/project/eclipse-che/v4.0/docs/samsung-artik-ide-getting-started) to install ARTIK IDE from our binaries.
+Follow the [step by step guide](https://eclipse.org/che/docs/artik/start-windows/index.html) to install ARTIK IDE from our binaries.
 
 ### License
 ARTIK IDE is open sourced under the Eclipse Public License 1.0.
 
 ### Dependencies
-* Docker 1.8+
-* Maven 3.3.1+
-* Java 1.8
+* Docker 1.11+ (1.12.5+ recommended) on Windows, Mac, or Linux.
 
-### Vagrant
-We suggest using [the Vagrantfile](https://github.com/codenvy/artik-ide/blob/master/Vagrantfile) to create a Che image - it's the fastest and easiest way. You can read our [getting started with Che in Vagrant](https://dash.readme.io/project/eclipse-che/v4.0/docs/usage) in our docs.
-
-### Clone and Build
-Alternatively, you can clone the code and build the ARTIK IDE from scratch.
-
-```sh
-git clone https://github.com/codenvy/artik-ide.git
-```
-If master is unstable, checkout the latest tagged version.
-
-### Build and Run
-```sh
-cd artik-ide
-mvn clean install
-
-# A new assembly is placed in:
-cd assembly/assembly-main/target/eclipse-che-<version>/eclipse-che-<version>
-
-# Executable files are:
-bin/che.sh
-bin/che.bat
-```
-The ARTIK IDE will be available at ```localhost:8080```.
+### Install  
+* Window users can refer to [Getting Started - Windows](https://eclipse.org/che/docs/artik/start-windows/index.html) documentation on how to install ARTIK IDE.
+* Mac and Linux users can refer to [Getting Started - Mac & Linux](https://eclipse.org/che/docs/artik/start-mac/index.html) documentation on how to install ARTIK IDE.
 
 ### Build Submodules
 Building `/assembly` pulls already-built libraries for Eclipse Che `/core`, `/plugins`, and `/dashboard` from our Nexus repository. You can customize the Eclipse Che core, plugins, and dashboard directly by cloning [Eclipse Che](http://github.com/eclipse/che).
 
-### Run ARTIK IDE as a Server
-If you want to run the ARTIK IDE as a server, there are additional Eclipse Che flags that you may need to configure. Please see the [usage and networking documentation](https://eclipse-che.readme.io/docs/usage).
-
 ### Custom Eclipse Che Assembly
-The ARTIK IDE is a custom [Eclipse Che assembly](https://eclipse-che.readme.io/docs/assemblies). On its own, Eclipse Che provides its own IDE. This repository rebuilds its own assembly using Eclipse Che as the baseline and then overrides the assembly instructions (in `/assembly` directory) and adds additional ARTIK-specific plugins (in the `/plugins`) directory. The assembly builds binaries that use base binaries from Eclipse Che that are stored in Che's nexus repository.
+The ARTIK IDE is a custom [Eclipse Che assembly](https://eclipse.org/che/docs/plugins/assemblies/index.html). On its own, Eclipse Che provides its own IDE. This repository rebuilds its own assembly using Eclipse Che as the baseline and then overrides the assembly instructions (in `/assembly` directory) and adds additional ARTIK-specific plugins (in the `/plugins`) directory. The assembly builds binaries that use base binaries from Eclipse Che that are stored in Che's nexus repository.
 
 ### Modules
 These modules make up the ARTIK IDE assembly hosted at `http://github.com/codenvy/artik-ide`.
