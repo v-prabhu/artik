@@ -154,8 +154,8 @@ public class ArtikDeviceManager {
      *         if value of required parameter is invalid
      */
     SshMachineProcess exec(String deviceId,
-                         Command command,
-                         @Nullable String outputChannel) throws NotFoundException, MachineException, BadRequestException {
+                           Command command,
+                           @Nullable String outputChannel) throws NotFoundException, MachineException, BadRequestException {
         requiredNotNull(deviceId, "Machine ID is required");
         requiredNotNull(command, "Command is required");
         requiredNotNull(command.getCommandLine(), "Command line is required");
@@ -611,7 +611,9 @@ public class ArtikDeviceManager {
                 sleep(100);
 
                 final String outputText = listLineConsumer.getText();
-                if (outputText.contains("No route to host") || outputText.contains("Connection refused")) {
+                if (outputText.contains("No route to host") ||
+                    outputText.contains("Connection refused") ||
+                    outputText.contains("Connection timed out")) {
                     device.setStatus(ERROR);
                     eventService.publish(newDto(ArtikDeviceStatusEventDto.class)
                                                  .withEventType(ArtikDeviceStatusEventDto.EventType.DISCONNECTED)
