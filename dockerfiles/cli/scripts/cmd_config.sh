@@ -7,8 +7,6 @@
 
 # Runs puppet image to generate ${CHE_FORMAL_PRODUCT_NAME} configuration
 generate_configuration_with_puppet() {
-  debug $FUNCNAME
-
   if is_docker_for_windows; then
     ARTIK_ENV_FILE=$(convert_posix_to_windows "${CHE_HOST_INSTANCE}/config/$CHE_MINI_PRODUCT_NAME.env")
   else
@@ -44,6 +42,16 @@ generate_configuration_with_puppet() {
     WRITE_PARAMETERS=""
   fi
 
+  for element in "${CLI_ENV_ARRAY[@]}" 
+  do
+    var1=$(echo $element | cut -f1 -d=)
+    var2=$(echo $element | cut -f2 -d=)
+
+    if [[ $var1 == CHE_* ]] ||
+       [[ $var1 == ${CHE_PRODUCT_NAME}_* ]]; then
+      WRITE_PARAMETERS+=" -e \"$var1=$var2\""
+    fi
+  done
 
   GENERATE_CONFIG_COMMAND="docker_run \
                   --env-file=\"${REFERENCE_CONTAINER_ENVIRONMENT_FILE}\" \
@@ -51,8 +59,6 @@ generate_configuration_with_puppet() {
                   -v \"${CHE_HOST_INSTANCE}\":/opt/${CHE_MINI_PRODUCT_NAME}:rw \
                   ${WRITE_PARAMETERS} \
                   -e \"ARTIK_ENV_FILE=${ARTIK_ENV_FILE}\" \
-                  -e \"ARTIK_HOST=${ARTIK_HOST}\" \
-                  -e \"ARTIK_PORT=${ARTIK_PORT}\" \
                   -e \"CHE_CONTAINER_ROOT=${CHE_CONTAINER_ROOT}\" \
                   -e \"CHE_ENVIRONMENT=${CHE_ENVIRONMENT}\" \
                   -e \"CHE_CONFIG=${CHE_HOST_INSTANCE}\" \
