@@ -20,6 +20,13 @@ pre_init() {
   CHE_IMAGE_FULLNAME="codenvy/artik-cli"
   DEFAULT_ARTIK_PORT=8080
   DEFAULT_CHE_PORT=8080
+
+  if [ -z ${ARTIK_PORT+x} ]; then
+    CHE_PORT_SET_ON_COMMAND_LINE=false
+  else
+    CHE_PORT_SET_ON_COMMAND_LINE=true
+  fi
+
   ARTIK_PORT=${ARTIK_PORT:-${DEFAULT_ARTIK_PORT}}
   CHE_PORT=${ARTIK_PORT}
   CHE_MIN_RAM=1.5

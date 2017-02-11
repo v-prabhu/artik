@@ -51,6 +51,8 @@ generate_configuration_with_puppet() {
                   -v \"${CHE_HOST_INSTANCE}\":/opt/${CHE_MINI_PRODUCT_NAME}:rw \
                   ${WRITE_PARAMETERS} \
                   -e \"ARTIK_ENV_FILE=${ARTIK_ENV_FILE}\" \
+                  -e \"ARTIK_HOST=${ARTIK_HOST}\" \
+                  -e \"ARTIK_PORT=${ARTIK_PORT}\" \
                   -e \"CHE_CONTAINER_ROOT=${CHE_CONTAINER_ROOT}\" \
                   -e \"CHE_ENVIRONMENT=${CHE_ENVIRONMENT}\" \
                   -e \"CHE_CONFIG=${CHE_HOST_INSTANCE}\" \
