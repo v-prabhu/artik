@@ -23,11 +23,7 @@ import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.core.model.machine.MachineSource;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
-import org.eclipse.che.api.promises.client.Operation;
-import org.eclipse.che.api.promises.client.OperationException;
 import org.eclipse.che.api.promises.client.Promise;
-import org.eclipse.che.api.promises.client.PromiseError;
-import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
 import org.eclipse.che.api.promises.client.js.JsPromiseError;
 import org.eclipse.che.api.promises.client.js.Promises;
 import org.eclipse.che.ide.api.app.AppContext;
@@ -37,6 +33,8 @@ import org.eclipse.che.ide.api.debug.DebugConfigurationType;
 import org.eclipse.che.ide.api.debug.DebugConfigurationsManager;
 import org.eclipse.che.ide.api.macro.MacroProcessor;
 import org.eclipse.che.ide.api.notification.NotificationManager;
+import org.eclipse.che.ide.api.notification.StatusNotification;
+import org.eclipse.che.ide.api.project.ProjectServiceClient;
 import org.eclipse.che.ide.api.resources.Project;
 import org.eclipse.che.ide.api.resources.Resource;
 import org.eclipse.che.ide.dto.DtoFactory;
@@ -74,6 +72,7 @@ public class DebuggerConnector {
 
     private final DtoFactory                     dtoFactory;
     private final ProcessListener                processListener;
+    private final ProjectServiceClient           projectService;
     private final AppContext                     appContext;
     private final DeviceServiceClient            deviceServiceClient;
     private final MacroProcessor                 macroProcessor;
@@ -90,6 +89,7 @@ public class DebuggerConnector {
     @Inject
     public DebuggerConnector(DtoFactory dtoFactory,
                              ProcessListener processListener,
+                             ProjectServiceClient projectService,
                              AppContext appContext,
                              MacroProcessor macroProcessor,
                              DebugConfigurationTypeRegistry debugConfigurationTypeRegistry,
@@ -101,6 +101,7 @@ public class DebuggerConnector {
                              CommandConsoleFactory commandConsoleFactory) {
         this.dtoFactory = dtoFactory;
         this.processListener = processListener;
+        this.projectService = projectService;
         this.appContext = appContext;
         this.deviceServiceClient = deviceServiceClient;
         this.macroProcessor = macroProcessor;
@@ -122,29 +123,33 @@ public class DebuggerConnector {
      * for debugging project's binary file.
      */
     public void debug(final Machine machine) {
-        runGdbServer(machine).then(new Operation<Integer>() {
-            @Override
-            public void apply(Integer port) throws OperationException {
+        Optional<Project> projectOptional = getCurrentProject();
+        if (!projectOptional.isPresent()) {
+            return;
+        }
+
+        Project project = projectOptional.get();
+
+        String binaryName = project.getAttribute(BINARY_NAME_ATTRIBUTE);
+        projectService.getItem(project.getLocation()
+                                      .append(!isNullOrEmpty(binaryName) ? binaryName : DEFAULT_BINARY_NAME)).then(itemReference -> {
+            runGdbServer(machine, project).then(port -> {
                 if (port != null) {
                     connect(machine, port);
                 }
-            }
-        }).catchError(new Operation<PromiseError>() {
-            @Override
-            public void apply(PromiseError promiseError) throws OperationException {
+            }).catchError(promiseError -> {
                 notificationManager.notify("", promiseError.getMessage());
-            }
+            });
+        }).catchError(promiseError -> {
+            notificationManager.notify("",
+                                       "No binary file found. Compile your app and re-run debug.",
+                                       StatusNotification.Status.FAIL,
+                                       StatusNotification.DisplayMode.EMERGE_MODE);
         });
     }
 
     /** Runs GDB server and returns the listened port. */
-    private Promise<Integer> runGdbServer(final Machine machine) {
-        Optional<Project> projectOptional = getCurrentProject();
-        if (!projectOptional.isPresent()) {
-            return Promises.resolve(null);
-        }
-
-        Project project = projectOptional.get();
+    private Promise<Integer> runGdbServer(final Machine machine, final Project project) {
         final String chanel = "process:output:" + UUID.uuid();
         final int debugPort = 1234;
 
@@ -172,44 +177,28 @@ public class DebuggerConnector {
             runCallback.onFailure(new Exception(e));
         }
 
-        final Promise<Integer> promise = createFromAsyncRequest(new AsyncPromiseHelper.RequestCall<Integer>() {
-            @Override
-            public void makeCall(AsyncCallback<Integer> callback) {
-                runCallback = callback;
-            }
-        });
+        final Promise<Integer> promise = createFromAsyncRequest(callback -> runCallback = callback);
 
         final Command command = buildCommand(project, machine, debugPort);
         final DefaultOutputConsole console = (DefaultOutputConsole)commandConsoleFactory.create(command.getName());
-        final MessageHandler handler = new MessageHandler() {
-            @Override
-            public void onMessage(String message) {
-                console.printText(message);
-            }
-        };
+        final MessageHandler handler = console::printText;
         try {
             messageBus.subscribe(chanel, handler);
         } catch (WebSocketException e) {
             //do nothing
         }
 
-        macroProcessor.expandMacros(command.getCommandLine()).then(new Operation<String>() {
-            @Override
-            public void apply(String arg) throws OperationException {
-                final CommandDto commandDto = dtoFactory.createDto(CommandDto.class)
-                                                        .withName(command.getName())
-                                                        .withCommandLine(arg)
-                                                        .withType(command.getType());
+        macroProcessor.expandMacros(command.getCommandLine()).then(arg -> {
+            final CommandDto commandDto = dtoFactory.createDto(CommandDto.class)
+                                                    .withName(command.getName())
+                                                    .withCommandLine(arg)
+                                                    .withType(command.getType());
 
-                final Promise<MachineProcessDto> processPromise = deviceServiceClient.executeCommand(machine.getId(), commandDto, chanel);
-                processPromise.then(new Operation<MachineProcessDto>() {
-                    @Override
-                    public void apply(MachineProcessDto process) throws OperationException {
-                        processesPanelPresenter.addCommandOutput(machine.getId(), console);
-                        processListener.attachToProcess(process, machine, chanel, handler);
-                    }
-                });
-            }
+            final Promise<MachineProcessDto> processPromise = deviceServiceClient.executeCommand(machine.getId(), commandDto, chanel);
+            processPromise.then(process -> {
+                processesPanelPresenter.addCommandOutput(machine.getId(), console);
+                processListener.attachToProcess(process, machine, chanel, handler);
+            });
         });
 
         return promise;
@@ -224,33 +213,28 @@ public class DebuggerConnector {
 
         final Map<String, String> connectionProperties = new HashMap<>();
 
-        macroProcessor.expandMacros("${current.project.path}/${binary.name}").then(new Operation<String>() {
-            @Override
-            public void apply(String cmd) throws OperationException {
-                connectionProperties.put("BINARY", cmd);
+        macroProcessor.expandMacros("${current.project.path}/${binary.name}").then(cmd -> {
+            connectionProperties.put("BINARY", cmd);
 
-                getDeviceIP(machine).then(new Operation<String>() {
-                    @Override
-                    public void apply(String ip) throws OperationException {
-                        DebugConfiguration debugConfiguration = new DebugConfiguration(gdbType,
-                                                                                       "debug",
-                                                                                       ip,
-                                                                                       debugPort,
-                                                                                       connectionProperties);
-                        debugConfigurationsManager.apply(debugConfiguration);
-                    }
-                }).catchError(new Operation<PromiseError>() {
-                    @Override
-                    public void apply(PromiseError arg) throws OperationException {
-                        notificationManager.notify("", arg.getMessage());
-                    }
-                });
-            }
+            getDeviceIP(machine).then(ip -> {
+                DebugConfiguration debugConfiguration = new DebugConfiguration(gdbType,
+                                                                               "debug",
+                                                                               ip,
+                                                                               debugPort,
+                                                                               connectionProperties);
+                debugConfigurationsManager.apply(debugConfiguration);
+            }).catchError(arg -> {
+                notificationManager.notify("", arg.getMessage());
+            });
         });
     }
 
     /** Read the specified devices's IP from it's config. */
     private Promise<String> getDeviceIP(Machine machine) {
+        return getValueOfMachineContent(machine, "host");
+    }
+
+    private Promise<String> getValueOfMachineContent(Machine machine, String key) {
         final MachineSource source = machine.getConfig().getSource();
         if (!"ssh-config".equals(source.getType())) {
             return Promises.reject(JsPromiseError.create(new Exception("Can't get machine's address. Machine " +
@@ -263,8 +247,8 @@ public class DebuggerConnector {
             return Promises.resolve("");
         }
         final JSONObject jsonObject = parseLenient(content).isObject();
-        final String host = jsonObject.get("host").isString().stringValue();
-        return Promises.resolve(host);
+        final String value = jsonObject.get(key).isString().stringValue();
+        return Promises.resolve(value);
     }
 
     private Command buildCommand(Project project, Machine machine, int debugPort) {
