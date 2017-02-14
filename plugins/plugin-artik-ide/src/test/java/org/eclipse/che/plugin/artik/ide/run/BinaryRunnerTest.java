@@ -17,10 +17,15 @@ import com.google.gwtmockito.GwtMockitoTestRunner;
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
+import org.eclipse.che.api.project.shared.dto.ItemReference;
 import org.eclipse.che.api.promises.client.Operation;
 import org.eclipse.che.api.promises.client.Promise;
+import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.macro.MacroProcessor;
+import org.eclipse.che.ide.api.notification.NotificationManager;
+import org.eclipse.che.ide.api.notification.StatusNotification;
+import org.eclipse.che.ide.api.project.ProjectServiceClient;
 import org.eclipse.che.ide.api.resources.Project;
 import org.eclipse.che.ide.api.resources.Resource;
 import org.eclipse.che.ide.dto.DtoFactory;
@@ -28,6 +33,7 @@ import org.eclipse.che.ide.extension.machine.client.outputspanel.console.Command
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
 import org.eclipse.che.ide.part.explorer.project.macro.ExplorerCurrentFileNameMacro;
 import org.eclipse.che.ide.part.explorer.project.macro.ExplorerCurrentFileParentPathMacro;
+import org.eclipse.che.ide.resource.Path;
 import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 import org.eclipse.che.plugin.artik.ide.outputconsole.ArtikCommandConsoleFactory;
 import org.junit.Before;
@@ -37,6 +43,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Matchers;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
@@ -53,6 +60,10 @@ public class BinaryRunnerTest {
     private DtoFactory                         dtoFactory;
     @Mock
     private AppContext                         appContext;
+    @Mock
+    private NotificationManager                notificationManager;
+    @Mock
+    private ProjectServiceClient               projectServiceClient;
     @Mock
     private MacroProcessor                     macroProcessor;
     @Mock
@@ -75,6 +86,8 @@ public class BinaryRunnerTest {
     @Mock
     private Project                                      project;
     @Mock
+    private ItemReference                                itemReference;
+    @Mock
     private CommandDto                                   commandDto;
     @Mock
     private MachineProcessDto                            process;
@@ -84,6 +97,12 @@ public class BinaryRunnerTest {
     private Promise<String>                              macroProcessorPromise;
     @Mock
     private Promise<MachineProcessDto>                   processPromise;
+    @Mock
+    private Promise<ItemReference>                       itemReferencePromise;
+    @Captor
+    private ArgumentCaptor<Operation<ItemReference>>     itemReferenceCapture;
+    @Captor
+    private ArgumentCaptor<Operation<PromiseError>>      itemReferenceErrorCapture;
     @Captor
     private ArgumentCaptor<Operation<String>>            macroArgumentCapture;
     @Captor
@@ -97,6 +116,13 @@ public class BinaryRunnerTest {
         when(macroProcessor.expandMacros(anyString())).thenReturn(macroProcessorPromise);
         when(macroProcessorPromise.then(Matchers.<Operation<String>>any())).thenReturn(macroProcessorPromise);
 
+        when(project.getAttribute(anyString())).thenReturn("a.out");
+        when(project.getLocation()).thenReturn(new Path("/project/path"));
+
+        when(projectServiceClient.getItem(anyObject())).thenReturn(itemReferencePromise);
+        when(itemReferencePromise.then(Matchers.<Operation<ItemReference>>any())).thenReturn(itemReferencePromise);
+        when(itemReferencePromise.catchError(Matchers.<Operation<PromiseError>>any())).thenReturn(itemReferencePromise);
+
         when(dtoFactory.createDto(CommandDto.class)).thenReturn(commandDto);
         when(commandDto.withName(anyString())).thenReturn(commandDto);
         when(commandDto.withCommandLine(anyString())).thenReturn(commandDto);
@@ -109,6 +135,8 @@ public class BinaryRunnerTest {
 
         binaryRunner = new BinaryRunner(dtoFactory,
                                         appContext,
+                                        notificationManager,
+                                        projectServiceClient,
                                         consoleFactory,
                                         macroProcessor,
                                         deviceServiceClient,
@@ -123,6 +151,10 @@ public class BinaryRunnerTest {
         when(resource.getRelatedProject()).thenReturn(Optional.of(project));
 
         binaryRunner.run(device);
+
+        verify(projectServiceClient).getItem(anyObject());
+        verify(itemReferencePromise).then(itemReferenceCapture.capture());
+        itemReferenceCapture.getValue().apply(itemReference);
 
         verify(macroProcessor).expandMacros(COMMAND_TEMPLATE);
         verify(macroProcessorPromise).then(macroArgumentCapture.capture());
@@ -141,5 +173,25 @@ public class BinaryRunnerTest {
         verify(commandOutputConsole).listenToOutput(anyString());
         verify(processesPanelPresenter).addCommandOutput(DEVICE_ID, commandOutputConsole);
         verify(commandOutputConsole).attachToProcess(process);
+    }
+
+    @Test
+    public void shouldNotRunIfNoBinaryFile() throws Exception {
+        Resource[] resources = {resource};
+        when(appContext.getResources()).thenReturn(resources);
+        when(appContext.getResource()).thenReturn(resource);
+        when(resource.getRelatedProject()).thenReturn(Optional.of(project));
+
+        binaryRunner.run(device);
+
+        verify(projectServiceClient).getItem(anyObject());
+        verify(itemReferencePromise).catchError(itemReferenceErrorCapture.capture());
+        itemReferenceErrorCapture.getValue().apply(Mockito.mock(PromiseError.class));
+
+        verify(notificationManager).notify("",
+                                           "No binary file found. Compile your app and re-run.",
+                                           StatusNotification.Status.FAIL,
+                                           StatusNotification.DisplayMode.EMERGE_MODE);
+
     }
 }
