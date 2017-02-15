@@ -6,7 +6,7 @@
     "description": "Artik Development Stack",
     "scope": "general",
     "tags": [
-      "Fedora 23",
+      "Fedora 24",
       "Artik",
       "gnueabi-toolchain",
       "gdb"
