@@ -12,6 +12,7 @@
 package org.eclipse.che.api.deploy;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 
@@ -91,6 +92,10 @@ public class WsMasterModule extends AbstractModule {
         Multibinder<org.eclipse.che.api.core.model.machine.ServerConf> machineServers = Multibinder.newSetBinder(binder(),
                                                                                    org.eclipse.che.api.core.model.machine.ServerConf.class,
                                                                                    Names.named("machine.docker.dev_machine.machine_servers"));
+
+        bind(new TypeLiteral<String[]>() {}).annotatedWith(Names.named("che.docker.dns_resolvers"))
+                                            .toProvider(org.eclipse.che.plugin.docker.machine.dns.DnsResolversProvider.class);
+
         machineServers.addBinding().toInstance(
                 new org.eclipse.che.api.machine.server.model.impl.ServerConfImpl(Constants.WSAGENT_DEBUG_REFERENCE, "4403/tcp", "http",
                                                                                  null));
