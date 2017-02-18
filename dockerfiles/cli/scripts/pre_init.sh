@@ -9,7 +9,7 @@
 
 pre_init() {
   # This must be incremented when BASE is incremented by an API developer
-  CHE_CLI_API_VERSION=1
+  CHE_CLI_API_VERSION=2
 
   CHE_PRODUCT_NAME="ARTIK"
   CHE_MINI_PRODUCT_NAME="artik"
