@@ -25,12 +25,10 @@ import org.eclipse.che.api.core.model.machine.MachineConfig;
 import org.eclipse.che.api.core.model.machine.MachineSource;
 import org.eclipse.che.api.core.model.machine.MachineStatus;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
-import org.eclipse.che.api.machine.shared.dto.MachineDto;
 import org.eclipse.che.api.promises.client.Operation;
 import org.eclipse.che.api.promises.client.OperationException;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.PromiseError;
-import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
 import org.eclipse.che.ide.api.action.ActionManager;
 import org.eclipse.che.ide.api.action.DefaultActionGroup;
 import org.eclipse.che.ide.api.dialogs.CancelCallback;
@@ -39,6 +37,7 @@ import org.eclipse.che.ide.api.dialogs.DialogFactory;
 import org.eclipse.che.ide.api.machine.events.MachineStateEvent;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
+import org.eclipse.che.ide.api.workspace.event.MachineStatusChangedEvent;
 import org.eclipse.che.ide.commons.exception.UnmarshallerException;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
@@ -51,12 +50,12 @@ import org.eclipse.che.ide.websocket.WebSocketException;
 import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
 import org.eclipse.che.ide.websocket.rest.Unmarshallable;
 import org.eclipse.che.plugin.artik.ide.ArtikExtension;
+import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 import org.eclipse.che.plugin.artik.ide.ArtikResources;
-import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 import org.eclipse.che.plugin.artik.ide.installpkg.PackageInstallerAction;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static com.google.gwt.json.client.JSONParser.parseLenient;
@@ -72,20 +71,21 @@ import static org.eclipse.che.ide.api.notification.StatusNotification.Status.SUC
  * @author Vitaliy Guliy
  */
 @Singleton
-public class DevelopmentModeManager implements MachineStateEvent.Handler {
+public class DevelopmentModeManager implements MachineStateEvent.Handler, MachineStatusChangedEvent.Handler {
 
     private static final String REPLICATION_FOLDER      = "replicationFolder";
     private static final String DEFAULT_PROJECTS_FOLDER = "projects";
 
-    private final ActionManager           actionManager;
-    private final ArtikModeActionFactory  artikModeActionFactory;
-    private final MessageBusProvider      messageBusProvider;
-    private final DeviceServiceClient     deviceServiceClient;
-    private final DtoFactory              dtoFactory;
-    private final ArtikResources          resources;
-    private final ProcessesPanelPresenter processesPanelPresenter;
-    private final DialogFactory           dialogFactory;
-    private final NotificationManager     notificationManager;
+    private final ActionManager             actionManager;
+    private final ArtikModeActionFactory    artikModeActionFactory;
+    private final ArtikLocalizationConstant localizationConstant;
+    private final MessageBusProvider        messageBusProvider;
+    private final DeviceServiceClient       deviceServiceClient;
+    private final DtoFactory                dtoFactory;
+    private final ArtikResources            resources;
+    private final ProcessesPanelPresenter   processesPanelPresenter;
+    private final DialogFactory             dialogFactory;
+    private final NotificationManager       notificationManager;
 
     /**
      * A set of ssh machines.
@@ -103,6 +103,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
     public DevelopmentModeManager(ActionManager actionManager,
                                   ArtikModeActionFactory artikModeActionFactory,
                                   EventBus eventBus,
+                                  ArtikLocalizationConstant localizationConstant,
                                   MessageBusProvider messageBusProvider,
                                   DtoFactory dtoFactory,
                                   DeviceServiceClient deviceServiceClient,
@@ -112,6 +113,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
                                   NotificationManager notificationManager) {
         this.actionManager = actionManager;
         this.artikModeActionFactory = artikModeActionFactory;
+        this.localizationConstant = localizationConstant;
         this.messageBusProvider = messageBusProvider;
         this.dtoFactory = dtoFactory;
         this.deviceServiceClient = deviceServiceClient;
@@ -124,6 +126,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
         menus = new HashMap<>();
 
         eventBus.addHandler(MachineStateEvent.TYPE, this);
+        eventBus.addHandler(MachineStatusChangedEvent.TYPE, this);
     }
 
     private native void log(String msg) /*-{
@@ -154,23 +157,17 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
         final String yesMessage = "Yes";
         final String cancelMessage = "Cancel";
 
-        final ConfirmCallback confirmCallback = new ConfirmCallback() {
-            @Override
-            public void accepted() {
-                String notificationMessage = "Turning on development mode for " + machineName;
-                progressNotification = notificationManager.notify(notificationMessage, PROGRESS, FLOAT_MODE);
+        final ConfirmCallback confirmCallback = () -> {
+            String notificationMessage = "Turning on development mode for " + machineName;
+            progressNotification = notificationManager.notify(notificationMessage, PROGRESS, FLOAT_MODE);
 
-                Machine machine = sshMachines.get(machineName);
-                String cmd = resources.turnOnDevelopmentProfileCommand().getText();
-                executeCommand(cmd, machine).then(new Operation<String>() {
-                    @Override
-                    public void apply(String arg) throws OperationException {
-                        String message = "Development mode has been turned on for " + machineName;
-                        progressNotification.setTitle(message);
-                        progressNotification.setStatus(SUCCESS);
-                    }
-                });
-            }
+            Machine machine = sshMachines.get(machineName);
+            String cmd = resources.turnOnDevelopmentProfileCommand().getText();
+            executeCommand(cmd, machine).then(arg -> {
+                String message = "Development mode has been turned on for " + machineName;
+                progressNotification.setTitle(message);
+                progressNotification.setStatus(SUCCESS);
+            });
         };
         final CancelCallback cancelCallback = null;
 
@@ -185,15 +182,12 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
         final DefaultActionGroup artikGroup = (DefaultActionGroup)actionManager.getAction(ArtikExtension.ARTIK_GROUP_MAIN_MENU_ID);
         artikGroup.addSeparator();
 
-        deviceServiceClient.getDevices().then(new Operation<List<MachineDto>>() {
-            @Override
-            public void apply(List<MachineDto> machines) throws OperationException {
-                for (Machine machine : machines) {
-                    if (!MachineStatus.RUNNING.equals(machine.getStatus())) {
-                        continue;
-                    }
-                    addArtikProfileMenu(machine);
+        deviceServiceClient.getDevices().then(machines -> {
+            for (Machine machine : machines) {
+                if (!MachineStatus.RUNNING.equals(machine.getStatus())) {
+                    continue;
                 }
+                addArtikProfileMenu(machine);
             }
         }).catchError(new Operation<PromiseError>() {
             @Override
@@ -216,13 +210,15 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
 
         profileGroup.add(machineMenu);
 
-        TurnDevelopmentModeAction turnDevelopmentModeAction = artikModeActionFactory.turnDevelopmentModeAction(machine.getConfig().getName());
+        TurnDevelopmentModeAction turnDevelopmentModeAction =
+                artikModeActionFactory.turnDevelopmentModeAction(machine.getConfig().getName());
         machineMenu.add(turnDevelopmentModeAction);
 
         TurnProductionModeAction turnProductionModeAction = artikModeActionFactory.turnProductionModeAction(machine.getConfig().getName());
         machineMenu.add(turnProductionModeAction);
 
-        PackageInstallerAction packageInstallerAction = artikModeActionFactory.packageInstallerAction(sshMachines.get(machine.getConfig().getName()));
+        PackageInstallerAction packageInstallerAction =
+                artikModeActionFactory.packageInstallerAction(sshMachines.get(machine.getConfig().getName()));
         machineMenu.add(packageInstallerAction);
     }
 
@@ -289,12 +285,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
             commandCallback.onFailure(new Exception(e));
         }
 
-        final Promise<String> promise = createFromAsyncRequest(new AsyncPromiseHelper.RequestCall<String>() {
-            @Override
-            public void makeCall(AsyncCallback<String> callback) {
-                commandCallback = callback;
-            }
-        });
+        final Promise<String> promise = createFromAsyncRequest(callback -> commandCallback = callback);
 
         final Command command = dtoFactory.createDto(CommandDto.class)
                                           .withName("name")
@@ -304,6 +295,22 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
         deviceServiceClient.executeCommand(device.getId(), command, chanel);
 
         return promise;
+    }
+
+    @Override
+    public void onMachineStatusChanged(MachineStatusChangedEvent machineStatusChangedEvent) {
+        switch (machineStatusChangedEvent.getEventType()) {
+            case DESTROYED:
+                if (progressNotification != null && PROGRESS.equals(progressNotification.getStatus())) {
+                    progressNotification.setStatus(FAIL);
+                    progressNotification.setContent(localizationConstant.operationAborted(machineStatusChangedEvent.getMachineName()));
+                }
+                break;
+            case RUNNING:
+                break;
+            case ERROR:
+                break;
+        }
     }
 
     private class CommandOutputUnmarshaller implements Unmarshallable<String> {
@@ -329,41 +336,38 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler {
                                "Are you sure you want to turn on production mode for <b>" + machineName + "</b>?";
         final String yesMessage = "Yes";
         final String noMessage = "Cancel";
-        final ConfirmCallback confirmCallback = new ConfirmCallback() {
-            @Override
-            public void accepted() {
-                final String message = "Turning on production mode for " + machineName;
-                progressNotification = notificationManager.notify(message, PROGRESS, FLOAT_MODE);
+        final ConfirmCallback confirmCallback = () -> {
+            final String message1 = "Turning on production mode for " + machineName;
+            progressNotification = notificationManager.notify(message1, PROGRESS, FLOAT_MODE);
 
-                final Machine machine = sshMachines.get(machineName);
+            final Machine machine = sshMachines.get(machineName);
 
-                final MachineConfig config = machine.getConfig();
-                Log.debug(DevelopmentModeManager.this.getClass(), "config: " + config);
+            final MachineConfig config = machine.getConfig();
+            Log.debug(DevelopmentModeManager.this.getClass(), "config: " + config);
 
-                final MachineSource source = config.getSource();
-                Log.debug(DevelopmentModeManager.this.getClass(), "source: " + source);
+            final MachineSource source = config.getSource();
+            Log.debug(DevelopmentModeManager.this.getClass(), "source: " + source);
 
-                final String location = source.getLocation();
-                Log.debug(DevelopmentModeManager.this.getClass(), "location: " + location);
+            final String location = source.getLocation();
+            Log.debug(DevelopmentModeManager.this.getClass(), "location: " + location);
 
-                final String content = source.getContent();
-                final JSONObject jsonObject = parseLenient(content).isObject();
+            final String content = source.getContent();
+            final JSONObject jsonObject = parseLenient(content).isObject();
 
-                final JSONValue replicationFolderValue = jsonObject.get(REPLICATION_FOLDER);
-                final JSONString replicationFolderString = replicationFolderValue.isString();
+            final JSONValue replicationFolderValue = jsonObject.get(REPLICATION_FOLDER);
+            final JSONString replicationFolderString = replicationFolderValue.isString();
 
-                final String replicationFolder = replicationFolderString.stringValue();
-                Log.debug(DevelopmentModeManager.this.getClass(), "replicationFolder: " + replicationFolder);
+            final String replicationFolder = replicationFolderString.stringValue();
+            Log.debug(DevelopmentModeManager.this.getClass(), "replicationFolder: " + replicationFolder);
 
 
-                final String commandText = resources.turnOnProductionProfileCommand().getText();
-                final String command = format(commandText, replicationFolder + "/" + DEFAULT_PROJECTS_FOLDER);
-                Log.debug(DevelopmentModeManager.this.getClass(), "command: " + command);
+            final String commandText = resources.turnOnProductionProfileCommand().getText();
+            final String command = format(commandText, replicationFolder + "/" + DEFAULT_PROJECTS_FOLDER);
+            Log.debug(DevelopmentModeManager.this.getClass(), "command: " + command);
 
-                executeCommand(command, machine).then(new ExecuteCommandOperation(machineName))
-                                                        .catchError(new ErrorOperation());
+            executeCommand(command, machine).then(new ExecuteCommandOperation(machineName))
+                                            .catchError(new ErrorOperation());
 
-            }
         };
         final CancelCallback cancelCallback = null;
 

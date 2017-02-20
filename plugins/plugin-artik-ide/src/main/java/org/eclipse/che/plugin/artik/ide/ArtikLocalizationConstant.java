@@ -197,6 +197,8 @@ public interface ArtikLocalizationConstant extends Messages {
     @Key("cancel.button")
     String cancelButton();
 
+    @Key("operation.aborted.message")
+    String operationAborted(String deviceName);
 
     @Key("artikProfile.action.title")
     String artikProfileActionTitle();
