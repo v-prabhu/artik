@@ -21,7 +21,7 @@
     </parent>
     <groupId>org.eclipse.artik</groupId>
     <artifactId>artik-ide-parent</artifactId>
-    <version>1.4.0-SNAPSHOT</version>
+    <version>1.5.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Artik IDE :: Parent</name>
     <inceptionYear>2016</inceptionYear>

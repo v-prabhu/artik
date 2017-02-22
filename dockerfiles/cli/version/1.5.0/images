@@ -1,0 +1,2 @@
+IMAGE_INIT=codenvy/artik-init:1.5.0
+IMAGE_ARTIK=codenvy/artik-server:1.5.0

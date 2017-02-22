@@ -17,11 +17,11 @@
     <parent>
         <artifactId>artik-ide-parent</artifactId>
         <groupId>org.eclipse.artik</groupId>
-        <version>1.4.0-SNAPSHOT</version>
+        <version>1.5.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>artik-ide-assembly-parent</artifactId>
-    <version>1.4.0-SNAPSHOT</version>
+    <version>1.5.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Artik IDE :: Assemblies parent</name>
     <modules>
