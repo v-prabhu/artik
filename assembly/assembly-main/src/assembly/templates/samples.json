@@ -185,6 +185,22 @@
         "tags": ["Artik"]
       },
       {
+        "name": "mqtt",
+        "displayName": "mqtt",
+        "path": "/artik-samples/mqtt",
+        "description": "Mqtt test",
+        "type": "c",
+        "mixins": [],
+        "attributes": {},
+        "modules": [],
+        "problems": [],
+        "source": {},
+        "commands": [],
+        "links": [],
+        "category": "Samples",
+        "tags": ["Artik"]
+      },
+      {
         "name": "network",
         "displayName": "network",
         "path": "/artik-samples/network",
@@ -436,79 +452,6 @@
     "category": "Samples",
     "tags": [
       "Artik"
-    ]
-  },
-  {
-    "name": "artik-weather-station-libcurl-c",
-    "displayName": "artik-weather-station-libcurl-c",
-    "path": "/artik-weather-station-libcurl-c",
-    "description": "Developing an IoT weather station in C",
-    "projectType": "c",
-    "mixins": [],
-    "attributes": {
-    },
-    "modules": [],
-    "problems": [],
-    "source": {
-      "type": "git",
-      "location": "https://github.com/che-samples/artik-weather-station-libcurl-c",
-      "parameters": {}
-    },
-    "commands": [
-      {
-        "name": "build",
-        "type": "custom",
-        "commandLine": "gcc /root/WeatherStationLibcurl.c -o /root/WeatherStationLibcurl –lcurl",
-        "attributes": {
-          "previewUrl": ""
-        }
-      },
-      {
-        "name": "run",
-        "type": "custom",
-        "commandLine": "/root/WeatherStationLibcurl",
-        "attributes": {
-          "previewUrl": ""
-        }
-      }
-    ],
-    "links": [],
-    "category": "Samples",
-    "tags": [
-      "Artik"
-    ]
-  },
-  {
-    "name": "artik-weather-station-node",
-    "displayName": "artik-weather-station-node",
-    "path": "/artik-weather-station-node",
-    "description": "Developing an IoT weather station for both native and web developers",
-    "projectType": "node-js",
-    "mixins": [],
-    "attributes": {
-    },
-    "modules": [],
-    "problems": [],
-    "source": {
-      "type": "git",
-      "location": "https://github.com/che-samples/artik-weather-station-node",
-      "parameters": {}
-    },
-    "commands": [
-      {
-        "name": "run",
-        "type": "custom",
-        "commandLine": "node /root/WeatherStation_restclient.js",
-        "attributes": {
-          "previewUrl": ""
-        }
-      }
-    ],
-    "links": [],
-    "category": "Samples",
-    "tags": [
-      "Artik",
-      "node"
     ]
   },
   {
