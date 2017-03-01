@@ -17,22 +17,17 @@ import com.google.inject.Singleton;
 import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
-import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
-import org.eclipse.che.api.promises.client.Operation;
-import org.eclipse.che.api.promises.client.OperationException;
-import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.ide.api.command.CommandImpl;
+import org.eclipse.che.ide.api.machine.ExecAgentCommandManager;
 import org.eclipse.che.ide.api.macro.MacroProcessor;
 import org.eclipse.che.ide.dto.DtoFactory;
+import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandConsoleFactory;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandOutputConsole;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
 import org.eclipse.che.ide.part.explorer.project.macro.ExplorerCurrentFileNameMacro;
 import org.eclipse.che.ide.part.explorer.project.macro.ExplorerCurrentFileParentPathMacro;
-import org.eclipse.che.ide.util.UUID;
 import org.eclipse.che.plugin.artik.ide.command.macro.NodeJsRunParametersMacro;
 import org.eclipse.che.plugin.artik.ide.command.macro.ReplicationFolderMacro;
-import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
-import org.eclipse.che.plugin.artik.ide.outputconsole.ArtikCommandConsoleFactory;
 
 /**
  * Run NodeJs file.
@@ -42,8 +37,8 @@ import org.eclipse.che.plugin.artik.ide.outputconsole.ArtikCommandConsoleFactory
 @Singleton
 public class NodeJsRunner {
     private final DtoFactory                         dtoFactory;
-    private final ArtikCommandConsoleFactory         consoleFactory;
-    private final DeviceServiceClient                deviceServiceClient;
+    private final ExecAgentCommandManager            execAgentCommandManager;
+    private final CommandConsoleFactory              consoleFactory;
     private final MacroProcessor                     macroProcessor;
     private final NodeJsRunParametersMacro           nodeJsRunParametersMacro;
     private final ExplorerCurrentFileParentPathMacro currentFileParentPathMacro;
@@ -52,16 +47,16 @@ public class NodeJsRunner {
 
     @Inject
     public NodeJsRunner(DtoFactory dtoFactory,
+                        ExecAgentCommandManager execAgentCommandManager,
                         MacroProcessor macroProcessor,
-                        ArtikCommandConsoleFactory consoleFactory,
-                        DeviceServiceClient deviceServiceClient,
+                        CommandConsoleFactory consoleFactory,
                         NodeJsRunParametersMacro nodeJsRunOptionsMacro,
                         ExplorerCurrentFileParentPathMacro currentFileParentPathMacro,
                         ExplorerCurrentFileNameMacro currentFileNameMacro,
                         ProcessesPanelPresenter processesPanelPresenter) {
         this.dtoFactory = dtoFactory;
+        this.execAgentCommandManager = execAgentCommandManager;
         this.consoleFactory = consoleFactory;
-        this.deviceServiceClient = deviceServiceClient;
         this.macroProcessor = macroProcessor;
         this.nodeJsRunParametersMacro = nodeJsRunOptionsMacro;
         this.currentFileParentPathMacro = currentFileParentPathMacro;
@@ -78,30 +73,22 @@ public class NodeJsRunner {
      */
     public void run(final Machine device) {
         final Command command = buildCommand(device);
-        final String outputChannel = "process:output:" + UUID.uuid();
 
-        macroProcessor.expandMacros(command.getCommandLine()).then(new Operation<String>() {
-            @Override
-            public void apply(String arg) throws OperationException {
-                final CommandDto toExecute = dtoFactory.createDto(CommandDto.class)
-                                                       .withName(command.getName())
-                                                       .withCommandLine(arg)
-                                                       .withType(command.getType());
+        macroProcessor.expandMacros(command.getCommandLine()).then(commandLine -> {
+            final CommandDto toExecute = dtoFactory.createDto(CommandDto.class)
+                                                   .withName(command.getName())
+                                                   .withCommandLine(commandLine)
+                                                   .withType(command.getType());
 
-                final Promise<MachineProcessDto> processPromise = deviceServiceClient.executeCommand(device.getId(),
-                                                                                                     toExecute,
-                                                                                                     outputChannel);
-                processPromise.then(new Operation<MachineProcessDto>() {
-                    @Override
-                    public void apply(MachineProcessDto process) throws OperationException {
-                        final CommandOutputConsole commandOutputConsole = consoleFactory.create(new CommandImpl(toExecute), device);
-                        commandOutputConsole.listenToOutput(outputChannel);
-                        processesPanelPresenter.addCommandOutput(device.getId(), commandOutputConsole);
+            final CommandOutputConsole commandOutputConsole = consoleFactory.create(new CommandImpl(toExecute), device);
+            processesPanelPresenter.addCommandOutput(device.getId(), commandOutputConsole);
 
-                        commandOutputConsole.attachToProcess(process);
-                    }
-                });
-            }
+            execAgentCommandManager.startProcess(device.getId(), toExecute)
+                                   .thenIfProcessStartedEvent(commandOutputConsole.getProcessStartedOperation())
+                                   .thenIfProcessStdErrEvent(commandOutputConsole.getStdErrOperation())
+                                   .thenIfProcessStdOutEvent(commandOutputConsole.getStdOutOperation())
+                                   .thenIfProcessDiedEvent(commandOutputConsole.getProcessDiedOperation());
+
         });
     }
 

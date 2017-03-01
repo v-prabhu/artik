@@ -14,7 +14,6 @@ package org.eclipse.che.plugin.artik.ide.profile;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONString;
 import com.google.gwt.json.client.JSONValue;
-import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.web.bindery.event.shared.EventBus;
@@ -27,28 +26,20 @@ import org.eclipse.che.api.core.model.machine.MachineStatus;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.promises.client.Operation;
 import org.eclipse.che.api.promises.client.OperationException;
-import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.ide.api.action.ActionManager;
 import org.eclipse.che.ide.api.action.DefaultActionGroup;
 import org.eclipse.che.ide.api.dialogs.CancelCallback;
 import org.eclipse.che.ide.api.dialogs.ConfirmCallback;
 import org.eclipse.che.ide.api.dialogs.DialogFactory;
+import org.eclipse.che.ide.api.machine.ExecAgentCommandManager;
 import org.eclipse.che.ide.api.machine.events.MachineStateEvent;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
 import org.eclipse.che.ide.api.workspace.event.MachineStatusChangedEvent;
-import org.eclipse.che.ide.commons.exception.UnmarshallerException;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
-import org.eclipse.che.ide.util.UUID;
 import org.eclipse.che.ide.util.loging.Log;
-import org.eclipse.che.ide.websocket.Message;
-import org.eclipse.che.ide.websocket.MessageBus;
-import org.eclipse.che.ide.websocket.MessageBusProvider;
-import org.eclipse.che.ide.websocket.WebSocketException;
-import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
-import org.eclipse.che.ide.websocket.rest.Unmarshallable;
 import org.eclipse.che.plugin.artik.ide.ArtikExtension;
 import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 import org.eclipse.che.plugin.artik.ide.ArtikResources;
@@ -59,7 +50,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static com.google.gwt.json.client.JSONParser.parseLenient;
-import static org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper.createFromAsyncRequest;
 import static org.eclipse.che.ide.api.notification.StatusNotification.DisplayMode.FLOAT_MODE;
 import static org.eclipse.che.ide.api.notification.StatusNotification.Status.FAIL;
 import static org.eclipse.che.ide.api.notification.StatusNotification.Status.PROGRESS;
@@ -79,7 +69,7 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler, Machin
     private final ActionManager             actionManager;
     private final ArtikModeActionFactory    artikModeActionFactory;
     private final ArtikLocalizationConstant localizationConstant;
-    private final MessageBusProvider        messageBusProvider;
+    private final ExecAgentCommandManager   execAgentCommandManager;
     private final DeviceServiceClient       deviceServiceClient;
     private final DtoFactory                dtoFactory;
     private final ArtikResources            resources;
@@ -95,8 +85,6 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler, Machin
 
     private final Map<String, DefaultActionGroup> menus;
 
-    private AsyncCallback<String> commandCallback;
-
     private StatusNotification progressNotification;
 
     @Inject
@@ -104,8 +92,8 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler, Machin
                                   ArtikModeActionFactory artikModeActionFactory,
                                   EventBus eventBus,
                                   ArtikLocalizationConstant localizationConstant,
-                                  MessageBusProvider messageBusProvider,
                                   DtoFactory dtoFactory,
+                                  ExecAgentCommandManager execAgentCommandManager,
                                   DeviceServiceClient deviceServiceClient,
                                   ArtikResources resources,
                                   ProcessesPanelPresenter processesPanelPresenter,
@@ -114,8 +102,8 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler, Machin
         this.actionManager = actionManager;
         this.artikModeActionFactory = artikModeActionFactory;
         this.localizationConstant = localizationConstant;
-        this.messageBusProvider = messageBusProvider;
         this.dtoFactory = dtoFactory;
+        this.execAgentCommandManager = execAgentCommandManager;
         this.deviceServiceClient = deviceServiceClient;
         this.resources = resources;
         this.processesPanelPresenter = processesPanelPresenter;
@@ -163,11 +151,8 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler, Machin
 
             Machine machine = sshMachines.get(machineName);
             String cmd = resources.turnOnDevelopmentProfileCommand().getText();
-            executeCommand(cmd, machine).then(arg -> {
-                String message = "Development mode has been turned on for " + machineName;
-                progressNotification.setTitle(message);
-                progressNotification.setStatus(SUCCESS);
-            });
+            String message = "Development mode has been turned on for " + machineName;
+            executeCommand(cmd, machine, message);
         };
         final CancelCallback cancelCallback = null;
 
@@ -252,49 +237,24 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler, Machin
     /**
      * Executes a command and returns first message from output as a result.
      */
-    private Promise<String> executeCommand(final String cmd, final Machine device) {
+    private void executeCommand(final String cmd, final Machine device, final String notificationTitle) {
         final String deviceName = device.getConfig().getName();
-        final String chanel = "process:output:" + UUID.uuid();
-
-        try {
-            final MessageBus machineMessageBus = messageBusProvider.getMachineMessageBus();
-            machineMessageBus.subscribe(chanel, new SubscriptionHandler<String>(new CommandOutputUnmarshaller()) {
-                @Override
-                protected void onMessageReceived(String message) {
-                    if ("[STDOUT] >>> end <<<".equals(message)) {
-                        machineMessageBus.unsubscribeSilently(chanel, this);
-                        processesPanelPresenter.printMachineOutput(deviceName, "");
-                        commandCallback.onSuccess(message);
-                    } else {
-                        if (message.startsWith("[STDOUT] ")) {
-                            processesPanelPresenter.printMachineOutput(deviceName, message.substring(9));
-                        } else if (message.startsWith("[STDERR] ")) {
-                            processesPanelPresenter.printMachineOutput(deviceName, message.substring(9), "red");
-                        } else {
-                            processesPanelPresenter.printMachineOutput(deviceName, message);
-                        }
-                    }
-                }
-
-                @Override
-                protected void onErrorReceived(Throwable throwable) {
-                    machineMessageBus.unsubscribeSilently(chanel, this);
-                }
-            });
-        } catch (WebSocketException e) {
-            commandCallback.onFailure(new Exception(e));
-        }
-
-        final Promise<String> promise = createFromAsyncRequest(callback -> commandCallback = callback);
 
         final Command command = dtoFactory.createDto(CommandDto.class)
                                           .withName("name")
                                           .withType("custom")
                                           .withCommandLine(cmd);
 
-        deviceServiceClient.executeCommand(device.getId(), command, chanel);
-
-        return promise;
+        execAgentCommandManager.startProcess(device.getId(), command)
+                               .thenIfProcessStdOutEvent(
+                                       psStdOut -> processesPanelPresenter.printMachineOutput(deviceName, psStdOut.getText()))
+                               .thenIfProcessStdErrEvent(psStdErr -> processesPanelPresenter.printMachineOutput(deviceName,
+                                                                                                                psStdErr.getText(),
+                                                                                                                "red"))
+                               .thenIfProcessDiedEvent(arg -> {
+                                   progressNotification.setTitle(notificationTitle);
+                                   progressNotification.setStatus(SUCCESS);
+                               });
     }
 
     @Override
@@ -311,22 +271,6 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler, Machin
             case ERROR:
                 break;
         }
-    }
-
-    private class CommandOutputUnmarshaller implements Unmarshallable<String> {
-
-        private String payload;
-
-        @Override
-        public void unmarshal(Message response) throws UnmarshallerException {
-            payload = response.getBody();
-        }
-
-        @Override
-        public String getPayload() {
-            return payload;
-        }
-
     }
 
     public void turnOnProductionMode(final String machineName) {
@@ -365,8 +309,8 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler, Machin
             final String command = format(commandText, replicationFolder + "/" + DEFAULT_PROJECTS_FOLDER);
             Log.debug(DevelopmentModeManager.this.getClass(), "command: " + command);
 
-            executeCommand(command, machine).then(new ExecuteCommandOperation(machineName))
-                                            .catchError(new ErrorOperation());
+            String notificationTitle = "Production mode has been turned on for " + machineName;
+            executeCommand(command, machine, notificationTitle);
 
         };
         final CancelCallback cancelCallback = null;
@@ -374,30 +318,6 @@ public class DevelopmentModeManager implements MachineStateEvent.Handler, Machin
         dialogFactory.createConfirmDialog(title, message, yesMessage, noMessage, confirmCallback, cancelCallback)
                      .show();
 
-    }
-
-    private class ErrorOperation implements Operation<PromiseError> {
-        @Override
-        public void apply(PromiseError promiseError) throws OperationException {
-            String message = "Production mode has not been turned on due to internal error.";
-            progressNotification.setTitle(message);
-            progressNotification.setStatus(FAIL);
-        }
-    }
-
-    private class ExecuteCommandOperation implements Operation<String> {
-        String name;
-
-        public ExecuteCommandOperation(String machineName) {
-            name = machineName;
-        }
-
-        @Override
-        public void apply(String arg) throws OperationException {
-            String message = "Production mode has been turned on for " + name;
-            progressNotification.setTitle(message);
-            progressNotification.setStatus(SUCCESS);
-        }
     }
 
 }

@@ -24,22 +24,11 @@ import org.eclipse.che.ide.api.dialogs.CancelCallback;
 import org.eclipse.che.ide.api.dialogs.ConfirmCallback;
 import org.eclipse.che.ide.api.dialogs.DialogFactory;
 import org.eclipse.che.ide.api.machine.events.MachineStateEvent;
-import org.eclipse.che.ide.api.notification.NotificationManager;
-import org.eclipse.che.ide.api.notification.StatusNotification;
-import org.eclipse.che.ide.api.workspace.event.MachineStatusChangedEvent;
 import org.eclipse.che.ide.util.loging.Log;
-import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import static org.eclipse.che.ide.api.notification.StatusNotification.DisplayMode.FLOAT_MODE;
-import static org.eclipse.che.ide.api.notification.StatusNotification.Status.FAIL;
-import static org.eclipse.che.ide.api.notification.StatusNotification.Status.PROGRESS;
-import static org.eclipse.che.ide.api.notification.StatusNotification.Status.SUCCESS;
 
 /**
  * @author Dmitry Kuleshov
@@ -47,28 +36,20 @@ import static org.eclipse.che.ide.api.notification.StatusNotification.Status.SUC
 @Singleton
 public class SoftwareManager implements MachineStateEvent.Handler {
 
-    private final SoftwareAnalyzer          softwareAnalyzer;
-    private final SoftwareInstaller         softwareInstaller;
-    private final ArtikLocalizationConstant artikLocalizationConstant;
-    private final NotificationManager       notificationManager;
-    private final EventBus                  eventBus;
-    private final DialogFactory             dialogFactory;
+    private final SoftwareAnalyzer  softwareAnalyzer;
+    private final SoftwareInstaller softwareInstaller;
+    private final DialogFactory     dialogFactory;
 
     private final Map<String, Machine> sshMachines = new HashMap<>();
 
     @Inject
     public SoftwareManager(SoftwareAnalyzer softwareAnalyzer,
                            SoftwareInstaller softwareInstaller,
-                           ArtikLocalizationConstant artikLocalizationConstant,
-                           NotificationManager notificationManager,
                            EventBus eventBus,
                            DialogFactory dialogFactory) {
 
         this.softwareAnalyzer = softwareAnalyzer;
         this.softwareInstaller = softwareInstaller;
-        this.artikLocalizationConstant = artikLocalizationConstant;
-        this.notificationManager = notificationManager;
-        this.eventBus = eventBus;
         this.dialogFactory = dialogFactory;
 
         eventBus.addHandler(MachineStateEvent.TYPE, this);
@@ -79,7 +60,7 @@ public class SoftwareManager implements MachineStateEvent.Handler {
         final String machineId = machine.getId();
 
         softwareAnalyzer.getMissingSoft(machineId)
-                        .then(new InstallationDialogue(machine, eventBus, artikLocalizationConstant))
+                        .then(new InstallationDialogue(machine))
                         .catchError(new ErrorHandling());
     }
 
@@ -111,22 +92,18 @@ public class SoftwareManager implements MachineStateEvent.Handler {
         }
     }
 
-    private class InstallationDialogue implements Operation<Set<Software>>, MachineStatusChangedEvent.Handler {
-        private final ArtikLocalizationConstant artikLocalizationConstant;
-        private final String                    machineName;
-        private final String                    title;
-        private final String                    content;
-        private final String                    ok;
-        private final String                    cancel;
-        private final CancelCallback            cancelCallback;
-        private final Machine                   machine;
+    private class InstallationDialogue implements Operation<Set<Software>> {
+        private final String         machineName;
+        private final String         title;
+        private final String         content;
+        private final String         ok;
+        private final String         cancel;
+        private final CancelCallback cancelCallback;
+        private final Machine        machine;
 
-        private List<StatusNotification> notifications;
-
-        private InstallationDialogue(Machine machine, EventBus eventBus, ArtikLocalizationConstant artikLocalizationConstant) {
+        private InstallationDialogue(Machine machine) {
             this.machine = machine;
             this.machineName = machine.getConfig().getName();
-            this.artikLocalizationConstant = artikLocalizationConstant;
 
             this.title = "Development Mode";
             this.content = "Rsync and/or gdbserver not found in %PATH on <b>" + machineName + "</b>. This will <br>" +
@@ -136,10 +113,6 @@ public class SoftwareManager implements MachineStateEvent.Handler {
             this.ok = "Ok";
             this.cancel = "Cancel";
             this.cancelCallback = null;
-
-            notifications = new ArrayList<>();
-
-            eventBus.addHandler(MachineStatusChangedEvent.TYPE, this);
         }
 
         @Override
@@ -153,24 +126,6 @@ public class SoftwareManager implements MachineStateEvent.Handler {
             dialogFactory.createConfirmDialog(title, content, ok, cancel, confirmCallback, cancelCallback).show();
         }
 
-        @Override
-        public void onMachineStatusChanged(MachineStatusChangedEvent machineStatusChangedEvent) {
-            switch (machineStatusChangedEvent.getEventType()) {
-                case DESTROYED:
-                    for (StatusNotification notification : notifications) {
-                        if (PROGRESS.equals(notification.getStatus())) {
-                            notification.setStatus(FAIL);
-                            notification.setContent(artikLocalizationConstant.operationAborted(machineStatusChangedEvent.getMachineName()));
-                        }
-                    }
-                    break;
-                case RUNNING:
-                    break;
-                case ERROR:
-                    break;
-            }
-        }
-
         private class Installation implements ConfirmCallback {
             private final Set<Software> arg;
 
@@ -181,20 +136,7 @@ public class SoftwareManager implements MachineStateEvent.Handler {
             @Override
             public void accepted() {
                 for (Software software : arg) {
-                    final String message = "Installing " + software.name + " for development mode to " + machineName;
-                    final StatusNotification notification = notificationManager.notify(message, PROGRESS, FLOAT_MODE);
-                    notifications.add(notification);
-
-                    softwareInstaller.install(software, machine).then(arg -> {
-                        final String message1 = "Software installed";
-                        notification.setTitle(message1);
-                        notification.setStatus(SUCCESS);
-                    }).catchError(new Operation<PromiseError>() {
-                        @Override
-                        public void apply(PromiseError arg) throws OperationException {
-                            Log.error(getClass(), arg.getMessage());
-                        }
-                    });
+                    softwareInstaller.install(software, machine);
                 }
             }
         }
