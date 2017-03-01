@@ -7,7 +7,7 @@
     "scope": "general",
     "tags": [
       "Fedora 24",
-      "Artik",
+      "Artik SDK",
       "gnueabi-toolchain",
       "gdb"
     ],
@@ -33,9 +33,10 @@
               }
             }
           },
-          "recipe": {
-            "location": "codenvy/artik",
-            "type": "dockerimage"
+          "recipe":{
+            "content":"FROM codenvy/artik",
+            "contentType":"text/x-dockerfile",
+            "type":"dockerfile"
           }
         }
       },
