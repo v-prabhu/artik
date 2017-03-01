@@ -455,6 +455,39 @@
     ]
   },
   {
+    "name": "artik-weather-station-node",
+    "displayName": "artik-weather-station-node",
+    "path": "/artik-weather-station-node",
+    "description": "Developing an IoT weather station for both native and web developers",
+    "projectType": "node-js",
+    "mixins": [],
+    "attributes": {
+    },
+    "modules": [],
+    "problems": [],
+    "source": {
+      "type": "git",
+      "location": "https://github.com/che-samples/artik-weather-station-node",
+      "parameters": {}
+    },
+    "commands": [
+      {
+        "name": "run",
+        "type": "custom",
+        "commandLine": "node /root/WeatherStation_restclient.js",
+        "attributes": {
+          "previewUrl": ""
+        }
+      }
+    ],
+    "links": [],
+    "category": "Samples",
+    "tags": [
+      "Artik",
+      "node"
+    ]
+  },
+  {
     "name": "blank-project",
     "displayName": "blank-project",
     "path": "/blank-project",
