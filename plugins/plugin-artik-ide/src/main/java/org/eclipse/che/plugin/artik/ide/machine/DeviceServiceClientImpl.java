@@ -13,10 +13,8 @@ package org.eclipse.che.plugin.artik.ide.machine;
 
 import com.google.inject.Inject;
 
-import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.machine.shared.dto.MachineConfigDto;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
-import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.machine.DevMachine;
@@ -106,36 +104,6 @@ public class DeviceServiceClientImpl implements DeviceServiceClient {
         return asyncRequestFactory.createDeleteRequest(url)
                                   .loader(loaderFactory.newLoader())
                                   .send(dtoUnmarshallerFactory.newUnmarshaller(MachineDto.class));
-    }
-
-    @Override
-    public Promise<List<MachineProcessDto>> getProcesses(String machineId) {
-        final DevMachine devMachine = appContext.getDevMachine();
-        final String url = devMachine.getWsAgentBaseUrl() + "/artik/processes/" + machineId;
-
-        return asyncRequestFactory.createGetRequest(url)
-                                  .loader(loaderFactory.newLoader())
-                                  .send(dtoUnmarshallerFactory.newListUnmarshaller(MachineProcessDto.class));
-    }
-
-    @Override
-    public Promise<MachineProcessDto> executeCommand(String machineId, Command command, String outputChannel) {
-        final DevMachine devMachine = appContext.getDevMachine();
-        final String url = devMachine.getWsAgentBaseUrl() + "/artik/" + machineId + "/command?outputChannel=" + outputChannel;
-
-        return asyncRequestFactory.createPostRequest(url, command)
-                                  .loader(loaderFactory.newLoader())
-                                  .send(dtoUnmarshallerFactory.newUnmarshaller(MachineProcessDto.class));
-    }
-
-    @Override
-    public Promise<Void> stopProcess(String machineId, int processId) {
-        final DevMachine devMachine = appContext.getDevMachine();
-        final String url = devMachine.getWsAgentBaseUrl() + "/artik/" + machineId + "/process/" + processId;
-
-        return asyncRequestFactory.createDeleteRequest(url)
-                                  .loader(loaderFactory.newLoader())
-                                  .send();
     }
 
 }
