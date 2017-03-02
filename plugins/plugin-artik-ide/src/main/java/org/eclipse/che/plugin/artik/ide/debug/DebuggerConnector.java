@@ -114,19 +114,40 @@ public class DebuggerConnector {
         String binaryName = project.getAttribute(BINARY_NAME_ATTRIBUTE);
         projectService.getItem(project.getLocation().append(!isNullOrEmpty(binaryName) ? binaryName : DEFAULT_BINARY_NAME))
                       .then(itemReference -> {
-                          runGdbServer(machine, project).then(port -> {
-                              if (port != null) {
-                                  connect(machine, port);
-                              }
-                          }).catchError(connectionError -> {
-                              notificationManager.notify("", connectionError.getMessage());
-                          });
+                          checkPortOccupation(machine, project);
                       }).catchError(noFileError -> {
             notificationManager.notify("",
                                        "No binary file found. Compile your app and re-run debug.",
                                        StatusNotification.Status.FAIL,
                                        StatusNotification.DisplayMode.EMERGE_MODE);
         });
+    }
+
+    private void checkPortOccupation(final Machine device, final Project project) {
+        final String commandLine = "process=$(netstat -nlp | grep :1234 | awk '{print $7}' | sed 's/\\/gdbserver//')\n" +
+                                   "        if [[ $process ]]; then\n" +
+                                   "          echo 'Stopping GDB server...'\n" +
+                                   "          kill $process\n" +
+                                   "          echo 'GDB server stopped'\n" +
+                                   "        else\n" +
+                                   "          echo 'GDB server is not running'\n" +
+                                   "      fi";
+        final String commandName = "kill process";
+        final String commandType = "custom";
+        final CommandDto commandDto = dtoFactory.createDto(CommandDto.class)
+                                                .withName(commandName)
+                                                .withCommandLine(commandLine)
+                                                .withType(commandType);
+
+        final String deviceId = device.getId();
+        execAgentCommandManager.startProcess(deviceId, commandDto)
+                               .thenIfProcessDiedEvent(processDied -> runGdbServer(device, project).then(port -> {
+                                   if (port != null) {
+                                       connect(device, port);
+                                   }
+                               }).catchError(promiseError -> {
+                                   notificationManager.notify("", promiseError.getMessage());
+                               }));
     }
 
     /** Runs GDB server and returns the listened port. */
