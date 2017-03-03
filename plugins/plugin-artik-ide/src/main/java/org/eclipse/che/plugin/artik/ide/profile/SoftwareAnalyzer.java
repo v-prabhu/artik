@@ -11,16 +11,24 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.artik.ide.profile;
 
+import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
 import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.promises.client.Promise;
-import org.eclipse.che.ide.api.machine.ExecAgentCommandManager;
+import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
 import org.eclipse.che.ide.dto.DtoFactory;
+import org.eclipse.che.ide.util.UUID;
 import org.eclipse.che.ide.util.loging.Log;
+import org.eclipse.che.ide.websocket.MessageBus;
+import org.eclipse.che.ide.websocket.MessageBusProvider;
+import org.eclipse.che.ide.websocket.WebSocketException;
+import org.eclipse.che.ide.websocket.rest.StringUnmarshallerWS;
+import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
 import org.eclipse.che.plugin.artik.ide.ArtikResources;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -37,15 +45,18 @@ import static org.eclipse.che.plugin.artik.ide.profile.Software.RSYNC;
 public class SoftwareAnalyzer {
     private static Software[] REQUIRED_SOFTWARE = Software.values();
 
-    private final DtoFactory              dtoFactory;
-    private final ExecAgentCommandManager execAgentCommandManager;
+    private final MessageBusProvider  messageBusProvider;
+    private final DtoFactory          dtoFactory;
+    private final DeviceServiceClient deviceServiceClient;
 
     @Inject
-    public SoftwareAnalyzer(DtoFactory dtoFactory,
-                            ArtikResources artikResources,
-                            ExecAgentCommandManager execAgentCommandManager) {
+    public SoftwareAnalyzer(DeviceServiceClient deviceServiceClient,
+                            MessageBusProvider messageBusProvider,
+                            DtoFactory dtoFactory,
+                            ArtikResources artikResources) {
+        this.deviceServiceClient = deviceServiceClient;
+        this.messageBusProvider = messageBusProvider;
         this.dtoFactory = dtoFactory;
-        this.execAgentCommandManager = execAgentCommandManager;
 
 
         GDB_SERVER.setVerificationCommand(artikResources.gdbServerVerificationCommand().getText());
@@ -55,50 +66,78 @@ public class SoftwareAnalyzer {
     public Promise<Set<Software>> getMissingSoft(final String machineId) {
         Log.debug(getClass(), "Verifying software for machine: " + machineId);
 
-        final Command command = getCommand();
+        final String chanel = "process:output:" + UUID.uuid();
+        final Set<Software> missingSoftware = new HashSet<>(asList(REQUIRED_SOFTWARE));
 
-        final Promise<Set<Software>> promise = createFromAsyncRequest(callback -> {
-            final Set<Software> missingSoftware = new HashSet<>(asList(REQUIRED_SOFTWARE));
 
-            execAgentCommandManager.startProcess(machineId, command)
-                                   .thenIfProcessStdOutEvent(psStdOut -> {
-                                       String message = psStdOut.getText();
-                                       if (message.contains(GDB_SERVER.name)) {
-                                           missingSoftware.remove(GDB_SERVER);
-
-                                           Log.debug(getClass(), "Debug: " + machineId + ", " + message);
-                                       } else if (message.contains(RSYNC.name)) {
-                                           missingSoftware.remove(RSYNC);
-
-                                           Log.debug(getClass(), "Debug: " + machineId + ", " + message);
-                                       }
-                                   })
-                                   .thenIfProcessStdErrEvent(
-                                           psStdErr -> Log.error(getClass(), "Error: " + machineId + ", " + psStdErr.getText()))
-                                   .thenIfProcessDiedEvent(psDied -> callback.onSuccess(missingSoftware));
+        final Promise<Set<Software>> promise = createFromAsyncRequest(new AsyncPromiseHelper.RequestCall<Set<Software>>() {
+            @Override
+            public void makeCall(AsyncCallback<Set<Software>> callback) {
+                readChannel(machineId, chanel, missingSoftware, callback);
+            }
         });
 
-
-        Log.debug(getClass(), "Verification command: " + command);
-
-        return promise;
-    }
-
-    private Command getCommand() {
         final StringBuilder commandLineBuilder = new StringBuilder();
         for (Software softwareType : REQUIRED_SOFTWARE) {
             final String checkCommand = softwareType.getVerificationCommand();
             commandLineBuilder.append(checkCommand);
             commandLineBuilder.append("\n");
         }
+        commandLineBuilder.append("echo \">>> end <<<\"");
         final String commandLine = commandLineBuilder.toString();
         final String commandName = "get-missing-software";
         final String commandType = "custom";
 
-        return dtoFactory.createDto(CommandDto.class)
-                         .withName(commandName)
-                         .withType(commandType)
-                         .withCommandLine(commandLine);
+        final Command command = dtoFactory.createDto(CommandDto.class)
+                                          .withName(commandName)
+                                          .withType(commandType)
+                                          .withCommandLine(commandLine);
+
+        Log.debug(getClass(), "Verification command: " + command);
+
+        deviceServiceClient.executeCommand(machineId, command, chanel);
+
+        return promise;
     }
 
+    private void readChannel(final String machineId,
+                             final String chanel,
+                             final Set<Software> requiredSoftware,
+                             final AsyncCallback<Set<Software>> commandCallback) {
+        final MessageBus messageBus = messageBusProvider.getMachineMessageBus();
+        try {
+            messageBus.subscribe(chanel, new SubscriptionHandler<String>(new StringUnmarshallerWS()) {
+                @Override
+                protected void onMessageReceived(String message) {
+                    if ("[STDOUT] >>> end <<<".equals(message)) {
+                        messageBus.unsubscribeSilently(chanel, this);
+                        commandCallback.onSuccess(requiredSoftware);
+
+                        Log.debug(getClass(), "Found missing software: " + requiredSoftware);
+                    } else {
+                        if (message.startsWith("[STDOUT] ") && message.contains(GDB_SERVER.name)) {
+                            requiredSoftware.remove(GDB_SERVER);
+
+                            Log.debug(getClass(), "Debug: " + machineId + ", " + message);
+                        } else if (message.startsWith("[STDOUT] ") && message.contains(RSYNC.name)) {
+                            requiredSoftware.remove(RSYNC);
+
+                            Log.debug(getClass(), "Debug: " + machineId + ", " + message);
+                        } else if (message.startsWith("[STDERR] ")) {
+                            Log.error(getClass(), "Error: " + machineId + ", " + message.substring(9));
+                        } else {
+                            Log.debug(getClass(), "Debug: " + machineId + ", " + message);
+                        }
+                    }
+                }
+
+                @Override
+                protected void onErrorReceived(Throwable throwable) {
+                    messageBus.unsubscribeSilently(chanel, this);
+                }
+            });
+        } catch (WebSocketException e) {
+            commandCallback.onFailure(new Exception(e));
+        }
+    }
 }

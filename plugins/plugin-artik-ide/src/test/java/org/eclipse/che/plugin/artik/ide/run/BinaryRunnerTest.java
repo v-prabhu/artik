@@ -16,14 +16,12 @@ import com.google.gwtmockito.GwtMockitoTestRunner;
 
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
-import org.eclipse.che.api.machine.shared.dto.execagent.ProcessStartResponseDto;
+import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
 import org.eclipse.che.api.project.shared.dto.ItemReference;
 import org.eclipse.che.api.promises.client.Operation;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.ide.api.app.AppContext;
-import org.eclipse.che.ide.api.machine.ExecAgentCommandManager;
-import org.eclipse.che.ide.api.machine.execagent.ExecAgentPromise;
 import org.eclipse.che.ide.api.macro.MacroProcessor;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
@@ -31,12 +29,13 @@ import org.eclipse.che.ide.api.project.ProjectServiceClient;
 import org.eclipse.che.ide.api.resources.Project;
 import org.eclipse.che.ide.api.resources.Resource;
 import org.eclipse.che.ide.dto.DtoFactory;
-import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandConsoleFactory;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandOutputConsole;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
 import org.eclipse.che.ide.part.explorer.project.macro.ExplorerCurrentFileNameMacro;
 import org.eclipse.che.ide.part.explorer.project.macro.ExplorerCurrentFileParentPathMacro;
 import org.eclipse.che.ide.resource.Path;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
+import org.eclipse.che.plugin.artik.ide.outputconsole.ArtikCommandConsoleFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -68,42 +67,46 @@ public class BinaryRunnerTest {
     @Mock
     private MacroProcessor                     macroProcessor;
     @Mock
-    private CommandConsoleFactory              consoleFactory;
+    private ArtikCommandConsoleFactory         consoleFactory;
+    @Mock
+    private DeviceServiceClient                deviceServiceClient;
     @Mock
     private ExplorerCurrentFileParentPathMacro currentFileParentPathMacro;
     @Mock
     private ExplorerCurrentFileNameMacro       currentFileNameMacro;
     @Mock
     private ProcessesPanelPresenter            processesPanelPresenter;
-    @Mock
-    private ExecAgentCommandManager            execAgentCommandManager;
 
     private BinaryRunner binaryRunner;
 
     @Mock
-    private Machine                                   device;
+    private Machine                                      device;
     @Mock
-    private Resource                                  resource;
+    private Resource                                     resource;
     @Mock
-    private Project                                   project;
+    private Project                                      project;
     @Mock
-    private ItemReference                             itemReference;
+    private ItemReference                                itemReference;
     @Mock
-    private CommandDto                                commandDto;
+    private CommandDto                                   commandDto;
     @Mock
-    private CommandOutputConsole                      commandOutputConsole;
+    private MachineProcessDto                            process;
     @Mock
-    private Promise<String>                           macroProcessorPromise;
+    private CommandOutputConsole                         commandOutputConsole;
     @Mock
-    private ExecAgentPromise<ProcessStartResponseDto> processPromise;
+    private Promise<String>                              macroProcessorPromise;
     @Mock
-    private Promise<ItemReference>                    itemReferencePromise;
+    private Promise<MachineProcessDto>                   processPromise;
+    @Mock
+    private Promise<ItemReference>                       itemReferencePromise;
     @Captor
-    private ArgumentCaptor<Operation<ItemReference>>  itemReferenceCapture;
+    private ArgumentCaptor<Operation<ItemReference>>     itemReferenceCapture;
     @Captor
-    private ArgumentCaptor<Operation<PromiseError>>   itemReferenceErrorCapture;
+    private ArgumentCaptor<Operation<PromiseError>>      itemReferenceErrorCapture;
     @Captor
-    private ArgumentCaptor<Operation<String>>         macroArgumentCapture;
+    private ArgumentCaptor<Operation<String>>            macroArgumentCapture;
+    @Captor
+    private ArgumentCaptor<Operation<MachineProcessDto>> processCaptor;
 
     @Before
     public void setUp() throws Exception {
@@ -125,21 +128,18 @@ public class BinaryRunnerTest {
         when(commandDto.withCommandLine(anyString())).thenReturn(commandDto);
         when(commandDto.withType(anyString())).thenReturn(commandDto);
 
-        when(execAgentCommandManager.startProcess(anyString(), anyObject())).thenReturn(processPromise);
-        when(processPromise.thenIfProcessStartedEvent(Matchers.any())).thenReturn(processPromise);
-        when(processPromise.thenIfProcessDiedEvent(Matchers.any())).thenReturn(processPromise);
-        when(processPromise.thenIfProcessStdErrEvent(Matchers.any())).thenReturn(processPromise);
-        when(processPromise.thenIfProcessStdOutEvent(Matchers.any())).thenReturn(processPromise);
+        when(deviceServiceClient.executeCommand(anyString(), anyObject(), anyString())).thenReturn(processPromise);
+        when(processPromise.then(Matchers.<Operation<MachineProcessDto>>any())).thenReturn(processPromise);
 
         when(consoleFactory.create(anyObject(), anyObject())).thenReturn(commandOutputConsole);
 
         binaryRunner = new BinaryRunner(dtoFactory,
                                         appContext,
-                                        execAgentCommandManager,
                                         notificationManager,
                                         projectServiceClient,
                                         consoleFactory,
                                         macroProcessor,
+                                        deviceServiceClient,
                                         processesPanelPresenter);
     }
 
@@ -165,14 +165,14 @@ public class BinaryRunnerTest {
         verify(commandDto).withName("run");
         verify(commandDto).withType("custom");
 
-        verify(consoleFactory).create(anyObject(), anyObject());
-        verify(processesPanelPresenter).addCommandOutput(DEVICE_ID, commandOutputConsole);
+        verify(deviceServiceClient).executeCommand(anyString(), anyObject(), anyString());
+        verify(processPromise).then(processCaptor.capture());
+        processCaptor.getValue().apply(process);
 
-        verify(execAgentCommandManager).startProcess(DEVICE_ID, commandDto);
-        verify(commandOutputConsole).getProcessStartedOperation();
-        verify(commandOutputConsole).getProcessDiedOperation();
-        verify(commandOutputConsole).getStdOutOperation();
-        verify(commandOutputConsole).getStdErrOperation();
+        verify(consoleFactory).create(anyObject(), anyObject());
+        verify(commandOutputConsole).listenToOutput(anyString());
+        verify(processesPanelPresenter).addCommandOutput(DEVICE_ID, commandOutputConsole);
+        verify(commandOutputConsole).attachToProcess(process);
     }
 
     @Test

@@ -22,6 +22,7 @@ import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.core.model.machine.MachineSource;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
+import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
 import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.js.JsPromiseError;
 import org.eclipse.che.api.promises.client.js.Promises;
@@ -30,7 +31,6 @@ import org.eclipse.che.ide.api.command.CommandImpl;
 import org.eclipse.che.ide.api.debug.DebugConfiguration;
 import org.eclipse.che.ide.api.debug.DebugConfigurationType;
 import org.eclipse.che.ide.api.debug.DebugConfigurationsManager;
-import org.eclipse.che.ide.api.machine.ExecAgentCommandManager;
 import org.eclipse.che.ide.api.macro.MacroProcessor;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
@@ -41,7 +41,16 @@ import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandConsoleFactory;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.DefaultOutputConsole;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
+import org.eclipse.che.ide.util.UUID;
+import org.eclipse.che.ide.util.loging.Log;
+import org.eclipse.che.ide.websocket.MessageBus;
+import org.eclipse.che.ide.websocket.MessageBusProvider;
+import org.eclipse.che.ide.websocket.WebSocketException;
+import org.eclipse.che.ide.websocket.events.MessageHandler;
+import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
 import org.eclipse.che.plugin.artik.ide.command.macro.ReplicationFolderMacro;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
+import org.eclipse.che.plugin.artik.ide.updatesdk.OutputMessageUnmarshaller;
 import org.eclipse.che.plugin.debugger.ide.configuration.DebugConfigurationTypeRegistry;
 
 import java.util.HashMap;
@@ -62,14 +71,16 @@ import static org.eclipse.che.plugin.cpp.shared.Constants.BINARY_NAME_ATTRIBUTE;
 public class DebuggerConnector {
 
     private final DtoFactory                     dtoFactory;
+    private final ProcessListener                processListener;
     private final ProjectServiceClient           projectService;
     private final AppContext                     appContext;
-    private final ExecAgentCommandManager        execAgentCommandManager;
+    private final DeviceServiceClient            deviceServiceClient;
     private final MacroProcessor                 macroProcessor;
     private final DebugConfigurationTypeRegistry debugConfigurationTypeRegistry;
     private final DebugConfigurationsManager     debugConfigurationsManager;
     private final NotificationManager            notificationManager;
 
+    private final MessageBus              messageBus;
     private final ProcessesPanelPresenter processesPanelPresenter;
     private final CommandConsoleFactory   commandConsoleFactory;
 
@@ -77,25 +88,33 @@ public class DebuggerConnector {
 
     @Inject
     public DebuggerConnector(DtoFactory dtoFactory,
+                             ProcessListener processListener,
                              ProjectServiceClient projectService,
                              AppContext appContext,
                              MacroProcessor macroProcessor,
-                             ExecAgentCommandManager execAgentCommandManager,
                              DebugConfigurationTypeRegistry debugConfigurationTypeRegistry,
                              DebugConfigurationsManager debugConfigurationsManager,
                              NotificationManager notificationManager,
+                             DeviceServiceClient deviceServiceClient,
+                             MessageBusProvider messageBusProvider,
                              ProcessesPanelPresenter processesPanelPresenter,
                              CommandConsoleFactory commandConsoleFactory) {
         this.dtoFactory = dtoFactory;
+        this.processListener = processListener;
         this.projectService = projectService;
         this.appContext = appContext;
-        this.execAgentCommandManager = execAgentCommandManager;
+        this.deviceServiceClient = deviceServiceClient;
         this.macroProcessor = macroProcessor;
         this.debugConfigurationTypeRegistry = debugConfigurationTypeRegistry;
         this.debugConfigurationsManager = debugConfigurationsManager;
         this.notificationManager = notificationManager;
+        this.messageBus = messageBusProvider.getMachineMessageBus();
         this.processesPanelPresenter = processesPanelPresenter;
         this.commandConsoleFactory = commandConsoleFactory;
+    }
+
+    private static boolean isSuccessMessage(String message) {
+        return message.contains("Listening on port");
     }
 
     /**
@@ -112,10 +131,16 @@ public class DebuggerConnector {
         Project project = projectOptional.get();
 
         String binaryName = project.getAttribute(BINARY_NAME_ATTRIBUTE);
-        projectService.getItem(project.getLocation().append(!isNullOrEmpty(binaryName) ? binaryName : DEFAULT_BINARY_NAME))
-                      .then(itemReference -> {
-                          checkPortOccupation(machine, project);
-                      }).catchError(noFileError -> {
+        projectService.getItem(project.getLocation()
+                                      .append(!isNullOrEmpty(binaryName) ? binaryName : DEFAULT_BINARY_NAME)).then(itemReference -> {
+            runGdbServer(machine, project).then(port -> {
+                if (port != null) {
+                    connect(machine, port);
+                }
+            }).catchError(promiseError -> {
+                notificationManager.notify("", promiseError.getMessage());
+            });
+        }).catchError(promiseError -> {
             notificationManager.notify("",
                                        "No binary file found. Compile your app and re-run debug.",
                                        StatusNotification.Status.FAIL,
@@ -123,41 +148,45 @@ public class DebuggerConnector {
         });
     }
 
-    private void checkPortOccupation(final Machine device, final Project project) {
-        final String commandLine = "process=$(netstat -nlp | grep :1234 | awk '{print $7}' | sed 's/\\/gdbserver//')\n" +
-                                   "        if [[ $process ]]; then\n" +
-                                   "          echo 'Stopping GDB server...'\n" +
-                                   "          kill $process\n" +
-                                   "          echo 'GDB server stopped'\n" +
-                                   "        else\n" +
-                                   "          echo 'GDB server is not running'\n" +
-                                   "      fi";
-        final String commandName = "kill process";
-        final String commandType = "custom";
-        final CommandDto commandDto = dtoFactory.createDto(CommandDto.class)
-                                                .withName(commandName)
-                                                .withCommandLine(commandLine)
-                                                .withType(commandType);
-
-        final String deviceId = device.getId();
-        execAgentCommandManager.startProcess(deviceId, commandDto)
-                               .thenIfProcessDiedEvent(processDied -> runGdbServer(device, project).then(port -> {
-                                   if (port != null) {
-                                       connect(device, port);
-                                   }
-                               }).catchError(promiseError -> {
-                                   notificationManager.notify("", promiseError.getMessage());
-                               }));
-    }
-
     /** Runs GDB server and returns the listened port. */
     private Promise<Integer> runGdbServer(final Machine machine, final Project project) {
+        final String chanel = "process:output:" + UUID.uuid();
         final int debugPort = 1234;
+
+        try {
+            messageBus.subscribe(chanel, new SubscriptionHandler<String>(new OutputMessageUnmarshaller()) {
+                @Override
+                protected void onMessageReceived(String message) {
+                    if (isSuccessMessage(message)) {
+                        runCallback.onSuccess(debugPort);
+
+                        try {
+                            messageBus.unsubscribe(chanel, this);
+                        } catch (WebSocketException e) {
+                            Log.error(getClass(), e);
+                        }
+                    }
+                }
+
+                @Override
+                protected void onErrorReceived(Throwable throwable) {
+                    runCallback.onFailure(throwable);
+                }
+            });
+        } catch (WebSocketException e) {
+            runCallback.onFailure(new Exception(e));
+        }
 
         final Promise<Integer> promise = createFromAsyncRequest(callback -> runCallback = callback);
 
         final Command command = buildCommand(project, machine, debugPort);
         final DefaultOutputConsole console = (DefaultOutputConsole)commandConsoleFactory.create(command.getName());
+        final MessageHandler handler = console::printText;
+        try {
+            messageBus.subscribe(chanel, handler);
+        } catch (WebSocketException e) {
+            //do nothing
+        }
 
         macroProcessor.expandMacros(command.getCommandLine()).then(arg -> {
             final CommandDto commandDto = dtoFactory.createDto(CommandDto.class)
@@ -165,28 +194,14 @@ public class DebuggerConnector {
                                                     .withCommandLine(arg)
                                                     .withType(command.getType());
 
-            execAgentCommandManager.startProcess(machine.getId(), commandDto)
-                                   .then(process -> processesPanelPresenter.addCommandOutput(machine.getId(), console))
-                                   .thenIfProcessStdOutEvent(processStdOut -> {
-                                       if (isSuccessMessage(processStdOut.getText())) {
-                                           runCallback.onSuccess(debugPort);
-                                       }
-                                       console.printText(processStdOut.getText());
-                                   })
-                                   .thenIfProcessStdErrEvent(processStdErr -> {
-                                       if (isSuccessMessage(processStdErr.getText())) {
-                                           runCallback.onSuccess(debugPort);
-                                       }
-                                       console.printText(processStdErr.getText());
-                                   });
+            final Promise<MachineProcessDto> processPromise = deviceServiceClient.executeCommand(machine.getId(), commandDto, chanel);
+            processPromise.then(process -> {
+                processesPanelPresenter.addCommandOutput(machine.getId(), console);
+                processListener.attachToProcess(process, machine, chanel, handler);
+            });
         });
 
-
         return promise;
-    }
-
-    private static boolean isSuccessMessage(String message) {
-        return message.contains("Listening on port");
     }
 
     /** Connect the debugger to the specified device. */

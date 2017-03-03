@@ -17,7 +17,6 @@ import com.google.gwt.inject.client.multibindings.GinMapBinder;
 import com.google.gwt.inject.client.multibindings.GinMultibinder;
 import com.google.inject.Singleton;
 import com.google.inject.name.Names;
-
 import org.eclipse.che.ide.api.command.CommandProducer;
 import org.eclipse.che.ide.api.component.Component;
 import org.eclipse.che.ide.api.extension.ExtensionGinModule;
@@ -25,6 +24,7 @@ import org.eclipse.che.ide.api.machine.CheWsAgentLinksModifier;
 import org.eclipse.che.ide.api.machine.WsAgentURLModifier;
 import org.eclipse.che.ide.api.macro.Macro;
 import org.eclipse.che.ide.editor.orion.client.inject.OrionPlugin;
+import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandOutputConsole;
 import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartView;
 import org.eclipse.che.plugin.artik.ide.apidocs.DocsPartViewImpl;
 import org.eclipse.che.plugin.artik.ide.command.CCompileCommandProducer;
@@ -34,8 +34,10 @@ import org.eclipse.che.plugin.artik.ide.command.macro.CCompilationPropertiesMacr
 import org.eclipse.che.plugin.artik.ide.command.macro.CppCompilationPropertiesMacro;
 import org.eclipse.che.plugin.artik.ide.command.macro.NodeJsRunParametersMacro;
 import org.eclipse.che.plugin.artik.ide.command.macro.ReplicationFolderMacroFactory;
-import org.eclipse.che.plugin.artik.ide.debug.DebugActionFactory;
 import org.eclipse.che.plugin.artik.ide.debug.DebugAndRunActionsManager;
+import org.eclipse.che.plugin.artik.ide.debug.DebugActionFactory;
+import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClient;
+import org.eclipse.che.plugin.artik.ide.discovery.DeviceDiscoveryServiceClientImpl;
 import org.eclipse.che.plugin.artik.ide.installpkg.PackageInstallerView;
 import org.eclipse.che.plugin.artik.ide.installpkg.PackageInstallerViewImpl;
 import org.eclipse.che.plugin.artik.ide.keyworddoc.KeywordDocsServiceClient;
@@ -43,6 +45,8 @@ import org.eclipse.che.plugin.artik.ide.keyworddoc.KeywordDocsServiceClientImpl;
 import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClientImpl;
 import org.eclipse.che.plugin.artik.ide.orionplugin.ArtikOrionPlugin;
+import org.eclipse.che.plugin.artik.ide.outputconsole.ArtikCommandConsoleFactory;
+import org.eclipse.che.plugin.artik.ide.outputconsole.ArtikCommandOutputConsole;
 import org.eclipse.che.plugin.artik.ide.profile.ArtikModeActionFactory;
 import org.eclipse.che.plugin.artik.ide.run.RunActionFactory;
 import org.eclipse.che.plugin.artik.ide.scp.action.PushToDeviceActionFactory;
@@ -63,6 +67,7 @@ public class ArtikGinModule extends AbstractGinModule {
         install(new GinFactoryModuleBuilder().build(PushToDeviceActionFactory.class));
         install(new GinFactoryModuleBuilder().build(ArtikModeActionFactory.class));
 
+        bind(DeviceDiscoveryServiceClient.class).to(DeviceDiscoveryServiceClientImpl.class).in(Singleton.class);
         bind(WsAgentURLModifier.class).to(CheWsAgentLinksModifier.class);
 
         bind(PackageInstallerView.class).to(PackageInstallerViewImpl.class);
@@ -78,6 +83,10 @@ public class ArtikGinModule extends AbstractGinModule {
         GinMultibinder<CommandProducer> commandProducerMultibinder = GinMultibinder.newSetBinder(binder(), CommandProducer.class);
         commandProducerMultibinder.addBinding().to(CCompileCommandProducer.class);
         commandProducerMultibinder.addBinding().to(CppCompileCommandProducer.class);
+
+        install(new GinFactoryModuleBuilder()
+                        .implement(CommandOutputConsole.class, Names.named("artik-command-console"), ArtikCommandOutputConsole.class)
+                        .build(ArtikCommandConsoleFactory.class));
 
         GinMultibinder<Macro> macrosMultibinder = GinMultibinder.newSetBinder(binder(), Macro.class);
         macrosMultibinder.addBinding().to(BinaryNameMacro.class);

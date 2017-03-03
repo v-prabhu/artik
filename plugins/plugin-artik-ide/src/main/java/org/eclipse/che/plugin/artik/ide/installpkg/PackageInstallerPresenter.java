@@ -11,25 +11,33 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.artik.ide.installpkg;
 
+import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import com.google.web.bindery.event.shared.EventBus;
 
 import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
-import org.eclipse.che.ide.api.machine.ExecAgentCommandManager;
+import org.eclipse.che.api.promises.client.Operation;
+import org.eclipse.che.api.promises.client.OperationException;
+import org.eclipse.che.api.promises.client.Promise;
+import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
-import org.eclipse.che.ide.api.workspace.event.MachineStatusChangedEvent;
+import org.eclipse.che.ide.commons.exception.UnmarshallerException;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
-import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
+import org.eclipse.che.ide.util.UUID;
+import org.eclipse.che.ide.websocket.Message;
+import org.eclipse.che.ide.websocket.MessageBus;
+import org.eclipse.che.ide.websocket.MessageBusProvider;
+import org.eclipse.che.ide.websocket.WebSocketException;
+import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
+import org.eclipse.che.ide.websocket.rest.Unmarshallable;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
+import static org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper.createFromAsyncRequest;
 import static org.eclipse.che.ide.api.notification.StatusNotification.DisplayMode.FLOAT_MODE;
-import static org.eclipse.che.ide.api.notification.StatusNotification.Status.FAIL;
-import static org.eclipse.che.ide.api.notification.StatusNotification.Status.PROGRESS;
 import static org.eclipse.che.ide.api.notification.StatusNotification.Status.SUCCESS;
 
 /**
@@ -38,34 +46,33 @@ import static org.eclipse.che.ide.api.notification.StatusNotification.Status.SUC
  * @author Lijuan Xue
  */
 @Singleton
-public class PackageInstallerPresenter implements PackageInstallerView.ActionDelegate, MachineStatusChangedEvent.Handler {
-    private final PackageInstallerView      view;
-    private final ExecAgentCommandManager   commandManager;
-    private final NotificationManager       notificationManager;
-    private final ProcessesPanelPresenter   processesPanelPresenter;
-    private final ArtikLocalizationConstant locale;
-    private final DtoFactory                dtoFactory;
+public class PackageInstallerPresenter implements PackageInstallerView.ActionDelegate {
+    private final PackageInstallerView    view;
+    private final NotificationManager     notificationManager;
+    private final DeviceServiceClient     deviceServiceClient;
+    private final MessageBusProvider      messageBusProvider;
+    private final ProcessesPanelPresenter processesPanelPresenter;
 
-    private Machine            machine;
+    private       DtoFactory              dtoFactory;
+    private       Machine                 machine;
+    private       AsyncCallback<String>   commandCallback;
+
     private StatusNotification progressNotification;
 
     @Inject
     public PackageInstallerPresenter(PackageInstallerView view,
-                                     ExecAgentCommandManager commandManager,
                                      NotificationManager notificationManager,
                                      DtoFactory dtoFactory,
-                                     ArtikLocalizationConstant locale,
-                                     EventBus eventBus,
+                                     DeviceServiceClient deviceServiceClient,
+                                     MessageBusProvider messageBusProvider,
                                      ProcessesPanelPresenter processesPanelPresenter) {
         this.view = view;
-        this.commandManager = commandManager;
         this.notificationManager = notificationManager;
         this.dtoFactory = dtoFactory;
-        this.locale = locale;
+        this.deviceServiceClient = deviceServiceClient;
         this.view.setDelegate(this);
+        this.messageBusProvider = messageBusProvider;
         this.processesPanelPresenter = processesPanelPresenter;
-
-        eventBus.addHandler(MachineStatusChangedEvent.TYPE, this);
     }
 
     /**
@@ -90,50 +97,87 @@ public class PackageInstallerPresenter implements PackageInstallerView.ActionDel
      */
     @Override
     public void onInstallButtonClicked() {
-        final String packageName = view.getPackageName();
-        final String deviceName = machine.getConfig().getName();
-
-        if (!isNullOrEmpty(packageName)) {
+        String packageName = view.getPackageName();
+        if (packageName != null && !packageName.isEmpty()) {
             progressNotification = notificationManager.notify("Installing package: " +
-                                                              packageName +
-                                                              " on the target machine: " +
-                                                              machine.getConfig().getName() +
-                                                              ".", StatusNotification.Status.PROGRESS, FLOAT_MODE);
+                                                          packageName +
+                                                          " on the target machine: " +
+                                                          machine.getConfig().getName() +
+                                                          ".", StatusNotification.Status.PROGRESS, FLOAT_MODE);
 
-            String commandLine = "dnf install " + packageName + " -y";
+            String command = "dnf install " + packageName + " -y \n"
+                             + "# Special marker line. Don't modify it.\n"
+                             + "echo \">>> end <<<\"";
 
-            final Command command = dtoFactory.createDto(CommandDto.class)
-                                              .withName("name")
-                                              .withType("custom")
-                                              .withCommandLine(commandLine);
+            executeCommand(command, machine).then(new Operation<String>() {
+                @Override
+                public void apply(String arg) throws OperationException {
+                    String message = "Installing process completed.";
+                    progressNotification.setTitle(message);
+                    progressNotification.setStatus(SUCCESS);
+                }
+            });
 
-            commandManager.startProcess(machine.getId(), command)
-                          .thenIfProcessStdOutEvent(
-                                  processStdOut -> processesPanelPresenter.printMachineOutput(deviceName, processStdOut.getText()))
-                          .thenIfProcessStdErrEvent(
-                                  processSdtErr -> processesPanelPresenter.printMachineOutput(deviceName, processSdtErr.getText()))
-                          .thenIfProcessDiedEvent(processDied -> {
-                              String message = "Installing process completed.";
-                              progressNotification.setTitle(message);
-                              progressNotification.setStatus(SUCCESS);
-                          });
             view.closeDialog();
         }
     }
 
-    @Override
-    public void onMachineStatusChanged(MachineStatusChangedEvent machineStatusChangedEvent) {
-        switch (machineStatusChangedEvent.getEventType()) {
-            case DESTROYED:
-                if (PROGRESS.equals(progressNotification.getStatus())) {
-                    progressNotification.setStatus(FAIL);
-                    progressNotification.setContent(locale.operationAborted(machineStatusChangedEvent.getMachineName()));
-                }
-                break;
-            case RUNNING:
-                break;
-            case ERROR:
-                break;
+    private class CommandOutputUnmarshaller implements Unmarshallable<String> {
+
+        private String payload;
+
+        @Override
+        public void unmarshal(Message response) throws UnmarshallerException {
+            payload = response.getBody();
         }
+
+        @Override
+        public String getPayload() {
+            return payload;
+        }
+
+    }
+
+    private Promise<String> executeCommand(final String cmd, final Machine machine) {
+        final String deviceName = machine.getConfig().getName();
+        final String chanel = "process:output:" + UUID.uuid();
+        try {
+            final MessageBus messageBus = messageBusProvider.getMachineMessageBus();
+            messageBus.subscribe(chanel, new SubscriptionHandler<String>(new CommandOutputUnmarshaller()) {
+                @Override
+                protected void onMessageReceived(String message) {
+                    if ("[STDOUT] >>> end <<<".equals(message)) {
+                        messageBus.unsubscribeSilently(chanel, this);
+                        processesPanelPresenter.printMachineOutput(deviceName, "");
+                        commandCallback.onSuccess(message);
+
+                    } else {
+                        processesPanelPresenter.printMachineOutput(deviceName, message);
+                    }
+                }
+
+                @Override
+                protected void onErrorReceived(Throwable throwable) {
+                    messageBus.unsubscribeSilently(chanel, this);
+                }
+            });
+        } catch (WebSocketException e) {
+            commandCallback.onFailure(new Exception(e));
+        }
+
+        final Promise<String> promise = createFromAsyncRequest(new AsyncPromiseHelper.RequestCall<String>() {
+            @Override
+            public void makeCall(AsyncCallback<String> callback) {
+                commandCallback = callback;
+            }
+        });
+
+        final Command command = dtoFactory.createDto(CommandDto.class)
+                                          .withName("name")
+                                          .withType("custom")
+                                          .withCommandLine(cmd);
+
+        deviceServiceClient.executeCommand(machine.getId(), command, chanel);
+        return promise;
     }
 }

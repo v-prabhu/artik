@@ -17,15 +17,21 @@ import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
 
+import com.google.common.io.CharStreams;
 import com.google.inject.Inject;
 
 import org.eclipse.che.api.core.BadRequestException;
+import org.eclipse.che.api.core.ForbiddenException;
 import org.eclipse.che.api.core.NotFoundException;
 import org.eclipse.che.api.core.ServerException;
 import org.eclipse.che.api.core.rest.Service;
+import org.eclipse.che.api.machine.server.exception.MachineException;
+import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.machine.shared.dto.MachineConfigDto;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
+import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -35,8 +41,12 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import java.io.IOException;
+import java.io.Reader;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Artik device service API
@@ -63,7 +73,7 @@ public class ArtikDeviceService extends Service {
     @ApiResponses({@ApiResponse(code = 500, message = "Internal server error occurred"),
                    @ApiResponse(code = 400, message = "Missed required parameters, parameters are not valid")})
     public MachineDto connect(@ApiParam(value = "The new device configuration", required = true)
-                                      MachineConfigDto machineConfig) throws ServerException, BadRequestException {
+                                  MachineConfigDto machineConfig) throws ServerException, BadRequestException {
         requiredNotNull(machineConfig, "Device configuration");
         return artikDeviceManager.connect(machineConfig);
     }
@@ -76,7 +86,7 @@ public class ArtikDeviceService extends Service {
     @ApiResponses({@ApiResponse(code = 500, message = "Internal server error occurred"),
                    @ApiResponse(code = 400, message = "Missed required parameters, parameters are not valid")})
     public List<MachineDto> restore(@ApiParam(value = "Devices' configuration", required = true)
-                                            List<MachineConfigDto> devicesConfigs) throws ServerException, BadRequestException {
+                                      List<MachineConfigDto> devicesConfigs) throws ServerException, BadRequestException {
         requiredNotNull(devicesConfigs, "Device configuration");
         return artikDeviceManager.restoreDevices(devicesConfigs);
     }
@@ -120,6 +130,48 @@ public class ArtikDeviceService extends Service {
         return devices;
     }
 
+    @GET
+    @Path("/processes/{deviceId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.TEXT_PLAIN)
+    @ApiOperation(value = "Get processes of device",
+            response = MachineProcessDto.class,
+            responseContainer = "List")
+    @ApiResponses({@ApiResponse(code = 200, message = "The response contains device process entities"),
+                   @ApiResponse(code = 404, message = "Device with specified ID does not exist"),
+                   @ApiResponse(code = 500, message = "Internal server error occurred")})
+    public List<MachineProcessDto> getProcesses(@ApiParam(value = "Device ID")
+                                                @PathParam("deviceId") String deviceId) throws ServerException, NotFoundException {
+        return artikDeviceManager.getProcessesById(deviceId)
+                                 .stream()
+                                 .map(ArtikDtoConverter::asDto)
+                                 .map(machineProcess -> linksInjector.injectLinks(machineProcess,
+                                                                                  deviceId,
+                                                                                  getServiceContext()))
+                                 .collect(Collectors.toList());
+    }
+
+    @GET
+    @Path("/{deviceId}/process/{pid}/logs")
+    @Produces(MediaType.TEXT_PLAIN)
+    @ApiOperation(value = "Get logs of device process")
+    @ApiResponses({@ApiResponse(code = 200, message = "The response contains logs"),
+                   @ApiResponse(code = 404, message = "Device or process with specified ID does not exist"),
+                   @ApiResponse(code = 500, message = "Internal server error occurred")})
+    public void getProcessLogs(@ApiParam(value = "Device ID")
+                               @PathParam("deviceId") String machineId,
+                               @ApiParam(value = "Process ID")
+                               @PathParam("pid") int pid,
+                               @Context HttpServletResponse httpServletResponse)
+            throws NotFoundException,
+                   ForbiddenException,
+                   ServerException,
+                   IOException {
+
+        addProcessLogsToResponse(machineId, pid, httpServletResponse);
+    }
+
+
     @DELETE
     @Path("/{deviceId}")
     @Consumes(MediaType.TEXT_PLAIN)
@@ -135,9 +187,60 @@ public class ArtikDeviceService extends Service {
         return artikDeviceManager.disconnect(deviceId, remove);
     }
 
+    @POST
+    @Path("/{deviceId}/command")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "Start specified command in device")
+    @ApiResponses({@ApiResponse(code = 200, message = "The response contains entity of created device process"),
+                   @ApiResponse(code = 400, message = "Command entity is invalid"),
+                   @ApiResponse(code = 404, message = "Device with specified ID does not exist"),
+                   @ApiResponse(code = 500, message = "Internal server error occurred")})
+    public MachineProcessDto executeCommandInDevice(@ApiParam(value = "Device ID")
+                                                    @PathParam("deviceId") String deviceId,
+                                                    @ApiParam(value = "Command to execute", required = true)
+                                                    final CommandDto command,
+                                                    @ApiParam(value = "Channel for command output")
+                                                    @QueryParam("outputChannel") String outputChannel) throws NotFoundException,
+                                                                                                              ServerException,
+                                                                                                              BadRequestException {
+        requiredNotNull(command, "Command description");
+        requiredNotNull(command.getCommandLine(), "Commandline");
+        return linksInjector.injectLinks(ArtikDtoConverter.asDto(artikDeviceManager.exec(deviceId,
+                                                                                    command,
+                                                                                    outputChannel)),
+                                         deviceId,
+                                         getServiceContext());
+    }
+
+    @DELETE
+    @Path("/{deviceId}/process/{processId}")
+    @ApiOperation(value = "Stop process in device")
+    @ApiResponses({@ApiResponse(code = 204, message = "Process was successfully stopped"),
+                   @ApiResponse(code = 404, message = "Device with specified ID does not exist"),
+                   @ApiResponse(code = 500, message = "Internal server error occurred")})
+    public void stopProcess(@ApiParam(value = "Device ID")
+                            @PathParam("deviceId") String deviceId,
+                            @ApiParam(value = "Process ID")
+                            @PathParam("processId") int processId) throws NotFoundException,
+                                                                          ServerException {
+        artikDeviceManager.stopProcess(deviceId, processId);
+    }
+
     private void requiredNotNull(Object object, String message) throws BadRequestException {
         if (object == null) {
             throw new BadRequestException(message + " required");
+        }
+    }
+
+    private void addProcessLogsToResponse(String machineId, int pid, HttpServletResponse httpServletResponse) throws IOException,
+                                                                                                                     NotFoundException,
+                                                                                                                     MachineException {
+        try (Reader logsReader = artikDeviceManager.getProcessLogReader(machineId, pid)) {
+            // Response is written directly to the servlet request stream
+            httpServletResponse.setContentType("text/plain");
+            CharStreams.copy(logsReader, httpServletResponse.getWriter());
+            httpServletResponse.getWriter().flush();
         }
     }
 }

@@ -11,30 +11,28 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.artik.ide.profile;
 
+import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import com.google.web.bindery.event.shared.EventBus;
 
 import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
-import org.eclipse.che.ide.api.machine.ExecAgentCommandManager;
-import org.eclipse.che.ide.api.notification.NotificationManager;
-import org.eclipse.che.ide.api.notification.StatusNotification;
-import org.eclipse.che.ide.api.workspace.event.MachineStatusChangedEvent;
+import org.eclipse.che.api.promises.client.Promise;
+import org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
+import org.eclipse.che.ide.util.UUID;
 import org.eclipse.che.ide.util.loging.Log;
-import org.eclipse.che.plugin.artik.ide.ArtikLocalizationConstant;
+import org.eclipse.che.ide.websocket.MessageBus;
+import org.eclipse.che.ide.websocket.MessageBusProvider;
+import org.eclipse.che.ide.websocket.WebSocketException;
+import org.eclipse.che.ide.websocket.rest.StringUnmarshallerWS;
+import org.eclipse.che.ide.websocket.rest.SubscriptionHandler;
 import org.eclipse.che.plugin.artik.ide.ArtikResources;
+import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.eclipse.che.ide.api.notification.StatusNotification.DisplayMode.FLOAT_MODE;
-import static org.eclipse.che.ide.api.notification.StatusNotification.Status.FAIL;
-import static org.eclipse.che.ide.api.notification.StatusNotification.Status.PROGRESS;
-import static org.eclipse.che.ide.api.notification.StatusNotification.Status.SUCCESS;
+import static org.eclipse.che.api.promises.client.callback.AsyncPromiseHelper.createFromAsyncRequest;
 import static org.eclipse.che.plugin.artik.ide.profile.Software.GDB_SERVER;
 import static org.eclipse.che.plugin.artik.ide.profile.Software.RSYNC;
 
@@ -42,47 +40,43 @@ import static org.eclipse.che.plugin.artik.ide.profile.Software.RSYNC;
  * @author Dmitry Kuleshov
  */
 @Singleton
-public class SoftwareInstaller implements MachineStatusChangedEvent.Handler {
-    private final DtoFactory                dtoFactory;
-    private final NotificationManager       notificationManager;
-    private final ArtikLocalizationConstant artikLocalizationConstant;
-    private final ProcessesPanelPresenter   processesPanelPresenter;
-    private final ExecAgentCommandManager   execAgentCommandManager;
-
-    private List<StatusNotification> notifications;
+public class SoftwareInstaller {
+    private final MessageBusProvider      messageBusProvider;
+    private final DtoFactory              dtoFactory;
+    private final ProcessesPanelPresenter processesPanelPresenter;
+    private final DeviceServiceClient     deviceServiceClient;
 
     @Inject
-    public SoftwareInstaller(DtoFactory dtoFactory,
-                             NotificationManager notificationManager,
-                             ArtikLocalizationConstant artikLocalizationConstant,
-                             EventBus eventBus,
+    public SoftwareInstaller(DeviceServiceClient deviceServiceClient,
+                             MessageBusProvider messageBusProvider,
+                             DtoFactory dtoFactory,
                              ProcessesPanelPresenter processesPanelPresenter,
-                             ArtikResources artikResources,
-                             ExecAgentCommandManager execAgentCommandManager) {
+                             ArtikResources artikResources) {
+        this.deviceServiceClient = deviceServiceClient;
+        this.messageBusProvider = messageBusProvider;
         this.dtoFactory = dtoFactory;
-        this.notificationManager = notificationManager;
-        this.artikLocalizationConstant = artikLocalizationConstant;
         this.processesPanelPresenter = processesPanelPresenter;
-        this.execAgentCommandManager = execAgentCommandManager;
 
 
         GDB_SERVER.setInstallationCommand(artikResources.gdbServerInstallationCommand().getText());
         RSYNC.setInstallationCommand(artikResources.rsyncInstallationCommand().getText());
-
-        notifications = new ArrayList<>();
-
-        eventBus.addHandler(MachineStatusChangedEvent.TYPE, this);
     }
 
-    public void install(final Software software, final Machine device) {
-        Log.debug(getClass(), "Installing missing software: " + software);
+    public Promise<Void> install(final Software softwareType, final Machine device) {
+        Log.debug(getClass(), "Installing missing software: " + softwareType);
 
-        final String message = "Installing " + software.name + " for development mode to " + device.getConfig().getName();
-        final StatusNotification notification = notificationManager.notify(message, PROGRESS, FLOAT_MODE);
-        notifications.add(notification);
+        final String chanel = "process:output:" + UUID.uuid();
 
-        final String commandLine = software.getInstallationCommand();
-        final String commandName = software.name() + "_installation";
+        final Promise<Void> promise = createFromAsyncRequest(new AsyncPromiseHelper.RequestCall<Void>() {
+            @Override
+            public void makeCall(AsyncCallback<Void> callback) {
+                readChannel(device.getConfig().getName(), chanel, callback);
+            }
+        });
+
+
+        final String commandLine = softwareType.getInstallationCommand() + "echo \">>> end <<<\"";
+        final String commandName = softwareType.name() + "_installation";
         final String commandType = "custom";
 
         final Command command = dtoFactory.createDto(CommandDto.class)
@@ -92,43 +86,49 @@ public class SoftwareInstaller implements MachineStatusChangedEvent.Handler {
 
         Log.debug(getClass(), "Installation command: " + command);
 
-        execAgentCommandManager.startProcess(device.getId(), command).thenIfProcessStartedEvent(processStartedEventDto -> {
+        deviceServiceClient.executeCommand(device.getId(), command, chanel);
 
-        }).thenIfProcessDiedEvent(processDiedEventDto -> {
-            final String softwareInstalledMessage = "Software installed";
-            notification.setTitle(softwareInstalledMessage);
-            notification.setStatus(SUCCESS);
-
-            processesPanelPresenter.printMachineOutput(device.getConfig().getName(), "\n");
-
-            Log.debug(getClass(), message);
-        }).thenIfProcessStdOutEvent(processStdOutEventDto -> {
-            processesPanelPresenter.printMachineOutput(device.getConfig().getName(), processStdOutEventDto.getText());
-
-            Log.debug(getClass(), message);
-        }).thenIfProcessStdErrEvent(processStdErrEventDto -> {
-            processesPanelPresenter.printMachineOutput(device.getConfig().getName(), processStdErrEventDto.getText(), "red");
-
-            Log.debug(getClass(), message);
-        });
-
+        return promise;
     }
 
-    @Override
-    public void onMachineStatusChanged(MachineStatusChangedEvent machineStatusChangedEvent) {
-        switch (machineStatusChangedEvent.getEventType()) {
-            case DESTROYED:
-                for (StatusNotification notification : notifications) {
-                    if (PROGRESS.equals(notification.getStatus())) {
-                        notification.setStatus(FAIL);
-                        notification.setContent(artikLocalizationConstant.operationAborted(machineStatusChangedEvent.getMachineName()));
+    private void readChannel(final String deviceName, final String chanel, final AsyncCallback<Void> commandCallback) {
+        final MessageBus messageBus = messageBusProvider.getMachineMessageBus();
+        try {
+            messageBus.subscribe(chanel, new SubscriptionHandler<String>(new StringUnmarshallerWS()) {
+                @Override
+                protected void onMessageReceived(String message) {
+                    if ("[STDOUT] >>> end <<<".equals(message)) {
+                        messageBus.unsubscribeSilently(chanel, this);
+                        processesPanelPresenter.printMachineOutput(deviceName, "\n");
+                        commandCallback.onSuccess(null);
+
+                        Log.debug(getClass(), message);
+                    } else {
+                        if (message.startsWith("[STDOUT] ")) {
+                            processesPanelPresenter.printMachineOutput(deviceName, message.substring(9));
+
+                            Log.debug(getClass(), message);
+                        } else if (message.startsWith("[STDERR] ")) {
+                            processesPanelPresenter.printMachineOutput(deviceName, message.substring(9), "red");
+
+                            Log.error(getClass(), message);
+                        } else {
+                            processesPanelPresenter.printMachineOutput(deviceName, message);
+
+                            Log.debug(getClass(), message);
+                        }
                     }
                 }
-                break;
-            case RUNNING:
-                break;
-            case ERROR:
-                break;
+
+                @Override
+                protected void onErrorReceived(Throwable throwable) {
+                    messageBus.unsubscribeSilently(chanel, this);
+
+                    Log.error(getClass(), throwable);
+                }
+            });
+        } catch (WebSocketException e) {
+            commandCallback.onFailure(new Exception(e));
         }
     }
 }
