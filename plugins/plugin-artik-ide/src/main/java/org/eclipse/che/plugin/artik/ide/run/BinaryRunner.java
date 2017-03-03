@@ -18,10 +18,9 @@ import com.google.inject.Singleton;
 import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
-import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
-import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.ide.api.app.AppContext;
 import org.eclipse.che.ide.api.command.CommandImpl;
+import org.eclipse.che.ide.api.machine.ExecAgentCommandManager;
 import org.eclipse.che.ide.api.macro.MacroProcessor;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.api.notification.StatusNotification;
@@ -29,13 +28,11 @@ import org.eclipse.che.ide.api.project.ProjectServiceClient;
 import org.eclipse.che.ide.api.resources.Project;
 import org.eclipse.che.ide.api.resources.Resource;
 import org.eclipse.che.ide.dto.DtoFactory;
+import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandConsoleFactory;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandOutputConsole;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
 import org.eclipse.che.ide.resource.Path;
-import org.eclipse.che.ide.util.UUID;
 import org.eclipse.che.plugin.artik.ide.command.macro.ReplicationFolderMacro;
-import org.eclipse.che.plugin.artik.ide.machine.DeviceServiceClient;
-import org.eclipse.che.plugin.artik.ide.outputconsole.ArtikCommandConsoleFactory;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.eclipse.che.plugin.artik.ide.command.macro.BinaryNameMacro.DEFAULT_BINARY_NAME;
@@ -48,30 +45,30 @@ import static org.eclipse.che.plugin.cpp.shared.Constants.BINARY_NAME_ATTRIBUTE;
  */
 @Singleton
 public class BinaryRunner {
-    private final DtoFactory                 dtoFactory;
-    private final AppContext                 appContext;
-    private final NotificationManager        notificationManager;
-    private final ProjectServiceClient       projectService;
-    private final ArtikCommandConsoleFactory consoleFactory;
-    private final DeviceServiceClient        deviceServiceClient;
-    private final MacroProcessor             macroProcessor;
-    private final ProcessesPanelPresenter    processesPanelPresenter;
+    private final DtoFactory              dtoFactory;
+    private final AppContext              appContext;
+    private final ExecAgentCommandManager execAgentCommandManager;
+    private final NotificationManager     notificationManager;
+    private final ProjectServiceClient    projectService;
+    private final CommandConsoleFactory   consoleFactory;
+    private final MacroProcessor          macroProcessor;
+    private final ProcessesPanelPresenter processesPanelPresenter;
 
     @Inject
     public BinaryRunner(DtoFactory dtoFactory,
                         AppContext appContext,
+                        ExecAgentCommandManager execAgentCommandManager,
                         NotificationManager notificationManager,
                         ProjectServiceClient projectService,
-                        ArtikCommandConsoleFactory consoleFactory,
+                        CommandConsoleFactory consoleFactory,
                         MacroProcessor macroProcessor,
-                        DeviceServiceClient deviceServiceClient,
                         ProcessesPanelPresenter processesPanelPresenter) {
         this.dtoFactory = dtoFactory;
         this.appContext = appContext;
+        this.execAgentCommandManager = execAgentCommandManager;
         this.notificationManager = notificationManager;
         this.projectService = projectService;
         this.consoleFactory = consoleFactory;
-        this.deviceServiceClient = deviceServiceClient;
         this.macroProcessor = macroProcessor;
         this.processesPanelPresenter = processesPanelPresenter;
     }
@@ -91,26 +88,23 @@ public class BinaryRunner {
 
         Project project = projectOptional.get();
         final Command command = buildCommand(project, device);
-        final String outputChannel = "process:output:" + UUID.uuid();
         String binaryName = project.getAttribute(BINARY_NAME_ATTRIBUTE);
         Path binaryNamePath = project.getLocation().append(!isNullOrEmpty(binaryName) ? binaryName : DEFAULT_BINARY_NAME);
         projectService.getItem(binaryNamePath).then(itemReference -> {
-            macroProcessor.expandMacros(command.getCommandLine()).then(arg -> {
+            macroProcessor.expandMacros(command.getCommandLine()).then(commandLine -> {
                 final CommandDto toExecute = dtoFactory.createDto(CommandDto.class)
                                                        .withName(command.getName())
-                                                       .withCommandLine(arg)
+                                                       .withCommandLine(commandLine)
                                                        .withType(command.getType());
 
-                final Promise<MachineProcessDto> processPromise = deviceServiceClient.executeCommand(device.getId(),
-                                                                                                     toExecute,
-                                                                                                     outputChannel);
-                processPromise.then(process -> {
-                    final CommandOutputConsole commandOutputConsole = consoleFactory.create(new CommandImpl(toExecute), device);
-                    commandOutputConsole.listenToOutput(outputChannel);
-                    processesPanelPresenter.addCommandOutput(device.getId(), commandOutputConsole);
+                final CommandOutputConsole commandOutputConsole = consoleFactory.create(new CommandImpl(toExecute), device);
+                processesPanelPresenter.addCommandOutput(device.getId(), commandOutputConsole);
 
-                    commandOutputConsole.attachToProcess(process);
-                });
+                execAgentCommandManager.startProcess(device.getId(), toExecute)
+                                       .thenIfProcessStartedEvent(commandOutputConsole.getProcessStartedOperation())
+                                       .thenIfProcessDiedEvent(commandOutputConsole.getProcessDiedOperation())
+                                       .thenIfProcessStdOutEvent(commandOutputConsole.getStdOutOperation())
+                                       .thenIfProcessStdErrEvent(commandOutputConsole.getStdErrOperation());
             });
         }).catchError(promiseError -> {
             notificationManager.notify("",

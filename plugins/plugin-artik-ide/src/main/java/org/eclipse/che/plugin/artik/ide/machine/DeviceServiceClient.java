@@ -11,10 +11,8 @@
  *******************************************************************************/
 package org.eclipse.che.plugin.artik.ide.machine;
 
-import org.eclipse.che.api.core.model.machine.Command;
 import org.eclipse.che.api.machine.shared.dto.MachineConfigDto;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
-import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
 import org.eclipse.che.api.promises.client.Promise;
 
 import java.util.List;
@@ -79,37 +77,4 @@ public interface DeviceServiceClient {
      * @return a promise that will resolve when the device has been disconnected, or rejects with an error
      */
     Promise<MachineDto> disconnect(String deviceId, boolean remove);
-
-    /**
-     * Get processes from the specified device.
-     *
-     * @param deviceId
-     *         ID of device to get processes information from
-     * @return a promise that will provide a list of {@link MachineProcessDto}s for the given device ID
-     */
-    Promise<List<MachineProcessDto>> getProcesses(String deviceId);
-
-    /**
-     * Execute a command in device.
-     *
-     * @param deviceId
-     *         ID of the device where command should be executed
-     * @param command
-     *         the command that should be executed in the device
-     * @param outputChannel
-     *         websocket chanel for execution logs
-     * @return a promise that resolves to the {@link MachineProcessDto}, or rejects with an error
-     */
-    Promise<MachineProcessDto> executeCommand(String deviceId, Command command, String outputChannel);
-
-    /**
-     * Stop process in device.
-     *
-     * @param deviceId
-     *         ID of the device where process should be stopped
-     * @param processId
-     *         ID of the process to stop
-     * @return a promise that will resolve when the process has been stopped, or rejects with an error
-     */
-    Promise<Void> stopProcess(String deviceId, int processId);
 }
