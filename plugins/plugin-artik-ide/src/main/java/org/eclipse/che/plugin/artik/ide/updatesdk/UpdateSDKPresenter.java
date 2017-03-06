@@ -200,7 +200,12 @@ public class UpdateSDKPresenter implements UpdateSDKView.ActionDelegate, Machine
     private void checkWsStatus(final String workspaceId) {
         workspaceServiceClient.getWorkspace(workspaceId).then(workspaceDto -> {
             if (WorkspaceStatus.STOPPED.equals(workspaceDto.getStatus())) {
-                Window.Location.reload();
+                new Timer() {
+                    @Override
+                    public void run() {
+                        Window.Location.reload();
+                    }
+                }.schedule(1000);
             } else {
                 new Timer() {
                     @Override

@@ -15,8 +15,6 @@ import com.google.gson.JsonParser;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
-import com.google.inject.multibindings.Multibinder;
-import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 
 import org.eclipse.che.ApiEndpointAccessibilityChecker;
@@ -43,7 +41,6 @@ import org.eclipse.che.api.ssh.server.HttpSshServiceClient;
 import org.eclipse.che.api.ssh.server.SshServiceClient;
 import org.eclipse.che.api.user.server.spi.PreferenceDao;
 import org.eclipse.che.commons.lang.Pair;
-import org.eclipse.che.dto.server.DtoFactory;
 import org.eclipse.che.everrest.CheAsynchronousJobPool;
 import org.eclipse.che.git.impl.jgit.JGitConnectionFactory;
 import org.eclipse.che.inject.DynaModule;
@@ -73,7 +70,6 @@ public class WsAgentModule extends AbstractModule {
     protected void configure() {
         bind(ApiInfoService.class);
         bind(org.eclipse.che.plugin.machine.artik.replication.PushToDeviceService.class);
-        bind(org.eclipse.che.plugin.machine.artik.discovery.DeviceDiscoveryService.class);
         bind(KeywordDocsService.class);
 
 
